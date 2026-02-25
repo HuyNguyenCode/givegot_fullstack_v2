@@ -1,0 +1,116 @@
+// prisma/schema.prisma
+
+generator client {
+  provider        = "prisma-client-js"
+  // BẮT BUỘC: Bật tính năng extension để dùng được pgvector cho AI
+  previewFeatures = ["postgresqlExtensions"] 
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL") // Dùng cho Supabase
+  // BẮT BUỘC: Kích hoạt extension vector của PostgreSQL
+  extensions = [vector] 
+}
+
+// 1. Bảng User
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String?
+  avatarUrl  String?
+  bio        String?  @db.Text 
+  
+  // Time-banking logic
+  givePoints Int      @default(3)
+  
+  // --- TRƯỜNG DỮ LIỆU MỚI CHO AI SEMANTIC MATCHING ---
+  // Lưu tọa độ Vector (chuỗi số do Gemini tạo ra) từ kỹ năng DẠY và HỌC
+  // Dimension 768 là chuẩn đầu ra của mô hình Gemini text-embedding-004
+  teachingEmbedding Unsupported("vector(768)")? 
+  learningEmbedding Unsupported("vector(768)")? 
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Quan hệ
+  skills          UserSkill[] 
+  mentoring       Booking[]  @relation("MentorBooking") 
+  learning        Booking[]  @relation("MenteeBooking") 
+  reviewsReceived Review[]   @relation("ReviewReceiver") 
+  reviewsWritten  Review[]   @relation("ReviewAuthor") // ĐÃ SỬA: Thêm để truy vấn được người viết review
+}
+
+// 2. Bảng Skill
+model Skill {
+  id    String      @id @default(uuid())
+  name  String      @unique 
+  slug  String      @unique 
+  
+  users UserSkill[]
+}
+
+enum SkillType {
+  WANT // Muốn học
+  GIVE // Muốn dạy
+}
+
+// Bảng UserSkill
+model UserSkill {
+  id       String    @id @default(uuid())
+  userId   String
+  skillId  String
+  type     SkillType @default(WANT) 
+
+  user     User      @relation(fields: [userId], references: [id])
+  skill    Skill     @relation(fields: [skillId], references: [id])
+
+  // ĐÃ SỬA: Đảm bảo 1 người có thể vừa GIVE vừa WANT cùng 1 skill (nếu cần)
+  @@unique([userId, skillId, type]) 
+}
+
+// 3. Bảng Booking
+model Booking {
+  id        String        @id @default(uuid())
+  
+  mentorId  String
+  menteeId  String
+  
+  mentor    User          @relation("MentorBooking", fields: [mentorId], references: [id])
+  mentee    User          @relation("MenteeBooking", fields: [menteeId], references: [id])
+  
+  startTime DateTime
+  endTime   DateTime
+  status    BookingStatus @default(PENDING) 
+  note      String?       @db.Text 
+  
+  createdAt DateTime      @default(now())
+
+  review    Review?
+}
+
+// 4. Bảng Review
+model Review {
+  id         String   @id @default(uuid())
+  bookingId  String   @unique 
+  receiverId String   
+  authorId   String   
+  
+  rating     Int      
+  comment    String?  @db.Text
+  
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+  receiver   User     @relation("ReviewReceiver", fields: [receiverId], references: [id])
+  // ĐÃ SỬA: Khai báo relation cho người viết review
+  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  
+  createdAt  DateTime @default(now())
+}
+
+enum BookingStatus {
+  PENDING   
+  CONFIRMED 
+  COMPLETED 
+  CANCELLED 
+}
