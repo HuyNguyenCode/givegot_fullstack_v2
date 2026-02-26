@@ -113,6 +113,57 @@ interface ProfileUpdateResult {
   message: string
 }
 
+// Helper function to generate URL-friendly slug
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove non-word chars except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+}
+
+// Helper function to ensure skill exists (create if not)
+async function ensureSkillExists(skillName: string): Promise<string> {
+  const trimmedName = skillName.trim()
+  
+  // Check if skill already exists (case-insensitive)
+  let skill = await prisma.skill.findFirst({
+    where: {
+      name: {
+        equals: trimmedName,
+        mode: 'insensitive',
+      },
+    },
+  })
+
+  // If skill doesn't exist, create it
+  if (!skill) {
+    const slug = generateSlug(trimmedName)
+    
+    // Check if slug already exists, if so, append a number
+    let finalSlug = slug
+    let counter = 1
+    while (await prisma.skill.findUnique({ where: { slug: finalSlug } })) {
+      finalSlug = `${slug}-${counter}`
+      counter++
+    }
+
+    console.log(`✨ Creating new skill: "${trimmedName}" with slug "${finalSlug}"`)
+    
+    skill = await prisma.skill.create({
+      data: {
+        name: trimmedName,
+        slug: finalSlug,
+        category: 'Other', // Default category for custom skills
+      },
+    })
+  }
+
+  return skill.id
+}
+
 export async function updateUserProfile(
   userId: string,
   updates: ProfileUpdateData
@@ -146,16 +197,15 @@ export async function updateUserProfile(
 
       // Add new teaching skills
       if (updates.teachingSkills.length > 0) {
-        const skills = await prisma.skill.findMany({
-          where: {
-            name: { in: updates.teachingSkills },
-          },
-        })
+        // Ensure all skills exist (create custom ones if needed)
+        const skillIds = await Promise.all(
+          updates.teachingSkills.map(skillName => ensureSkillExists(skillName))
+        )
 
         await prisma.userSkill.createMany({
-          data: skills.map(skill => ({
+          data: skillIds.map(skillId => ({
             userId,
-            skillId: skill.id,
+            skillId,
             type: SkillType.GIVE,
           })),
         })
@@ -196,16 +246,15 @@ export async function updateUserProfile(
 
       // Add new learning goals
       if (updates.learningGoals.length > 0) {
-        const skills = await prisma.skill.findMany({
-          where: {
-            name: { in: updates.learningGoals },
-          },
-        })
+        // Ensure all skills exist (create custom ones if needed)
+        const skillIds = await Promise.all(
+          updates.learningGoals.map(skillName => ensureSkillExists(skillName))
+        )
 
         await prisma.userSkill.createMany({
-          data: skills.map(skill => ({
+          data: skillIds.map(skillId => ({
             userId,
-            skillId: skill.id,
+            skillId,
             type: SkillType.WANT,
           })),
         })

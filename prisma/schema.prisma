@@ -44,11 +44,12 @@ model User {
 
 // 2. Bảng Skill
 model Skill {
-  id    String      @id @default(uuid())
-  name  String      @unique 
-  slug  String      @unique 
+  id       String      @id @default(uuid())
+  name     String      @unique 
+  slug     String      @unique 
+  category String      @default("Other")
   
-  users UserSkill[]
+  users    UserSkill[]
 }
 
 enum SkillType {

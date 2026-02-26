@@ -14,17 +14,54 @@ async function main() {
   await prisma.user.deleteMany()
   console.log('✅ Existing data cleared')
 
-  // 1. Create Skills
-  console.log('📚 Creating skills...')
+  // 1. Create Skills (Categorized)
+  console.log('📚 Creating categorized skills...')
   const skills = await Promise.all([
-    prisma.skill.create({ data: { name: 'ReactJS', slug: 'reactjs' } }),
-    prisma.skill.create({ data: { name: 'NodeJS', slug: 'nodejs' } }),
-    prisma.skill.create({ data: { name: 'Python', slug: 'python' } }),
-    prisma.skill.create({ data: { name: 'UI/UX Design', slug: 'ui-ux-design' } }),
-    prisma.skill.create({ data: { name: 'Marketing', slug: 'marketing' } }),
-    prisma.skill.create({ data: { name: 'IELTS', slug: 'ielts' } }),
+    // Development
+    prisma.skill.create({ data: { name: 'ReactJS', slug: 'reactjs', category: 'Development' } }),
+    prisma.skill.create({ data: { name: 'NodeJS', slug: 'nodejs', category: 'Development' } }),
+    prisma.skill.create({ data: { name: 'Python', slug: 'python', category: 'Development' } }),
+    prisma.skill.create({ data: { name: 'TypeScript', slug: 'typescript', category: 'Development' } }),
+    prisma.skill.create({ data: { name: 'JavaScript', slug: 'javascript', category: 'Development' } }),
+    prisma.skill.create({ data: { name: 'Next.js', slug: 'nextjs', category: 'Development' } }),
+    prisma.skill.create({ data: { name: 'Vue.js', slug: 'vuejs', category: 'Development' } }),
+    prisma.skill.create({ data: { name: 'Angular', slug: 'angular', category: 'Development' } }),
+    
+    // Design
+    prisma.skill.create({ data: { name: 'UI/UX Design', slug: 'ui-ux-design', category: 'Design' } }),
+    prisma.skill.create({ data: { name: 'Figma', slug: 'figma', category: 'Design' } }),
+    prisma.skill.create({ data: { name: 'Adobe XD', slug: 'adobe-xd', category: 'Design' } }),
+    prisma.skill.create({ data: { name: 'Graphic Design', slug: 'graphic-design', category: 'Design' } }),
+    prisma.skill.create({ data: { name: 'Web Design', slug: 'web-design', category: 'Design' } }),
+    
+    // Data Science
+    prisma.skill.create({ data: { name: 'Machine Learning', slug: 'machine-learning', category: 'Data Science' } }),
+    prisma.skill.create({ data: { name: 'Data Analysis', slug: 'data-analysis', category: 'Data Science' } }),
+    prisma.skill.create({ data: { name: 'SQL', slug: 'sql', category: 'Data Science' } }),
+    prisma.skill.create({ data: { name: 'Pandas', slug: 'pandas', category: 'Data Science' } }),
+    prisma.skill.create({ data: { name: 'TensorFlow', slug: 'tensorflow', category: 'Data Science' } }),
+    
+    // Business
+    prisma.skill.create({ data: { name: 'Marketing', slug: 'marketing', category: 'Business' } }),
+    prisma.skill.create({ data: { name: 'Digital Marketing', slug: 'digital-marketing', category: 'Business' } }),
+    prisma.skill.create({ data: { name: 'SEO', slug: 'seo', category: 'Business' } }),
+    prisma.skill.create({ data: { name: 'Content Writing', slug: 'content-writing', category: 'Business' } }),
+    prisma.skill.create({ data: { name: 'Product Management', slug: 'product-management', category: 'Business' } }),
+    
+    // Languages
+    prisma.skill.create({ data: { name: 'IELTS', slug: 'ielts', category: 'Languages' } }),
+    prisma.skill.create({ data: { name: 'English Speaking', slug: 'english-speaking', category: 'Languages' } }),
+    prisma.skill.create({ data: { name: 'Business English', slug: 'business-english', category: 'Languages' } }),
+    prisma.skill.create({ data: { name: 'Japanese', slug: 'japanese', category: 'Languages' } }),
+    prisma.skill.create({ data: { name: 'Spanish', slug: 'spanish', category: 'Languages' } }),
+    
+    // DevOps & Cloud
+    prisma.skill.create({ data: { name: 'Docker', slug: 'docker', category: 'DevOps & Cloud' } }),
+    prisma.skill.create({ data: { name: 'AWS', slug: 'aws', category: 'DevOps & Cloud' } }),
+    prisma.skill.create({ data: { name: 'Kubernetes', slug: 'kubernetes', category: 'DevOps & Cloud' } }),
+    prisma.skill.create({ data: { name: 'CI/CD', slug: 'cicd', category: 'DevOps & Cloud' } }),
   ])
-  console.log(`✅ Created ${skills.length} skills`)
+  console.log(`✅ Created ${skills.length} categorized skills`)
 
   // 2. Create Users
   console.log('👥 Creating users...')
