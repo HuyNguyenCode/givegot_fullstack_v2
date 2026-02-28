@@ -406,6 +406,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
               id: us.skill.id,
               name: us.skill.name,
               slug: us.skill.slug,
+              isVerified: us.isVerified, // ✨ Show verified status
             }))
 
             const teachingSkillNames = teachingSkills.map(s => s.name)
@@ -461,6 +462,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
           id: us.skill.id,
           name: us.skill.name,
           slug: us.skill.slug,
+          isVerified: us.isVerified, // ✨ Show verified status
         }))
 
         const teachingSkillNames = teachingSkills.map(s => s.name)
@@ -577,7 +579,10 @@ export async function getMentors(excludeUserId?: string) {
 
     return mentors.map(mentor => ({
       ...mentor,
-      teachingSkills: mentor.skills.map(us => us.skill),
+      teachingSkills: mentor.skills.map(us => ({
+        ...us.skill,
+        isVerified: us.isVerified, // ✨ Show verified status
+      })),
     }))
   } catch (error) {
     console.error('Error fetching mentors:', error)
@@ -607,7 +612,10 @@ export async function getMentorById(mentorId: string) {
 
     return {
       ...mentor,
-      teachingSkills: mentor.skills.map(us => us.skill),
+      teachingSkills: mentor.skills.map(us => ({
+        ...us.skill,
+        isVerified: us.isVerified, // ✨ Show verified status
+      })),
     }
   } catch (error) {
     console.error('Error fetching mentor:', error)

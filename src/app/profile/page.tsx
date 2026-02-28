@@ -69,10 +69,18 @@ export default function ProfilePage() {
       const skills = await getAllAvailableSkills()
       setAvailableSkills(skills)
 
-      const teachingSkills = await getUserTeachingSkills(currentUser.id)
+      // const teachingSkills = await getUserTeachingSkills(currentUser.id)
+      // setSelectedTeachingSkills(teachingSkills)
+
+      // const learningGoals = await getUserLearningGoals(currentUser.id)
+      // setSelectedLearningGoals(learningGoals)
+
+      const rawTeachingSkills = await getUserTeachingSkills(currentUser.id)
+      const teachingSkills = rawTeachingSkills.map((s: any) => typeof s === 'string' ? s : s.name)
       setSelectedTeachingSkills(teachingSkills)
 
-      const learningGoals = await getUserLearningGoals(currentUser.id)
+      const rawLearningGoals = await getUserLearningGoals(currentUser.id)
+      const learningGoals = rawLearningGoals.map((s: any) => typeof s === 'string' ? s : s.name)
       setSelectedLearningGoals(learningGoals)
 
       // Load verification status for teaching skills
