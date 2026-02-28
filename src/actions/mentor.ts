@@ -71,24 +71,25 @@
 //       try {
 //         // Perform cosine similarity search using pgvector
 //         const rawMentors = await prisma.$queryRaw<RawMentorResult[]>`
-//           SELECT 
-//             u.id,
-//             u.email,
-//             u.name,
-//             u."avatarUrl",
-//             u.bio,
-//             u."givePoints",
-//             u."createdAt",
-//             u."updatedAt",
-//             1 - (u."learningEmbedding" <=> u2."teachingEmbedding") as similarity
-//           FROM "User" u
-//           CROSS JOIN "User" u2
-//           WHERE u2.id = ${currentUserId}
-//             AND u.id != ${currentUserId}
-//             AND u."teachingEmbedding" IS NOT NULL
-//           ORDER BY similarity DESC
-//           LIMIT 50
-//         `
+//         SELECT 
+//           u.id,
+//           u.email,
+//           u.name,
+//           u."avatarUrl",
+//           u.bio,
+//           u."givePoints",
+//           u."createdAt",
+//           u."updatedAt",
+//           -- ĐÃ SỬA: Lấy Mentor teaching so sánh với Bob learning
+//           1 - (u."teachingEmbedding" <=> u2."learningEmbedding") as similarity
+//         FROM "User" u
+//         CROSS JOIN "User" u2
+//         WHERE u2.id = ${currentUserId}
+//           AND u.id != ${currentUserId}
+//           AND u."teachingEmbedding" IS NOT NULL
+//         ORDER BY similarity DESC
+//         LIMIT 50
+//       `
 
 //         console.log(`✅ Found ${rawMentors.length} mentors via vector search`)
 
@@ -112,6 +113,9 @@
 //             }))
 
 //             const teachingSkillNames = teachingSkills.map(s => s.name)
+            
+//             // Note: AI Semantic match might not have exact string matches, 
+//             // but we keep this for UI compatibility
 //             const matchedSkills = userLearningGoals.filter(goal =>
 //               teachingSkillNames.includes(goal)
 //             )
@@ -189,10 +193,16 @@
 //       mentorsWithSkills.sort((a, b) => b.matchScore - a.matchScore)
 //     }
 
-//     // Split into best matches and others
-//     // For vector search: similarity > 0.5 = best match
-//     // For keyword: matchScore > 0 = best match
-//     const threshold = useVectorSearch ? 0.5 : 0
+//     // --- ĐÃ THÊM: In bảng điểm AI ra Terminal để theo dõi ---
+//     if (useVectorSearch) {
+//       console.log('\n📊 BẢNG ĐIỂM AI CHẤM CHO NGỮ NGHĨA:')
+//       mentorsWithSkills.forEach(m => {
+//         console.log(`   - Mentor: ${m.name} | Điểm: ${Number(m.similarity || 0).toFixed(4)}`)
+//       })
+//       console.log('-------------------------------------------\n')
+//     }
+//    0.57
+//     const threshold = useVectorSearch ? 0.60 : 0
     
 //     const bestMatches = mentorsWithSkills.filter(m => 
 //       useVectorSearch ? (m.similarity || 0) > threshold : m.matchScore > 0
@@ -479,7 +489,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
       mentorsWithSkills.sort((a, b) => b.matchScore - a.matchScore)
     }
 
-    // --- ĐÃ THÊM: In bảng điểm AI ra Terminal để theo dõi ---
+    // --- In bảng điểm AI ra Terminal để theo dõi ---
     if (useVectorSearch) {
       console.log('\n📊 BẢNG ĐIỂM AI CHẤM CHO NGỮ NGHĨA:')
       mentorsWithSkills.forEach(m => {
@@ -488,16 +498,39 @@ export async function getAutoMatchedMentors(currentUserId: string) {
       console.log('-------------------------------------------\n')
     }
 
-    // --- ĐÃ SỬA: Hạ ngưỡng điểm (threshold) xuống 0.15 do vector đã bị cắt ---
-    const threshold = useVectorSearch ? 0.57 : 0
-    
-    const bestMatches = mentorsWithSkills.filter(m => 
-      useVectorSearch ? (m.similarity || 0) > threshold : m.matchScore > 0
-    )
-    
-    const otherMentors = mentorsWithSkills.filter(m =>
-      useVectorSearch ? (m.similarity || 0) <= threshold : m.matchScore === 0
-    )
+    // --- ĐÃ SỬA: THUẬT TOÁN NGƯỠNG ĐỘNG (DYNAMIC MARGIN THRESHOLD) ---
+    let bestMatches: any[] = [];
+    let otherMentors: any[] = [];
+
+    if (useVectorSearch) {
+      // 1. Tìm điểm số cao nhất trong danh sách (Thủ khoa)
+      const highestScore = mentorsWithSkills.length > 0 
+        ? Math.max(...mentorsWithSkills.map(m => m.similarity || 0)) 
+        : 0;
+      
+      // const BASELINE = 0.55; // Điểm sàn tối thiểu phải đạt
+      // const MARGIN = 0.06;   // Khoảng cách tối đa so với Thủ khoa
+
+      const BASELINE = 0.54; 
+      const MARGIN = 0.03;
+
+      bestMatches = mentorsWithSkills.filter(m => {
+        const score = m.similarity || 0;
+        // Đậu nếu: Lớn hơn điểm sàn VÀ nằm trong top sát Thủ khoa
+        return score >= BASELINE && score >= (highestScore - MARGIN);
+      });
+
+      // otherMentors = mentorsWithSkills.filter(m => {
+      //   const score = m.similarity || 0;
+      //   return !(score >= BASELINE && score >= (highestScore - MARGIN));
+      // });
+      const bestMatchIds = bestMatches.map(m => m.id);
+      otherMentors = mentorsWithSkills.filter(m => !bestMatchIds.includes(m.id));
+    } else {
+      // Keyword matching cũ
+      bestMatches = mentorsWithSkills.filter(m => m.matchScore > 0);
+      otherMentors = mentorsWithSkills.filter(m => m.matchScore === 0);
+    }
 
     console.log(`🎯 Auto-match results (${useVectorSearch ? 'AI' : 'Keyword'}):`)
     console.log(`   Learning goals: ${userLearningGoals.join(', ')}`)

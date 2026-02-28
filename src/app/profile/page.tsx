@@ -8,6 +8,9 @@ import {
   getUserTeachingSkills,
   updateUserProfile,
 } from '@/actions/user'
+import { getQuizForSkill, getUserSkillDetails } from '@/actions/quiz'
+import { QuizQuestion } from '@/lib/gemini'
+import QuizModal from '@/components/QuizModal'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
@@ -28,6 +31,14 @@ export default function ProfilePage() {
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([])
   const [selectedTeachingSkills, setSelectedTeachingSkills] = useState<string[]>([])
   const [selectedLearningGoals, setSelectedLearningGoals] = useState<string[]>([])
+  const [verifiedSkills, setVerifiedSkills] = useState<Record<string, boolean>>({})
+  
+  // Quiz modal state
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false)
+  const [quizSkillName, setQuizSkillName] = useState('')
+  const [quizUserSkillId, setQuizUserSkillId] = useState('')
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
+  const [isLoadingQuiz, setIsLoadingQuiz] = useState(false)
   
   // Teaching input state
   const [teachingInput, setTeachingInput] = useState('')
@@ -64,11 +75,65 @@ export default function ProfilePage() {
       const learningGoals = await getUserLearningGoals(currentUser.id)
       setSelectedLearningGoals(learningGoals)
 
+      // Load verification status for teaching skills
+      await loadVerificationStatus(currentUser.id, teachingSkills)
+
       setIsLoading(false)
     }
 
     loadProfileData()
   }, [currentUser?.id])
+
+  const loadVerificationStatus = async (userId: string, skills: string[]) => {
+    const verified: Record<string, boolean> = {}
+    
+    for (const skillName of skills) {
+      const userSkill = await getUserSkillDetails(userId, skillName, 'GIVE')
+      if (userSkill) {
+        verified[skillName] = userSkill.isVerified
+      }
+    }
+    
+    setVerifiedSkills(verified)
+  }
+
+  const handleVerifySkill = async (skillName: string) => {
+    if (!currentUser) return
+    
+    setIsLoadingQuiz(true)
+    
+    // Get UserSkill ID
+    const userSkill = await getUserSkillDetails(currentUser.id, skillName, 'GIVE')
+    if (!userSkill) {
+      alert(`⚠️ Vui lòng kéo xuống dưới cùng và bấm "Save Profile" để lưu kỹ năng [${skillName}] vào hệ thống trước khi làm bài Sát hạch nhé!`)
+      // alert('Không tìm thấy kỹ năng này')
+      setIsLoadingQuiz(false)
+      return
+    }
+    
+    // Get quiz questions
+    const result = await getQuizForSkill(skillName)
+    
+    if (!result.success || !result.questions) {
+      alert(result.message || 'Không thể tạo bài kiểm tra. Vui lòng thử lại.')
+      setIsLoadingQuiz(false)
+      return
+    }
+    
+    setQuizSkillName(skillName)
+    setQuizUserSkillId(userSkill.id)
+    setQuizQuestions(result.questions)
+    setIsQuizModalOpen(true)
+    setIsLoadingQuiz(false)
+  }
+
+  const handleQuizVerified = () => {
+    // Refresh verification status
+    if (currentUser) {
+      loadVerificationStatus(currentUser.id, selectedTeachingSkills)
+      refreshUser()
+    }
+  }
 
   // Filter teaching skills based on input
   const getFilteredTeachingSkills = () => {
@@ -365,24 +430,52 @@ export default function ProfilePage() {
                 {/* Selected Skills as Chips */}
                 {selectedTeachingSkills.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {selectedTeachingSkills.map((skill) => (
-                      <div
-                        key={skill}
-                        className="inline-flex items-center gap-1.5 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm"
-                      >
-                        <span>{skill}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeTeachingSkill(skill)}
-                          className="hover:bg-green-700 rounded-full p-0.5 transition"
-                          aria-label={`Remove ${skill}`}
+                    {selectedTeachingSkills.map((skill) => {
+                      const isVerified = verifiedSkills[skill]
+                      return (
+                        <div
+                          key={skill}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm ${
+                            isVerified 
+                              ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white ring-2 ring-green-400' 
+                              : 'bg-green-600 text-white'
+                          }`}
                         >
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
+                          {isVerified && (
+                            <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                          <span>{skill}</span>
+                          {isVerified && (
+                            <span className="text-xs bg-yellow-300 text-green-800 px-1.5 py-0.5 rounded font-bold">
+                              Verified
+                            </span>
+                          )}
+                          {!isVerified && (
+                            <button
+                              type="button"
+                              onClick={() => handleVerifySkill(skill)}
+                              disabled={isLoadingQuiz}
+                              className="text-xs bg-white text-green-700 px-2 py-0.5 rounded font-semibold hover:bg-green-100 transition disabled:opacity-50"
+                              title="Xác thực kỹ năng"
+                            >
+                              {isLoadingQuiz ? '...' : 'Verify'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeTeachingSkill(skill)}
+                            className="hover:bg-green-700 rounded-full p-0.5 transition ml-1"
+                            aria-label={`Remove ${skill}`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
 
@@ -635,6 +728,16 @@ export default function ProfilePage() {
           </form>
         </div>
       </main>
+
+      {/* Quiz Modal */}
+      <QuizModal
+        isOpen={isQuizModalOpen}
+        onClose={() => setIsQuizModalOpen(false)}
+        skillName={quizSkillName}
+        userSkillId={quizUserSkillId}
+        questions={quizQuestions}
+        onVerified={handleQuizVerified}
+      />
 
       {showSuccessToast && (
         <div className="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3 animate-slide-in z-50">

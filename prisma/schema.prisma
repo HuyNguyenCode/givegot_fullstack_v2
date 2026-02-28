@@ -59,13 +59,14 @@ enum SkillType {
 
 // Bảng UserSkill
 model UserSkill {
-  id       String    @id @default(uuid())
-  userId   String
-  skillId  String
-  type     SkillType @default(WANT) 
+  id         String    @id @default(uuid())
+  userId     String
+  skillId    String
+  type       SkillType @default(WANT)
+  isVerified Boolean   @default(false) // ✨ NEW: AI Quiz verification status
 
-  user     User      @relation(fields: [userId], references: [id])
-  skill    Skill     @relation(fields: [skillId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+  skill      Skill     @relation(fields: [skillId], references: [id])
 
   // ĐÃ SỬA: Đảm bảo 1 người có thể vừa GIVE vừa WANT cùng 1 skill (nếu cần)
   @@unique([userId, skillId, type]) 
