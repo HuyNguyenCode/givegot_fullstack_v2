@@ -63,7 +63,8 @@ model UserSkill {
   userId     String
   skillId    String
   type       SkillType @default(WANT)
-  isVerified Boolean   @default(false) // ✨ NEW: AI Quiz verification status
+  isVerified Boolean   @default(false) // ✨ AI Quiz verification status
+  roadmap    Json?     // ✨ NEW: AI-generated learning roadmap (cached)
 
   user       User      @relation(fields: [userId], references: [id])
   skill      Skill     @relation(fields: [skillId], references: [id])

@@ -50,7 +50,7 @@ export async function getUserWithSkills(userId: string) {
   }
 }
 
-export async function getUserLearningGoals(userId: string): Promise<string[]> {
+export async function getUserLearningGoals(userId: string): Promise<Array<{ id: string; name: string; roadmap: any | null }>> {
   try {
     const userSkills = await prisma.userSkill.findMany({
       where: {
@@ -61,8 +61,12 @@ export async function getUserLearningGoals(userId: string): Promise<string[]> {
         skill: true,
       },
     })
-    
-    return userSkills.map(us => us.skill.name)
+
+    return userSkills.map(us => ({
+      id: us.id, // UserSkill ID (needed for roadmap)
+      name: us.skill.name,
+      roadmap: us.roadmap, // ✨ Include cached roadmap
+    }))
   } catch (error) {
     console.error('Error fetching learning goals:', error)
     return []

@@ -3,7 +3,10 @@
 import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState } from 'react'
 import { getMyBookings, acceptBooking, cancelBooking, completeSessionWithReview } from '@/actions/booking'
+import { getUserLearningGoals } from '@/actions/user'
 import { BookingWithDetails } from '@/types'
+import { RoadmapStep } from '@/lib/gemini'
+import LearningRoadmapCard from '@/components/LearningRoadmapCard'
 import Image from 'next/image'
 import { BookingStatus } from '@prisma/client'
 import Link from 'next/link'
@@ -12,6 +15,7 @@ export default function DashboardPage() {
   const { currentUser, refreshUser, isLoading: userLoading } = useUser()
   const [mentoringBookings, setMentoringBookings] = useState<BookingWithDetails[]>([])
   const [learningBookings, setLearningBookings] = useState<BookingWithDetails[]>([])
+  const [learningSkillsWithRoadmap, setLearningSkillsWithRoadmap] = useState<Array<{ id: string; name: string; roadmap: RoadmapStep[] | null }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   
@@ -30,6 +34,11 @@ export default function DashboardPage() {
     const bookings = await getMyBookings(currentUser.id)
     setMentoringBookings(bookings.asMentor)
     setLearningBookings(bookings.asMentee)
+    
+    // Load learning goals with roadmaps for the roadmap cards
+    const rawLearningGoals = await getUserLearningGoals(currentUser.id)
+    setLearningSkillsWithRoadmap(rawLearningGoals)
+    
     setIsLoading(false)
   }
 
@@ -272,6 +281,50 @@ export default function DashboardPage() {
             Edit Profile
           </Link>
         </div>
+
+        {/* AI Learning Roadmaps Section */}
+        {learningSkillsWithRoadmap.length > 0 && (
+          <section className="mb-8">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-blue-600 p-2 rounded-lg">
+                  <svg
+                    className="w-6 h-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    🗺️ Your Learning Roadmaps
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    AI-generated step-by-step paths to master your goals
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {learningSkillsWithRoadmap.map((skillData) => (
+                <LearningRoadmapCard
+                  key={skillData.id}
+                  userSkillId={skillData.id}
+                  skillName={skillData.name}
+                  initialRoadmap={skillData.roadmap}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="space-y-8">
           <section>
