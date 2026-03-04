@@ -44,12 +44,13 @@ model User {
 
 // 2. Bảng Skill
 model Skill {
-  id       String      @id @default(uuid())
-  name     String      @unique 
-  slug     String      @unique 
-  category String      @default("Other")
+  id        String      @id @default(uuid())
+  name      String      @unique 
+  slug      String      @unique 
+  category  String      @default("Other")
+  embedding Unsupported("vector(768)")? // ✨ NEW: Granular skill-level embedding
   
-  users    UserSkill[]
+  users     UserSkill[]
 }
 
 enum SkillType {

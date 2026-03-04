@@ -27,12 +27,29 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 }
 
 export async function generateSkillEmbedding(skills: string[]): Promise<number[]> {
-  if (skills.length === 0) {
-    return new Array(768).fill(0)
-  }
+  // if (skills.length === 0) {
+  //   return new Array(768).fill(0)
+  // }
 
-  const text = skills.join(', ')
-  return generateEmbedding(text)
+  // const text = skills.join(', ')
+  // return generateEmbedding(text)
+  try {
+    console.log("Đang nặn Vector cho:", skills)
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+    
+    const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' }) 
+    const textToEmbed = skills.join(', ')
+    const result = await model.embedContent(textToEmbed)
+    
+    // --- GỌT XUỐNG 768 CHIỀU Ở ĐÂY ---
+    const embedding = result.embedding.values.slice(0, 768)
+    
+    console.log(`📏 Kích thước Vector vừa nặn: ${embedding.length} chiều!`)
+    return embedding
+  } catch (error) {
+    console.error("Lỗi khi tạo Embedding:", error)
+    return []
+  }
 }
 
 export interface QuizQuestion {

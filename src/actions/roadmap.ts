@@ -34,7 +34,7 @@ export async function getOrGenerateRoadmap(
       console.log('✅ Roadmap cache hit! Returning existing roadmap.')
       return {
         success: true,
-        roadmap: userSkill.roadmap as RoadmapStep[],
+        roadmap: userSkill.roadmap as unknown as RoadmapStep[],
       }
     }
 

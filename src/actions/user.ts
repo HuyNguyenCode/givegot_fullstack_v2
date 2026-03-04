@@ -133,10 +133,10 @@ function generateSlug(name: string): string {
     .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
 }
 
-// Helper function to ensure skill exists (create if not)
+// Helper function to ensure skill exists (create if not) and generate embedding
 async function ensureSkillExists(skillName: string): Promise<string> {
   const trimmedName = skillName.trim()
-  
+
   // Check if skill already exists (case-insensitive)
   let skill = await prisma.skill.findFirst({
     where: {
@@ -147,10 +147,10 @@ async function ensureSkillExists(skillName: string): Promise<string> {
     },
   })
 
-  // If skill doesn't exist, create it
+  // If skill doesn't exist, create it WITH embedding
   if (!skill) {
     const slug = generateSlug(trimmedName)
-    
+
     // Check if slug already exists, if so, append a number
     let finalSlug = slug
     let counter = 1
