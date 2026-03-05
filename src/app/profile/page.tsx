@@ -297,6 +297,7 @@ export default function ProfilePage() {
     )
   }
 
+  // DevMode: show fallback when no user selected. Production: middleware redirects before we get here.
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

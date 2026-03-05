@@ -4,7 +4,9 @@ import { useEffect, useState, use } from 'react'
 import { getUserById } from '@/actions/user'
 import { getReviewsWithReviewerDetails, getMentorRating } from '@/actions/booking'
 import { getUserTeachingSkills } from '@/actions/user'
+import { useUser } from '@/contexts/UserContext'
 import { User, Review } from '@/types'
+import MenteeBookingCalendar from '@/components/MenteeBookingCalendar'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -28,6 +30,7 @@ interface ReviewWithReviewer {
 export default function MentorProfilePage({ params }: { params: Promise<{ mentorId: string }> }) {
   const { mentorId } = use(params)
   const router = useRouter()
+  const { currentUser } = useUser()
   
   const [mentor, setMentor] = useState<User | null>(null)
   const [teachingSkills, setTeachingSkills] = useState<Array<{ id: string; name: string; slug: string; isVerified: boolean }>>([])
@@ -211,16 +214,19 @@ export default function MentorProfilePage({ params }: { params: Promise<{ mentor
               )}
             </section>
 
-            <div className="border-t border-gray-200 pt-6">
-              <Link
-                href={`/book/${mentor.id}`}
-                className="block w-full md:w-auto md:inline-block text-center bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-purple-700 hover:to-blue-700 transition shadow-lg"
-              >
-                Book Session with {mentor.name?.split(' ')[0] || 'Mentor'} (1 pt)
-              </Link>
-            </div>
+            {/* ✨ Calendar-based booking */}
+            {currentUser && currentUser.id !== mentor.id && (
+              <section className="border-t border-gray-200 pt-8">
+                <MenteeBookingCalendar
+                  mentorId={mentor.id}
+                  mentorName={mentor.name || 'Mentor'}
+                  currentUserId={currentUser.id}
+                  currentUserPoints={currentUser.givePoints}
+                />
+              </section>
+            )}
 
-            <section>
+            <section id="reviews">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
                   Reviews ({rating.count})

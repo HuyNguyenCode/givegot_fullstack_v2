@@ -10,6 +10,144 @@ interface BookingResult {
   bookingId?: string
 }
 
+// ✨ NEW: Atomic slot-based booking with concurrency control
+export async function bookAvailableSlot(
+  slotId: string,
+  menteeId: string,
+  note?: string
+): Promise<BookingResult> {
+  try {
+    console.log('🔒 Attempting atomic slot booking:', { slotId, menteeId })
+
+    // ✨ CRITICAL: Use transaction with READ COMMITTED isolation level
+    // This ensures that concurrent transactions see consistent data
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // Step 1: Lock the slot row with SELECT FOR UPDATE
+        // This prevents race conditions by locking the row until transaction completes
+        const slot = await tx.$queryRaw<Array<{
+          id: string
+          mentorId: string
+          startTime: Date
+          endTime: Date
+          isBooked: boolean
+        }>>`
+          SELECT id, "mentorId", "startTime", "endTime", "isBooked"
+          FROM "AvailableSlot"
+          WHERE id = ${slotId}
+          FOR UPDATE
+        `
+
+        if (slot.length === 0) {
+          throw new Error('Slot not found')
+        }
+
+        const lockedSlot = slot[0]
+
+        // Step 2: Check if slot is already booked (CRITICAL for concurrency)
+        if (lockedSlot.isBooked) {
+          throw new Error('SLOT_TAKEN') // Special error code for UI handling
+        }
+
+        // Step 3: Verify mentee has enough points
+        const mentee = await tx.user.findUnique({
+          where: { id: menteeId },
+        })
+
+        if (!mentee) {
+          throw new Error('Mentee not found')
+        }
+
+        if (mentee.givePoints < 1) {
+          throw new Error(`Not enough GivePoints. You have ${mentee.givePoints}, need at least 1.`)
+        }
+
+        // Step 4: Deduct 1 point from mentee
+        await tx.user.update({
+          where: { id: menteeId },
+          data: { givePoints: { decrement: 1 } },
+        })
+
+        // Step 5: Create booking
+        const booking = await tx.booking.create({
+          data: {
+            mentorId: lockedSlot.mentorId,
+            menteeId,
+            slotId: lockedSlot.id,
+            startTime: lockedSlot.startTime,
+            endTime: lockedSlot.endTime,
+            status: BookingStatus.PENDING,
+            note: note || null,
+          },
+        })
+
+        // ✨ Step 6a: Log transaction (AUDIT TRAIL)
+        await tx.transactionLog.create({
+          data: {
+            userId: menteeId,
+            amount: -1,
+            type: 'BOOKING_CREATED',
+            bookingId: booking.id,
+          },
+        })
+
+        // Step 6b: Mark slot as booked (link booking ID)
+        await tx.availableSlot.update({
+          where: { id: slotId },
+          data: { isBooked: true },
+        })
+
+        console.log('✅ Slot booked successfully:', booking.id)
+        console.log('📝 Transaction logged: -1 point (BOOKING_CREATED)')
+
+        return booking
+      },
+      {
+        isolationLevel: 'ReadCommitted', // Ensures consistent reads
+        maxWait: 5000, // Wait up to 5 seconds for lock
+        timeout: 10000, // Transaction timeout
+      }
+    )
+
+    revalidatePath('/')
+    revalidatePath('/discover')
+    revalidatePath('/dashboard')
+    revalidatePath('/history')
+    revalidatePath(`/mentor/${result.mentorId}`)
+
+    return {
+      success: true,
+      message: '✅ Slot booked! 1 GivePoint held. Waiting for mentor to accept.',
+      bookingId: result.id,
+    }
+  } catch (error: any) {
+    console.error('❌ Error booking slot:', error)
+
+    // Handle specific error cases
+    if (error.message === 'SLOT_TAKEN') {
+      return {
+        success: false,
+        message: '⚠️ Oops! Someone just booked this slot. Please choose another time.',
+      }
+    }
+
+    if (error.message?.includes('GivePoints')) {
+      return {
+        success: false,
+        message: error.message,
+      }
+    }
+
+    return {
+      success: false,
+      message: 'Failed to book slot. Please try again.',
+    }
+  }
+}
+
+// Backward compatibility alias
+export const bookSlot = bookAvailableSlot
+
 export async function createBooking(
   mentorId: string,
   menteeId: string,
@@ -95,6 +233,7 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
 
     revalidatePath('/')
     revalidatePath('/dashboard')
+    revalidatePath('/history')
 
     return {
       success: true,
@@ -104,6 +243,75 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
   } catch (error) {
     console.error('Error accepting booking:', error)
     return { success: false, message: 'Failed to accept booking. Please try again.' }
+  }
+}
+
+export async function declineBooking(bookingId: string, mentorId: string): Promise<BookingResult> {
+  try {
+    const booking = await prisma.booking.findUnique({ 
+      where: { id: bookingId },
+      include: { slot: true }
+    })
+
+    if (!booking) {
+      return { success: false, message: 'Booking not found' }
+    }
+
+    if (booking.mentorId !== mentorId) {
+      return { success: false, message: 'Unauthorized: You are not the mentor for this session' }
+    }
+
+    if (booking.status !== BookingStatus.PENDING) {
+      return { success: false, message: `Cannot decline booking with status: ${booking.status}` }
+    }
+
+    // Use transaction for refund and slot release
+    await prisma.$transaction(async (tx) => {
+      // Update booking status to CANCELLED
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: BookingStatus.CANCELLED },
+      })
+
+      // Release the slot
+      if (booking.slotId) {
+        await tx.availableSlot.update({
+          where: { id: booking.slotId },
+          data: { isBooked: false },
+        })
+        console.log(`🔓 Slot ${booking.slotId} released`)
+      }
+
+      // Refund 1 point to mentee
+      await tx.user.update({
+        where: { id: booking.menteeId },
+        data: { givePoints: { increment: 1 } },
+      })
+
+      // ✨ Log refund transaction (AUDIT TRAIL)
+      await tx.transactionLog.create({
+        data: {
+          userId: booking.menteeId,
+          amount: 1,
+          type: 'BOOKING_DECLINED',
+          bookingId,
+        },
+      })
+      console.log('📝 Transaction logged: +1 point refund (BOOKING_DECLINED)')
+    })
+
+    revalidatePath('/')
+    revalidatePath('/dashboard')
+    revalidatePath('/history')
+
+    return {
+      success: true,
+      message: 'Booking declined. Point refunded to mentee.',
+      bookingId,
+    }
+  } catch (error) {
+    console.error('Error declining booking:', error)
+    return { success: false, message: 'Failed to decline booking. Please try again.' }
   }
 }
 
@@ -173,13 +381,26 @@ export async function completeSessionWithReview(
         where: { id: booking.mentorId },
         data: { givePoints: { increment: 1 } },
       })
+
+      // ✨ 4. Log transaction (AUDIT TRAIL)
+      await tx.transactionLog.create({
+        data: {
+          userId: booking.mentorId,
+          amount: 1,
+          type: 'BOOKING_COMPLETED',
+          bookingId,
+        },
+      })
     })
+
+    console.log('📝 Transaction logged: +1 point to mentor (BOOKING_COMPLETED)')
 
     console.log('🔵 Review added, booking completed, point transferred')
 
     revalidatePath('/')
     revalidatePath('/dashboard')
     revalidatePath('/discover')
+    revalidatePath('/history')
     revalidatePath(`/mentor/${booking.mentorId}`)
 
     return {
@@ -195,7 +416,10 @@ export async function completeSessionWithReview(
 
 export async function cancelBooking(bookingId: string, userId: string): Promise<BookingResult> {
   try {
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
+    const booking = await prisma.booking.findUnique({ 
+      where: { id: bookingId },
+      include: { slot: true }
+    })
 
     if (!booking) {
       return { success: false, message: 'Booking not found' }
@@ -213,7 +437,7 @@ export async function cancelBooking(bookingId: string, userId: string): Promise<
       return { success: false, message: 'Booking is already cancelled' }
     }
 
-    // Use transaction for refund
+    // Use transaction for refund and slot release
     await prisma.$transaction(async (tx) => {
       // Cancel booking
       await tx.booking.update({
@@ -221,21 +445,43 @@ export async function cancelBooking(bookingId: string, userId: string): Promise<
         data: { status: BookingStatus.CANCELLED },
       })
 
+      // ✨ NEW: Release the slot (make it available again)
+      if (booking.slotId) {
+        await tx.availableSlot.update({
+          where: { id: booking.slotId },
+          data: { isBooked: false },
+        })
+        console.log(`🔓 Slot ${booking.slotId} released and available again`)
+      }
+
       // Refund point to mentee if booking was PENDING or CONFIRMED
       if (booking.status === BookingStatus.PENDING || booking.status === BookingStatus.CONFIRMED) {
         await tx.user.update({
           where: { id: booking.menteeId },
           data: { givePoints: { increment: 1 } },
         })
+
+        // ✨ Log refund transaction (AUDIT TRAIL)
+        await tx.transactionLog.create({
+          data: {
+            userId: booking.menteeId,
+            amount: 1,
+            type: 'BOOKING_CANCELLED',
+            bookingId,
+          },
+        })
+        console.log('📝 Transaction logged: +1 point refund (BOOKING_CANCELLED)')
       }
     })
 
     revalidatePath('/')
     revalidatePath('/dashboard')
+    revalidatePath('/history')
+    revalidatePath(`/mentor/${booking.mentorId}`)
 
     return {
       success: true,
-      message: 'Booking cancelled. Point refunded to mentee.',
+      message: 'Booking cancelled. Point refunded and slot is available again.',
       bookingId,
     }
   } catch (error) {

@@ -4,7 +4,12 @@ import { useUser } from '@/contexts/UserContext'
 import Image from 'next/image'
 
 export function UserSwitcher() {
-  const { currentUser, allUsers, switchUser, isLoading } = useUser()
+  const { currentUser, allUsers, switchUser, isLoading, isDevMode } = useUser()
+
+  // ✨ CRITICAL: Only render DevBar if explicitly enabled
+  if (!isDevMode) {
+    return null
+  }
 
   if (isLoading) {
     return (

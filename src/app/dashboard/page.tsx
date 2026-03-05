@@ -2,11 +2,12 @@
 
 import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState } from 'react'
-import { getMyBookings, acceptBooking, cancelBooking, completeSessionWithReview } from '@/actions/booking'
+import { getMyBookings, acceptBooking, declineBooking, cancelBooking, completeSessionWithReview } from '@/actions/booking'
 import { getUserLearningGoals } from '@/actions/user'
 import { BookingWithDetails } from '@/types'
 import { RoadmapStep } from '@/lib/gemini'
 import LearningRoadmapCard from '@/components/LearningRoadmapCard'
+import MentorCalendarManager from '@/components/MentorCalendarManager'
 import Image from 'next/image'
 import { BookingStatus } from '@prisma/client'
 import Link from 'next/link'
@@ -101,17 +102,17 @@ export default function DashboardPage() {
     setIsSubmittingReview(false)
   }
 
-  const handleCancel = async (bookingId: string) => {
+  const handleDecline = async (bookingId: string) => {
     if (!currentUser) return
-    
-    if (!confirm('Are you sure you want to cancel this booking? Your point will be refunded.')) {
+
+    if (!confirm('Are you sure you want to decline this booking? The mentee will be refunded.')) {
       return
     }
-    
+
     setActionLoading(bookingId)
-    
-    const result = await cancelBooking(bookingId, currentUser.id)
-    
+
+    const result = await declineBooking(bookingId, currentUser.id)
+
     if (result.success) {
       alert(`✅ ${result.message}`)
       await refreshUser()
@@ -119,7 +120,29 @@ export default function DashboardPage() {
     } else {
       alert(`❌ ${result.message}`)
     }
-    
+
+    setActionLoading(null)
+  }
+
+  const handleCancel = async (bookingId: string) => {
+    if (!currentUser) return
+
+    if (!confirm('Are you sure you want to cancel this booking? Your point will be refunded.')) {
+      return
+    }
+
+    setActionLoading(bookingId)
+
+    const result = await cancelBooking(bookingId, currentUser.id)
+
+    if (result.success) {
+      alert(`✅ ${result.message}`)
+      await refreshUser()
+      await loadBookings()
+    } else {
+      alert(`❌ ${result.message}`)
+    }
+
     setActionLoading(null)
   }
 
@@ -134,6 +157,7 @@ export default function DashboardPage() {
     )
   }
 
+  // DevMode: show fallback when no user selected. Production: middleware redirects before we get here.
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -282,6 +306,11 @@ export default function DashboardPage() {
           </Link>
         </div>
 
+        {/* ✨ NEW: Mentor Calendar Management */}
+        <section className="mb-8">
+          <MentorCalendarManager mentorId={currentUser.id} />
+        </section>
+
         {/* AI Learning Roadmaps Section */}
         {learningSkillsWithRoadmap.length > 0 && (
           <section className="mb-8">
@@ -406,11 +435,11 @@ export default function DashboardPage() {
                             {actionLoading === booking.id ? 'Processing...' : 'Accept Booking'}
                           </button>
                           <button
-                            onClick={() => handleCancel(booking.id)}
+                            onClick={() => handleDecline(booking.id)}
                             disabled={actionLoading === booking.id}
-                            className="px-4 bg-red-100 text-red-700 py-2 rounded-lg font-medium hover:bg-red-200 transition"
+                            className="px-4 bg-red-100 text-red-700 py-2 rounded-lg font-medium hover:bg-red-200 transition disabled:bg-gray-300"
                           >
-                            Decline
+                            {actionLoading === booking.id ? 'Processing...' : 'Decline'}
                           </button>
                         </>
                       )}

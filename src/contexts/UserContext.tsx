@@ -10,6 +10,7 @@ interface UserContextType {
   switchUser: (userId: string) => void
   refreshUser: () => Promise<void>
   isLoading: boolean
+  isDevMode: boolean
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
@@ -18,26 +19,48 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isDevMode, setIsDevMode] = useState(false)
 
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Check if DevBar is enabled
+        const devBarEnabled = process.env.NEXT_PUBLIC_SHOW_DEV_BAR === 'true'
+        setIsDevMode(devBarEnabled)
+
         const users = await getAllUsers()
         setAllUsers(users)
         
-        const savedUserId = localStorage.getItem('mockUserId')
-        
-        if (savedUserId) {
-          const user = await getUserById(savedUserId)
-          if (user) {
-            setCurrentUser(user)
+        // ✨ DevBar Mode: Use localStorage override
+        if (devBarEnabled) {
+          const savedUserId = localStorage.getItem('mockUserId')
+          
+          if (savedUserId) {
+            const user = await getUserById(savedUserId)
+            if (user) {
+              setCurrentUser(user)
+            } else if (users.length > 0) {
+              setCurrentUser(users[0])
+              localStorage.setItem('mockUserId', users[0].id)
+            }
           } else if (users.length > 0) {
             setCurrentUser(users[0])
             localStorage.setItem('mockUserId', users[0].id)
           }
-        } else if (users.length > 0) {
-          setCurrentUser(users[0])
-          localStorage.setItem('mockUserId', users[0].id)
+        } else {
+          // ✨ Production Mode: Use NextAuth session
+          // In production, the session will be fetched from NextAuth
+          // For now, we'll fetch from server action that reads the session
+          const response = await fetch('/api/auth/session')
+          const session = await response.json()
+          
+          if (session?.user?.email) {
+            // Find user by email from NextAuth session
+            const user = users.find(u => u.email === session.user.email)
+            if (user) {
+              setCurrentUser(user)
+            }
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
@@ -63,6 +86,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   const switchUser = async (userId: string) => {
+    // ✨ DevBar override: Switch user in dev mode
+    if (!isDevMode) {
+      console.warn('User switching is only available in dev mode')
+      return
+    }
+
     setIsLoading(true)
     try {
       const user = await getUserById(userId)
@@ -78,7 +107,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, switchUser, refreshUser, isLoading }}>
+    <UserContext.Provider value={{ currentUser, allUsers, switchUser, refreshUser, isLoading, isDevMode }}>
       {children}
     </UserContext.Provider>
   )

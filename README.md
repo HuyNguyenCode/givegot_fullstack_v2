@@ -8,15 +8,41 @@ A Next.js-based mentorship platform implementing time-banking economics where te
 
 ## 🚀 Quick Start
 
+### First Time Setup
+
 ```bash
 # Install dependencies
 npm install
+
+# Push database schema
+npx prisma db push --accept-data-loss
+
+# Generate Prisma client
+npx prisma generate
+
+# Seed database
+npm run db:seed
+
+# Backfill AI embeddings
+npm run db:backfill-embeddings
+
+# Backfill transaction history
+npm run db:backfill-transactions
 
 # Start development server
 npm run dev
 ```
 
+### Daily Development
+
+```bash
+# Start development server
+npm run dev
+```
+
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+**NEW:** Check out `START-HERE-AUTH-HISTORY.md` for the latest features!
 
 ---
 
@@ -42,6 +68,25 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - ✅ **Session Completion** - Mentee marks complete → point transfers
 - ✅ **Cancellation** - Either party can cancel with point refund
 - ✅ **Full Dashboard** (`/dashboard`) - Manage all bookings
+
+### Phase 4: Calendar & Available Slots ✅
+- ✅ **Mentor Calendar Manager** - Weekly grid view for setting availability
+- ✅ **Available Slots** - Mentors create 1-hour time slots
+- ✅ **Slot-Based Booking** - Mentees book from available slots
+- ✅ **Concurrency Control** - Database-level locking prevents double-booking
+- ✅ **Atomic Transactions** - `SELECT FOR UPDATE` ensures data consistency
+- ✅ **Graceful Error Handling** - User-friendly messages for booking conflicts
+- ✅ **Slot Release** - Cancelled bookings free up slots immediately
+
+### Phase 5: Authentication & Transaction History ✅ **NEW!**
+- ✅ **NextAuth Integration** - Production-ready authentication (Google OAuth + Credentials)
+- ✅ **DevBar Control** - Environment-based visibility (`NEXT_PUBLIC_SHOW_DEV_BAR`)
+- ✅ **Transaction Logging** - Complete audit trail for all GivePoint changes
+- ✅ **Booking History** - Professional UI showing all bookings with color-coded statuses
+- ✅ **Transaction Ledger** - Detailed view of all point movements with running balance
+- ✅ **Summary Statistics** - Real-time balance, earned, spent, sessions, and bookings
+- ✅ **Decline Booking** - Mentors can decline with automatic refund
+- ✅ **Backfill Script** - Migrate existing data to transaction logs
 
 ---
 
@@ -80,8 +125,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | **TypeScript** | Type-safe development |
 | **Tailwind CSS** | Utility-first styling |
 | **Prisma** | Database ORM |
-| **PostgreSQL** | Database (via Supabase) |
+| **PostgreSQL** | Database (via Supabase) with pgvector |
 | **Server Actions** | API endpoints |
+| **NextAuth v5** | Authentication (Google OAuth + Credentials) |
+| **bcryptjs** | Password hashing |
+| **date-fns** | Date manipulation and formatting |
 
 ---
 
@@ -93,7 +141,8 @@ givegot-v2/
 │   ├── actions/
 │   │   ├── user.ts          # User management actions
 │   │   ├── mentor.ts        # Mentor discovery actions
-│   │   └── booking.ts       # Booking CRUD operations
+│   │   ├── booking.ts       # Booking CRUD operations
+│   │   └── slots.ts         # ✨ NEW: Slot management (availability)
 │   ├── app/
 │   │   ├── page.tsx         # Home/Welcome page
 │   │   ├── discover/        # Mentor discovery
@@ -101,7 +150,9 @@ givegot-v2/
 │   │   ├── dashboard/       # User dashboard
 │   │   └── layout.tsx       # Root layout with UserProvider
 │   ├── components/
-│   │   └── UserSwitcher.tsx # DevBar for mock auth
+│   │   ├── UserSwitcher.tsx          # DevBar for mock auth
+│   │   ├── MentorCalendarManager.tsx # ✨ NEW: Mentor availability calendar
+│   │   └── MenteeBookingCalendar.tsx # ✨ NEW: Mentee booking interface
 │   ├── contexts/
 │   │   └── UserContext.tsx  # User state management
 │   ├── lib/
@@ -265,12 +316,12 @@ GEMINI_API_KEY="..."
 
 ## 🎯 Next Features (Future Phases)
 
-- [ ] Review system after completed sessions
-- [ ] Skill validation quiz (using Gemini AI)
-- [ ] Calendar view for scheduled sessions
-- [ ] Mentor search and filtering
-- [ ] User profile editing
-- [ ] Email notifications
+- [x] ✅ Calendar view for scheduled sessions (COMPLETED!)
+- [x] ✅ Concurrency control for bookings (COMPLETED!)
+- [ ] Recurring slots (e.g., "Every Monday 9-10 AM")
+- [ ] Timezone support (store UTC, display local)
+- [ ] Email notifications (slot booked, session reminder)
+- [ ] Variable slot durations (30min, 1hr, 2hr)
 - [ ] Session history and analytics
 - [ ] Rating and reputation system
 
@@ -291,3 +342,21 @@ Built with Next.js 14 App Router, Prisma ORM, and Tailwind CSS.
 - `STATUS.md` - Current project status
 - `PHASE-2-3-COMPLETE.md` - Feature documentation
 - `GET-SUPABASE-CREDENTIALS.md` - Database connection help
+
+**Calendar & Slots Documentation:**
+- `CALENDAR-QUICK-START.md` - Quick start guide (5 minutes)
+- `CALENDAR-SLOTS-FEATURE.md` - Comprehensive feature documentation
+- `CONCURRENCY-CONTROL-EXPLAINED.md` - Deep dive into locking mechanism
+- `IMPLEMENTATION-SUMMARY.md` - High-level implementation overview
+- `VISUAL-SUMMARY.md` - UI/UX flows and mockups
+- `BOOKING-FLOW-MIGRATION.md` - Migration guide
+- `BEFORE-AFTER-COMPARISON.md` - Visual comparison
+- `FIXES-QUICK-REFERENCE.md` - Bug fixes reference
+
+**Authentication & History Documentation:** ✨ NEW!
+- `AUTH-QUICK-START.md` - Setup authentication in 5 minutes
+- `AUTH-AND-HISTORY-IMPLEMENTATION.md` - Complete auth & history docs
+- `AUTH-HISTORY-VISUAL-GUIDE.md` - Visual UI/UX guide
+- `COMPLETE-IMPLEMENTATION-SUMMARY.md` - Full platform overview
+- `TESTING-GUIDE.md` - Comprehensive testing guide (30 tests)
+- `DEPLOYMENT-CHECKLIST.md` - Production deployment checklist
