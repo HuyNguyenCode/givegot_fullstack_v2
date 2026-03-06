@@ -2,6 +2,7 @@
 
 import { useUser } from '@/contexts/UserContext'
 import Image from 'next/image'
+import { SignOutButton } from './SignOutButton'
 
 export function UserSwitcher() {
   const { currentUser, allUsers, switchUser, isLoading, isDevMode } = useUser()
@@ -80,6 +81,7 @@ export function UserSwitcher() {
               </option>
             ))}
           </select>
+          <SignOutButton variant="dev" />
         </div>
       </div>
     </div>

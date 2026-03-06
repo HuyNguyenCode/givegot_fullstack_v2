@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // PrismaAdapter enables auto-registration: new Google users are saved to User + Account tables
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
@@ -15,8 +16,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+      allowDangerousEmailAccountLinking: true, // Link Google account to existing User with same email
     }),
     CredentialsProvider({
       name: 'Credentials',

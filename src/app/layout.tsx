@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/contexts/UserContext";
 import { UserSwitcher } from "@/components/UserSwitcher";
+import { ProductionHeader } from "@/components/ProductionHeader";
 import { SessionProvider } from "@/components/SessionProvider";
 
 const geistSans = Geist({
@@ -33,6 +34,7 @@ export default function RootLayout({
         <SessionProvider>
           <UserProvider>
             <UserSwitcher />
+            <ProductionHeader />
             {children}
           </UserProvider>
         </SessionProvider>

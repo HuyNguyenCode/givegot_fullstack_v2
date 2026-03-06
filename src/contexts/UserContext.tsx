@@ -9,6 +9,7 @@ interface UserContextType {
   allUsers: User[]
   switchUser: (userId: string) => void
   refreshUser: () => Promise<void>
+  signOutDev: () => void
   isLoading: boolean
   isDevMode: boolean
 }
@@ -106,8 +107,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const signOutDev = () => {
+    if (!isDevMode) return
+    localStorage.removeItem('mockUserId')
+    setCurrentUser(null)
+  }
+
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, switchUser, refreshUser, isLoading, isDevMode }}>
+    <UserContext.Provider value={{ currentUser, allUsers, switchUser, refreshUser, signOutDev, isLoading, isDevMode }}>
       {children}
     </UserContext.Provider>
   )
