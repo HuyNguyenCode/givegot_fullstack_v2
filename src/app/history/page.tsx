@@ -506,7 +506,7 @@ export default function HistoryPage() {
                                     {transaction.booking ? (
                                       <div className="flex items-center gap-2">
                                         {(() => {
-                                          const otherUser = transaction.booking.mentorId === currentUser.id
+                                          const otherUser = transaction.booking.mentor.id === currentUser.id
                                             ? transaction.booking.mentee
                                             : transaction.booking.mentor
                                           return (
