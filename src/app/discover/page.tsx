@@ -1,7 +1,7 @@
 'use client'
 
 import { useUser } from '@/contexts/UserContext'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { getAutoMatchedMentors, searchMentorsSemantically } from '@/actions/mentor'
 import { getMentorRating } from '@/actions/booking'
@@ -29,7 +29,7 @@ interface MentorMatch {
   }
 }
 
-export default function DiscoverPage() {
+function DiscoverContent() {
   const { currentUser, isLoading: userLoading } = useUser()
   const searchParams = useSearchParams()
   const urlSearchQuery = searchParams.get('search') || ''
@@ -517,5 +517,13 @@ export default function DiscoverPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function DiscoverPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading mentors...</div>}>
+      <DiscoverContent />
+    </Suspense>
   )
 }
