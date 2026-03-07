@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { generateLearningRoadmap, RoadmapStep } from '@/lib/gemini'
 import { revalidatePath } from 'next/cache'
+import { Prisma } from '@prisma/client'
 
 interface RoadmapResult {
   success: boolean
@@ -71,7 +72,7 @@ export async function clearRoadmapCache(userSkillId: string): Promise<{ success:
   try {
     await prisma.userSkill.update({
       where: { id: userSkillId },
-      data: { roadmap: null },
+      data: { roadmap: Prisma.DbNull },
     })
 
     revalidatePath('/profile')
