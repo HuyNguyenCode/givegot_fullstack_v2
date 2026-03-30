@@ -165,7 +165,8 @@ async function ensureSkillExists(skillName: string): Promise<string> {
       data: {
         name: trimmedName,
         slug: finalSlug,
-        category: 'Other', // Default category for custom skills
+        category: 'Other',
+        status: 'PENDING', // NEW: All custom skills require admin approval
       },
     })
   }

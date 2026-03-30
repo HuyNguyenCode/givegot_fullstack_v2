@@ -14,7 +14,7 @@ datasource db {
   extensions = [vector] 
 }
 
-// 1. Bảng User (UPDATED: NextAuth compatible)
+// 1. Bảng User (UPDATED: NextAuth compatible + Admin role)
 model User {
   id         String   @id @default(uuid())
   email      String   @unique
@@ -26,6 +26,10 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?  // For credentials provider (hashed)
+  
+  // Admin & Security
+  role         UserRole @default(USER)
+  isSuspended  Boolean  @default(false)
   
   // Time-banking logic
   givePoints Int      @default(3)
@@ -47,21 +51,40 @@ model User {
   reviewsWritten  Review[]   @relation("ReviewAuthor") // ĐÃ SỬA: Thêm để truy vấn được người viết review
   availableSlots  AvailableSlot[] // NEW: Mentor's available time slots
   transactions    TransactionLog[] // NEW: Point transaction history
+  reportsCreated  Report[]         @relation("ReportCreator") // NEW: Reports filed by this user
+  reportsReceived Report[]         @relation("ReportedUser")  // NEW: Reports against this user
   
   // NextAuth relations
   accounts        Account[]
   sessions        Session[]
 }
 
-// 2. Bảng Skill
+// Admin: User Role Enum
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// 2. Bảng Skill (UPDATED: Admin approval shadow)
 model Skill {
   id        String      @id @default(uuid())
   name      String      @unique 
   slug      String      @unique 
   category  String      @default("Other")
   embedding Unsupported("vector(768)")? // NEW: Granular skill-level embedding
+  status    SkillStatus @default(PENDING) // NEW: Admin approval shadow - all new skills require review
+  
+  createdAt DateTime    @default(now())
+  updatedAt DateTime?   @updatedAt
   
   users     UserSkill[]
+}
+
+// Admin: Skill Status Enum
+enum SkillStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum SkillType {
@@ -211,4 +234,27 @@ enum TransactionType {
   BOOKING_DECLINED    // +1 point (refund to mentee)
   INITIAL_BONUS       // +3 points (new user bonus)
   ADMIN_ADJUSTMENT    // Manual adjustment
+}
+
+// 8. Report Model (✨ NEW: User reporting system)
+model Report {
+  id             String       @id @default(uuid())
+  reporterId     String
+  reportedUserId String
+  reason         String       @db.Text
+  status         ReportStatus @default(PENDING)
+  
+  reporter       User         @relation("ReportCreator", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser   User         @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime     @default(now())
+  resolvedAt     DateTime?
+  
+  @@index([status, createdAt])
+}
+
+// Admin: Report Status Enum
+enum ReportStatus {
+  PENDING
+  RESOLVED
 }

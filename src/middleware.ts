@@ -1,9 +1,10 @@
 import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 const isDevMode = process.env.NEXT_PUBLIC_SHOW_DEV_BAR === 'true'
 
-export default auth((req) => {
+export default auth(async (req) => {
   // DevMode: Skip all auth checks
   if (isDevMode) {
     return NextResponse.next()
@@ -31,6 +32,23 @@ export default auth((req) => {
     const signInUrl = new URL('/auth/signin', req.url)
     signInUrl.searchParams.set('callbackUrl', pathname || '/homepage')
     return NextResponse.redirect(signInUrl)
+  }
+
+  // Check if user is suspended (except for admin routes)
+  if (req.auth?.user?.email && !pathname.startsWith('/admin')) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: req.auth.user.email },
+        select: { isSuspended: true }
+      })
+
+      if (user?.isSuspended) {
+        // Redirect suspended users to a suspended page or sign-in
+        return NextResponse.redirect(new URL('/auth/signin?error=suspended', req.url))
+      }
+    } catch (error) {
+      console.error('Failed to check suspension status:', error)
+    }
   }
 
   return NextResponse.next()

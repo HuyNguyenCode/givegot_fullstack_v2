@@ -404,19 +404,20 @@ export async function getAutoMatchedMentors(currentUserId: string) {
          u.bio ILIKE ANY(ARRAY[${Prisma.join(ilikePatterns)}]::text[])
        ) as "hasKeywordMatch"
      FROM "User" u
-     INNER JOIN "UserSkill" us_give ON us_give."userId" = u.id AND us_give.type = 'GIVE'
-     INNER JOIN "Skill" s_give ON s_give.id = us_give."skillId"
-     -- CROSS JOIN: Compare against ALL of the current user's WANT skills
-     CROSS JOIN (
-       SELECT s.embedding, s.name
-       FROM "UserSkill" us
-       INNER JOIN "Skill" s ON s.id = us."skillId"
-       WHERE us."userId" = ${currentUserId} 
-         AND us.type = 'WANT' 
-         AND s.embedding IS NOT NULL
-     ) s_want
-     WHERE u.id != ${currentUserId}
-       AND s_give.embedding IS NOT NULL
+    INNER JOIN "UserSkill" us_give ON us_give."userId" = u.id AND us_give.type = 'GIVE'
+    INNER JOIN "Skill" s_give ON s_give.id = us_give."skillId" AND s_give.status = 'APPROVED'
+    -- CROSS JOIN: Compare against ALL of the current user's WANT skills
+    CROSS JOIN (
+      SELECT s.embedding, s.name
+      FROM "UserSkill" us
+      INNER JOIN "Skill" s ON s.id = us."skillId"
+      WHERE us."userId" = ${currentUserId} 
+        AND us.type = 'WANT' 
+        AND s.embedding IS NOT NULL
+        AND s.status = 'APPROVED'
+    ) s_want
+    WHERE u.id != ${currentUserId}
+      AND s_give.embedding IS NOT NULL
      GROUP BY u.id, u.email, u.name, u."avatarUrl", u.bio, u."givePoints", u."createdAt", u."updatedAt"
      HAVING 
        -- Include if keyword match (Skill OR Bio) OR semantic >= 0.55
@@ -450,7 +451,10 @@ export async function getAutoMatchedMentors(currentUserId: string) {
           },
         })
 
-        const teachingSkills = skills.map(us => ({
+        // Filter to only include APPROVED skills
+        const approvedSkills = skills.filter(us => (us.skill as any).status === 'APPROVED')
+
+        const teachingSkills = approvedSkills.map(us => ({
           id: us.skill.id,
           name: us.skill.name,
           slug: us.skill.slug,
@@ -737,7 +741,7 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
         ) as "hasKeywordMatch"
       FROM "User" u
       INNER JOIN "UserSkill" us ON us."userId" = u.id AND us.type = 'GIVE'
-      INNER JOIN "Skill" s ON s.id = us."skillId"
+      INNER JOIN "Skill" s ON s.id = us."skillId" AND s.status = 'APPROVED'
       WHERE u.id != ${currentUserId}
       GROUP BY u.id, u.email, u.name, u."avatarUrl", u.bio, u."givePoints", u."createdAt", u."updatedAt"
       HAVING 
@@ -784,7 +788,10 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
           },
         })
 
-        const teachingSkills = skills.map(us => ({
+        // Filter to only include APPROVED skills
+        const approvedSkills = skills.filter(us => (us.skill as any).status === 'APPROVED')
+
+        const teachingSkills = approvedSkills.map(us => ({
           id: us.skill.id,
           name: us.skill.name,
           slug: us.skill.slug,
