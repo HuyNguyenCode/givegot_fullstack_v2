@@ -19,7 +19,7 @@ export function ProductionHeader() {
   return (
     <header className="bg-white border-b border-gray-200 px-4 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link href="/" className="font-bold text-purple-600 hover:text-purple-700">
+        <Link href="/homepage" className="font-bold text-purple-600 hover:text-purple-700">
           GiveGot
         </Link>
         <div className="flex items-center gap-4">

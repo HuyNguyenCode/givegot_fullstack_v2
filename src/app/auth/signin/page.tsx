@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation'
 // 1. TÁCH CÁI NHÂN RA VÀ BỎ CHỮ "export default" ĐI
 function SignInForm() {
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  const callbackUrl = searchParams.get('callbackUrl') || '/homepage'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

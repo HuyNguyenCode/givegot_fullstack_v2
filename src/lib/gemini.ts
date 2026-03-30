@@ -168,10 +168,11 @@ Now generate the roadmap for "${skillName}". Return ONLY the JSON array, nothing
 
 export async function generateSkillQuiz(skillName: string): Promise<QuizQuestion[]> {
   try {
-    console.log(`📝 Generating quiz for skill: ${skillName}`)
+    console.log(`Generating quiz for skill: ${skillName}`)
     
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
-    const prompt = `You are a strict technical skill assessment generator. Generate EXACTLY 5 multiple-choice questions in Vietnamese to verify knowledge of "${skillName}".
+    const prompt = `You are a strict technical skill assessment generator. Generate EXACTLY 5 multiple-choice 
+    questions in Vietnamese to verify knowledge of "${skillName}".
 
 CRITICAL REQUIREMENTS:
 1. Questions must be medium difficulty - not too easy, not too hard

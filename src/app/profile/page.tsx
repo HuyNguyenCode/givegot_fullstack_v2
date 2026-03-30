@@ -317,7 +317,7 @@ export default function ProfilePage() {
       <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/homepage')}
             className="text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -711,7 +711,7 @@ export default function ProfilePage() {
             <div className="flex gap-4">
               <button
                 type="button"
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/homepage')}
                 className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
               >
                 Cancel

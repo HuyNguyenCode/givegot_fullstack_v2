@@ -11,15 +11,25 @@ export default auth((req) => {
 
   const { pathname } = req.nextUrl
 
-  // Allow sign-in page and NextAuth API routes
+  // Allow public access to sign-in page and NextAuth API routes
   if (pathname === '/auth/signin' || pathname.startsWith('/api/auth')) {
     return NextResponse.next()
   }
 
-  // No session and not on auth routes -> redirect to sign-in
+  // If authenticated user visits root, redirect to homepage
+  if (pathname === '/' && req.auth) {
+    return NextResponse.redirect(new URL('/homepage', req.url))
+  }
+
+  // Allow public access to landing page
+  if (pathname === '/') {
+    return NextResponse.next()
+  }
+
+  // No session and not on auth/public routes -> redirect to sign-in
   if (!req.auth) {
     const signInUrl = new URL('/auth/signin', req.url)
-    signInUrl.searchParams.set('callbackUrl', pathname || '/')
+    signInUrl.searchParams.set('callbackUrl', pathname || '/homepage')
     return NextResponse.redirect(signInUrl)
   }
 

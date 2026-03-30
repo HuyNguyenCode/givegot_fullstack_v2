@@ -2,7 +2,7 @@
 
 import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { getAutoMatchedMentors, searchMentorsSemantically } from '@/actions/mentor'
 import { getMentorRating } from '@/actions/booking'
 import Image from 'next/image'
@@ -32,6 +32,7 @@ interface MentorMatch {
 function DiscoverContent() {
   const { currentUser, isLoading: userLoading } = useUser()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const urlSearchQuery = searchParams.get('search') || ''
   
   const [bestMatches, setBestMatches] = useState<MentorMatch[]>([])
@@ -40,9 +41,26 @@ function DiscoverContent() {
   
   // FIX 1: Khởi tạo state ngay bằng URL param để tránh load rỗng ban đầu
   const [searchQuery, setSearchQuery] = useState(urlSearchQuery) 
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(urlSearchQuery)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Sync URL search param to local state
+  // Debounce search input (400ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+      
+      // Update URL without full page reload
+      if (searchQuery.trim()) {
+        router.replace(`/discover?search=${encodeURIComponent(searchQuery.trim())}`, { scroll: false })
+      } else {
+        router.replace('/discover', { scroll: false })
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery, router])
+
+  // Sync URL search param to local state (only on initial load or external URL changes)
   useEffect(() => {
     if (urlSearchQuery && urlSearchQuery !== searchQuery) {
       setSearchQuery(urlSearchQuery)
@@ -59,12 +77,12 @@ function DiscoverContent() {
       setIsLoading(true)
 
       // Check if there's a search query (from URL or manual input)
-      if (searchQuery.trim()) {
-        console.log(`🔍 Performing semantic search for: "${searchQuery}"`)
+      if (debouncedSearchQuery.trim()) {
+        console.log(`🔍 Performing semantic search for: "${debouncedSearchQuery}"`)
         
         try {
           // Use AI semantic search
-          const searchResult = await searchMentorsSemantically(searchQuery, currentUser.id)
+          const searchResult = await searchMentorsSemantically(debouncedSearchQuery, currentUser.id)
           
           // Add ratings to search results
           const mentorsWithRatings = await Promise.all(
@@ -130,11 +148,11 @@ function DiscoverContent() {
 
     loadMentors()
 
-    // BÁO HỦY: Khi searchQuery thay đổi, effect cũ sẽ bị báo tử
+    // BÁO HỦY: Khi debouncedSearchQuery thay đổi, effect cũ sẽ bị báo tử
     return () => {
       isCancelled = true
     }
-  }, [currentUser, searchQuery])
+  }, [currentUser, debouncedSearchQuery])
 
   if (userLoading || isLoading) {
     return (
@@ -306,7 +324,7 @@ function DiscoverContent() {
           </p>
           
           {/* Search Input */}
-          <div className="mt-4 ml-14 max-w-md">
+          <form onSubmit={(e) => e.preventDefault()} className="mt-4 ml-14 max-w-md">
             <div className="relative">
               <input
                 type="text"
@@ -343,7 +361,7 @@ function DiscoverContent() {
                 </button>
               )}
             </div>
-          </div>
+          </form>
           
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="inline-flex items-center gap-2 bg-purple-100 px-4 py-2 rounded-lg">

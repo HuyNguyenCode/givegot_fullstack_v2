@@ -2,7 +2,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  // BẮT BUỘC: Bật tính năng extension để dùng được pgvector cho AI
+  // Bật tính năng extension để dùng được pgvector cho AI
   previewFeatures = ["postgresqlExtensions"] 
 }
 
@@ -14,7 +14,7 @@ datasource db {
   extensions = [vector] 
 }
 
-// 1. Bảng User (✨ UPDATED: NextAuth compatible)
+// 1. Bảng User (UPDATED: NextAuth compatible)
 model User {
   id         String   @id @default(uuid())
   email      String   @unique
@@ -22,7 +22,7 @@ model User {
   avatarUrl  String?
   bio        String?  @db.Text 
   
-  // ✨ NextAuth fields
+  // NextAuth fields
   emailVerified DateTime?
   image         String?
   password      String?  // For credentials provider (hashed)
@@ -45,10 +45,10 @@ model User {
   learning        Booking[]  @relation("MenteeBooking") 
   reviewsReceived Review[]   @relation("ReviewReceiver") 
   reviewsWritten  Review[]   @relation("ReviewAuthor") // ĐÃ SỬA: Thêm để truy vấn được người viết review
-  availableSlots  AvailableSlot[] // ✨ NEW: Mentor's available time slots
-  transactions    TransactionLog[] // ✨ NEW: Point transaction history
+  availableSlots  AvailableSlot[] // NEW: Mentor's available time slots
+  transactions    TransactionLog[] // NEW: Point transaction history
   
-  // ✨ NextAuth relations
+  // NextAuth relations
   accounts        Account[]
   sessions        Session[]
 }
@@ -59,7 +59,7 @@ model Skill {
   name      String      @unique 
   slug      String      @unique 
   category  String      @default("Other")
-  embedding Unsupported("vector(768)")? // ✨ NEW: Granular skill-level embedding
+  embedding Unsupported("vector(768)")? // NEW: Granular skill-level embedding
   
   users     UserSkill[]
 }
@@ -75,8 +75,8 @@ model UserSkill {
   userId     String
   skillId    String
   type       SkillType @default(WANT)
-  isVerified Boolean   @default(false) // ✨ AI Quiz verification status
-  roadmap    Json?     // ✨ NEW: AI-generated learning roadmap (cached)
+  isVerified Boolean   @default(false) // AI Quiz verification status
+  roadmap    Json?     // NEW: AI-generated learning roadmap (cached)
 
   user       User      @relation(fields: [userId], references: [id])
   skill      Skill     @relation(fields: [skillId], references: [id])

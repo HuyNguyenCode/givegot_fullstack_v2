@@ -18,7 +18,6 @@ async function generateEmbedding(text: string): Promise<number[]> {
     const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' })
     const result = await model.embedContent(text)
     
-    // ĐÃ SỬA: Lấy mảng 3072 số và dùng dao "cắt" lấy đúng 768 số đầu tiên
     const embedding = result.embedding.values.slice(0, 768)
 
     return embedding
@@ -126,7 +125,7 @@ async function main() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log(`\n📊 Summary:`)
   console.log(`   ✅ Processed: ${processed} users`)
-  console.log(`   ⏭️  Skipped: ${skipped} users (no skills)`)
+  console.log(`   ⏭️ Skipped: ${skipped} users (no skills)`)
   console.log(`   ❌ Errors: ${errors} users`)
   console.log(`\n🚀 Your database now has AI-powered embeddings!`)
   console.log(`\n💡 Next: Restart your dev server and test the auto-match feature.`)
