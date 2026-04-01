@@ -54,11 +54,11 @@ export default function DashboardPage() {
     const result = await acceptBooking(bookingId, currentUser.id)
     
     if (result.success) {
-      alert(`✅ ${result.message}`)
+      alert(` ${result.message}`)
       await refreshUser()
       await loadBookings()
     } else {
-      alert(`❌ ${result.message}`)
+      alert(` ${result.message}`)
     }
     
     setActionLoading(null)
@@ -76,7 +76,7 @@ export default function DashboardPage() {
     if (!currentUser || !selectedBooking) return
     
     if (rating === 0) {
-      alert('❌ Please select a rating before submitting')
+      alert(' Please select a rating before submitting')
       return
     }
 
@@ -90,13 +90,13 @@ export default function DashboardPage() {
     )
     
     if (result.success) {
-      alert(`✅ ${result.message}`)
+      alert(` ${result.message}`)
       setIsReviewModalOpen(false)
       setSelectedBooking(null)
       await refreshUser()
       await loadBookings()
     } else {
-      alert(`❌ ${result.message}`)
+      alert(` ${result.message}`)
     }
     
     setIsSubmittingReview(false)
@@ -114,11 +114,11 @@ export default function DashboardPage() {
     const result = await declineBooking(bookingId, currentUser.id)
 
     if (result.success) {
-      alert(`✅ ${result.message}`)
+      alert(` ${result.message}`)
       await refreshUser()
       await loadBookings()
     } else {
-      alert(`❌ ${result.message}`)
+      alert(` ${result.message}`)
     }
 
     setActionLoading(null)
@@ -136,11 +136,11 @@ export default function DashboardPage() {
     const result = await cancelBooking(bookingId, currentUser.id)
 
     if (result.success) {
-      alert(`✅ ${result.message}`)
+      alert(` ${result.message}`)
       await refreshUser()
       await loadBookings()
     } else {
-      alert(`❌ ${result.message}`)
+      alert(` ${result.message}`)
     }
 
     setActionLoading(null)
@@ -306,7 +306,6 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* ✨ NEW: Mentor Calendar Management */}
         <section className="mb-8">
           <MentorCalendarManager mentorId={currentUser.id} />
         </section>

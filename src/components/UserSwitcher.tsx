@@ -7,7 +7,6 @@ import { SignOutButton } from './SignOutButton'
 export function UserSwitcher() {
   const { currentUser, allUsers, switchUser, isLoading, isDevMode } = useUser()
 
-  // ✨ CRITICAL: Only render DevBar if explicitly enabled
   if (!isDevMode) {
     return null
   }

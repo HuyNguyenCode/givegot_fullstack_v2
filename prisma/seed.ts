@@ -3,19 +3,19 @@ import { PrismaClient, SkillType, BookingStatus } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Starting database seed...')
+  console.log('Starting database seed...')
 
   // Clear existing data (in development only!)
-  console.log('🧹 Cleaning existing data...')
+  console.log('Cleaning existing data...')
   await prisma.review.deleteMany()
   await prisma.booking.deleteMany()
   await prisma.userSkill.deleteMany()
   await prisma.skill.deleteMany()
   await prisma.user.deleteMany()
-  console.log('✅ Existing data cleared')
+  console.log('Existing data cleared')
 
   // 1. Create Skills (Categorized)
-  console.log('📚 Creating categorized skills...')
+  console.log('Creating categorized skills...')
   const skills = await Promise.all([
     // Development
     prisma.skill.create({ data: { name: 'ReactJS', slug: 'reactjs', category: 'Development' } }),
@@ -61,10 +61,10 @@ async function main() {
     prisma.skill.create({ data: { name: 'Kubernetes', slug: 'kubernetes', category: 'DevOps & Cloud' } }),
     prisma.skill.create({ data: { name: 'CI/CD', slug: 'cicd', category: 'DevOps & Cloud' } }),
   ])
-  console.log(`✅ Created ${skills.length} categorized skills`)
+  console.log(`Created ${skills.length} categorized skills`)
 
   // 2. Create Users
-  console.log('👥 Creating users...')
+  console.log('Creating users...')
   
   const aliceJohnson = await prisma.user.create({
     data: {
@@ -126,7 +126,7 @@ async function main() {
     },
   })
 
-  console.log('✅ Created 6 users')
+  console.log('Created 6 users')
 
   // 3. Create UserSkills (Teaching & Learning)
   console.log('🔗 Creating user-skill relationships...')
@@ -179,10 +179,10 @@ async function main() {
     }),
   ])
 
-  console.log('✅ Created user-skill relationships')
+  console.log('Created user-skill relationships')
 
   // 4. Create Sample Bookings
-  console.log('📅 Creating sample bookings...')
+  console.log('Creating sample bookings...')
   
   const booking1 = await prisma.booking.create({
     data: {
@@ -228,10 +228,10 @@ async function main() {
     },
   })
 
-  console.log('✅ Created 4 sample bookings')
+  console.log('Created 4 sample bookings')
 
   // 5. Create Reviews (matching our mock data)
-  console.log('⭐ Creating sample reviews...')
+  console.log('Creating sample reviews...')
   
   await Promise.all([
     prisma.review.create({
@@ -272,16 +272,16 @@ async function main() {
     }),
   ])
 
-  console.log('✅ Created 4 sample reviews')
+  console.log('Created 4 sample reviews')
 
-  console.log('🎉 Database seeding completed successfully!')
-  console.log('\n📊 Summary:')
+  console.log('Database seeding completed successfully!')
+  console.log('\nSummary:')
   console.log(`   - Skills: ${skills.length}`)
   console.log('   - Users: 6')
   console.log('   - User-Skill Relations: 9')
   console.log('   - Bookings: 4')
   console.log('   - Reviews: 4')
-  console.log('\n🚀 Your database is ready!')
+  console.log('\nYour database is ready!')
 }
 
 main()
@@ -289,7 +289,7 @@ main()
     await prisma.$disconnect()
   })
   .catch(async (e) => {
-    console.error('❌ Error during seeding:', e)
+    console.error('Error during seeding:', e)
     await prisma.$disconnect()
     process.exit(1)
   })

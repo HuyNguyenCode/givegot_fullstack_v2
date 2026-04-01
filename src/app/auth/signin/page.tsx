@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 
-// 1. TÁCH CÁI NHÂN RA VÀ BỎ CHỮ "export default" ĐI
+
 function SignInForm() {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/homepage'
@@ -134,9 +134,6 @@ function SignInForm() {
   )
 }
 
-// ==========================================
-// 2. THÊM CÁI VỎ CHỨA SUSPENSE LÀM DEFAULT EXPORT CHÍNH
-// ==========================================
 export default function SignInPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Loading sign in...</div>}>

@@ -50,7 +50,7 @@ export default function MenteeBookingCalendar({
 
   const handleSlotClick = (slot: AvailableSlot) => {
     if (currentUserPoints < 1) {
-      alert('⚠️ You need at least 1 GivePoint to book a session. Teach to earn more points!')
+      alert('You need at least 1 GivePoint to book a session. Teach to earn more points!')
       return
     }
 
@@ -151,7 +151,7 @@ export default function MenteeBookingCalendar({
           </div>
           {currentUserPoints < 1 && (
             <p className="text-sm text-red-600 mt-2">
-              ⚠️ You need at least 1 point to book. Teach to earn more!
+            You need at least 1 point to book. Teach to earn more!
             </p>
           )}
         </div>

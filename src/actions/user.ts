@@ -65,7 +65,7 @@ export async function getUserLearningGoals(userId: string): Promise<Array<{ id: 
     return userSkills.map(us => ({
       id: us.id, // UserSkill ID (needed for roadmap)
       name: us.skill.name,
-      roadmap: us.roadmap, // ✨ Include cached roadmap
+      roadmap: us.roadmap, 
     }))
   } catch (error) {
     console.error('Error fetching learning goals:', error)
@@ -89,7 +89,7 @@ export async function getUserTeachingSkills(userId: string): Promise<Array<{ id:
       id: us.skill.id,
       name: us.skill.name,
       slug: us.skill.slug,
-      isVerified: us.isVerified, // ✨ Include verification status
+      isVerified: us.isVerified,
     }))
   } catch (error) {
     console.error('Error fetching teaching skills:', error)
@@ -159,7 +159,7 @@ async function ensureSkillExists(skillName: string): Promise<string> {
       counter++
     }
 
-    console.log(`✨ Creating new skill: "${trimmedName}" with slug "${finalSlug}"`)
+    console.log(`Creating new skill: "${trimmedName}" with slug "${finalSlug}"`)
     
     skill = await prisma.skill.create({
       data: {
@@ -179,7 +179,7 @@ export async function updateUserProfile(
   updates: ProfileUpdateData
 ): Promise<ProfileUpdateResult> {
   try {
-    console.log('🔵 Updating user profile:', userId, updates)
+    console.log('Updating user profile:', userId, updates)
     
     // Update basic profile fields
     if (updates.name !== undefined || updates.bio !== undefined || updates.avatarUrl !== undefined) {
@@ -221,7 +221,7 @@ export async function updateUserProfile(
         })
 
         // Generate and save teaching embedding
-        console.log('🤖 Generating teaching embedding...')
+        console.log('Generating teaching embedding...')
         const teachingEmbedding = await generateSkillEmbedding(updates.teachingSkills)
         const vectorString = `[${teachingEmbedding.join(',')}]`
         
@@ -230,7 +230,7 @@ export async function updateUserProfile(
           SET "teachingEmbedding" = ${vectorString}::vector 
           WHERE id = ${userId}
         `
-        console.log('✅ Teaching embedding saved')
+        console.log('Teaching embedding saved')
       } else {
         // Clear embedding if no teaching skills
         await prisma.$executeRaw`
@@ -238,13 +238,13 @@ export async function updateUserProfile(
           SET "teachingEmbedding" = NULL 
           WHERE id = ${userId}
         `
-        console.log('✅ Teaching embedding cleared')
+        console.log('Teaching embedding cleared')
       }
     }
 
     // Update learning goals (WANT)
     if (updates.learningGoals !== undefined) {
-      console.log('📚 Updating learning goals:', updates.learningGoals)
+      console.log('Updating learning goals:', updates.learningGoals)
       
       // Remove old learning goals
       await prisma.userSkill.deleteMany({
@@ -270,7 +270,7 @@ export async function updateUserProfile(
         })
 
         // Generate and save learning embedding
-        console.log('🤖 Generating learning embedding...')
+        console.log('Generating learning embedding...')
         const learningEmbedding = await generateSkillEmbedding(updates.learningGoals)
         const vectorString = `[${learningEmbedding.join(',')}]`
         
@@ -279,7 +279,7 @@ export async function updateUserProfile(
           SET "learningEmbedding" = ${vectorString}::vector 
           WHERE id = ${userId}
         `
-        console.log('✅ Learning embedding saved')
+        console.log('Learning embedding saved')
       } else {
         // Clear embedding if no learning goals
         await prisma.$executeRaw`
@@ -287,7 +287,7 @@ export async function updateUserProfile(
           SET "learningEmbedding" = NULL 
           WHERE id = ${userId}
         `
-        console.log('✅ Learning embedding cleared')
+        console.log('Learning embedding cleared')
       }
     }
 

@@ -1,299 +1,3 @@
-// 'use server'
-
-// import { prisma } from '@/lib/prisma'
-// import { SkillType, Prisma } from '@prisma/client'
-
-// interface MentorMatch {
-//   id: string
-//   email: string
-//   name: string | null
-//   avatarUrl: string | null
-//   bio: string | null
-//   givePoints: number
-//   createdAt: Date
-//   updatedAt: Date
-//   teachingSkills: Array<{
-//     id: string
-//     name: string
-//     slug: string
-//   }>
-//   matchedSkills: string[]
-//   matchScore: number
-// }
-
-// interface RawMentorResult {
-//   id: string
-//   email: string
-//   name: string | null
-//   avatarUrl: string | null
-//   bio: string | null
-//   givePoints: number
-//   createdAt: Date
-//   updatedAt: Date
-//   similarity: number
-// }
-
-// export async function getAutoMatchedMentors(currentUserId: string) {
-//   try {
-//     console.log('🎯 Starting AI-powered auto-match for user:', currentUserId)
-    
-//     // Get current user's learning goals (WANT skills)
-//     const userLearningSkills = await prisma.userSkill.findMany({
-//       where: {
-//         userId: currentUserId,
-//         type: SkillType.WANT,
-//       },
-//       include: {
-//         skill: true,
-//       },
-//     })
-    
-//     const userLearningGoals = userLearningSkills.map(us => us.skill.name)
-//     console.log('📚 User learning goals:', userLearningGoals)
-
-//     // Get current user's learning embedding (use raw query since Prisma doesn't support vector type)
-//     const currentUserRaw = await prisma.$queryRaw<Array<{ hasEmbedding: boolean }>>`
-//       SELECT CASE WHEN "learningEmbedding" IS NOT NULL THEN true ELSE false END as "hasEmbedding"
-//       FROM "User"
-//       WHERE id = ${currentUserId}
-//     `
-
-//     const hasLearningEmbedding = currentUserRaw[0]?.hasEmbedding || false
-
-//     let mentorsWithSkills: any[] = []
-//     let useVectorSearch = false
-
-//     // Try vector similarity search if embedding exists
-//     if (hasLearningEmbedding) {
-//       console.log('🤖 Using AI Vector Similarity Search')
-//       useVectorSearch = true
-      
-//       try {
-//         // Perform cosine similarity search using pgvector
-//         const rawMentors = await prisma.$queryRaw<RawMentorResult[]>`
-//         SELECT 
-//           u.id,
-//           u.email,
-//           u.name,
-//           u."avatarUrl",
-//           u.bio,
-//           u."givePoints",
-//           u."createdAt",
-//           u."updatedAt",
-//           -- ĐÃ SỬA: Lấy Mentor teaching so sánh với Bob learning
-//           1 - (u."teachingEmbedding" <=> u2."learningEmbedding") as similarity
-//         FROM "User" u
-//         CROSS JOIN "User" u2
-//         WHERE u2.id = ${currentUserId}
-//           AND u.id != ${currentUserId}
-//           AND u."teachingEmbedding" IS NOT NULL
-//         ORDER BY similarity DESC
-//         LIMIT 50
-//       `
-
-//         console.log(`✅ Found ${rawMentors.length} mentors via vector search`)
-
-//         // Enrich with teaching skills
-//         mentorsWithSkills = await Promise.all(
-//           rawMentors.map(async (mentor) => {
-//             const skills = await prisma.userSkill.findMany({
-//               where: {
-//                 userId: mentor.id,
-//                 type: SkillType.GIVE,
-//               },
-//               include: {
-//                 skill: true,
-//               },
-//             })
-
-//             const teachingSkills = skills.map(us => ({
-//               id: us.skill.id,
-//               name: us.skill.name,
-//               slug: us.skill.slug,
-//             }))
-
-//             const teachingSkillNames = teachingSkills.map(s => s.name)
-            
-//             // Note: AI Semantic match might not have exact string matches, 
-//             // but we keep this for UI compatibility
-//             const matchedSkills = userLearningGoals.filter(goal =>
-//               teachingSkillNames.includes(goal)
-//             )
-
-//             return {
-//               ...mentor,
-//               teachingSkills,
-//               matchedSkills,
-//               matchScore: mentor.similarity,
-//               similarity: mentor.similarity,
-//             }
-//           })
-//         )
-//       } catch (vectorError) {
-//         console.error('⚠️ Vector search failed, falling back to keyword matching:', vectorError)
-//         useVectorSearch = false
-//       }
-//     }
-
-//     // Fallback: Use keyword matching if no embedding or vector search failed
-//     if (!useVectorSearch || mentorsWithSkills.length === 0) {
-//       console.log('🔤 Using Keyword Matching (fallback)')
-      
-//       const mentors = await prisma.user.findMany({
-//         where: {
-//           id: { not: currentUserId },
-//           skills: {
-//             some: {
-//               type: SkillType.GIVE,
-//             },
-//           },
-//         },
-//         include: {
-//           skills: {
-//             where: {
-//               type: SkillType.GIVE,
-//             },
-//             include: {
-//               skill: true,
-//             },
-//           },
-//         },
-//       })
-
-//       mentorsWithSkills = mentors.map(mentor => {
-//         const teachingSkills = mentor.skills.map(us => ({
-//           id: us.skill.id,
-//           name: us.skill.name,
-//           slug: us.skill.slug,
-//         }))
-
-//         const teachingSkillNames = teachingSkills.map(s => s.name)
-        
-//         const matchedSkills = userLearningGoals.filter(goal => 
-//           teachingSkillNames.includes(goal)
-//         )
-        
-//         const matchScore = matchedSkills.length
-
-//         return {
-//           id: mentor.id,
-//           email: mentor.email,
-//           name: mentor.name,
-//           avatarUrl: mentor.avatarUrl,
-//           bio: mentor.bio,
-//           givePoints: mentor.givePoints,
-//           createdAt: mentor.createdAt,
-//           updatedAt: mentor.updatedAt,
-//           teachingSkills,
-//           matchedSkills,
-//           matchScore,
-//         }
-//       })
-
-//       mentorsWithSkills.sort((a, b) => b.matchScore - a.matchScore)
-//     }
-
-//     // --- ĐÃ THÊM: In bảng điểm AI ra Terminal để theo dõi ---
-//     if (useVectorSearch) {
-//       console.log('\n📊 BẢNG ĐIỂM AI CHẤM CHO NGỮ NGHĨA:')
-//       mentorsWithSkills.forEach(m => {
-//         console.log(`   - Mentor: ${m.name} | Điểm: ${Number(m.similarity || 0).toFixed(4)}`)
-//       })
-//       console.log('-------------------------------------------\n')
-//     }
-//    0.57
-//     const threshold = useVectorSearch ? 0.60 : 0
-    
-//     const bestMatches = mentorsWithSkills.filter(m => 
-//       useVectorSearch ? (m.similarity || 0) > threshold : m.matchScore > 0
-//     )
-    
-//     const otherMentors = mentorsWithSkills.filter(m =>
-//       useVectorSearch ? (m.similarity || 0) <= threshold : m.matchScore === 0
-//     )
-
-//     console.log(`🎯 Auto-match results (${useVectorSearch ? 'AI' : 'Keyword'}):`)
-//     console.log(`   Learning goals: ${userLearningGoals.join(', ')}`)
-//     console.log(`   Best matches: ${bestMatches.length}`)
-//     console.log(`   Other mentors: ${otherMentors.length}`)
-
-//     return {
-//       bestMatches,
-//       otherMentors,
-//       userLearningGoals,
-//     }
-//   } catch (error) {
-//     console.error('Error getting auto-matched mentors:', error)
-//     return {
-//       bestMatches: [],
-//       otherMentors: [],
-//       userLearningGoals: [],
-//     }
-//   }
-// }
-
-// export async function getMentors(excludeUserId?: string) {
-//   try {
-//     const mentors = await prisma.user.findMany({
-//       where: {
-//         ...(excludeUserId && { id: { not: excludeUserId } }),
-//         skills: {
-//           some: {
-//             type: SkillType.GIVE,
-//           },
-//         },
-//       },
-//       include: {
-//         skills: {
-//           where: {
-//             type: SkillType.GIVE,
-//           },
-//           include: {
-//             skill: true,
-//           },
-//         },
-//       },
-//     })
-
-//     return mentors.map(mentor => ({
-//       ...mentor,
-//       teachingSkills: mentor.skills.map(us => us.skill),
-//     }))
-//   } catch (error) {
-//     console.error('Error fetching mentors:', error)
-//     return []
-//   }
-// }
-
-// export async function getMentorById(mentorId: string) {
-//   try {
-//     const mentor = await prisma.user.findUnique({
-//       where: { id: mentorId },
-//       include: {
-//         skills: {
-//           where: {
-//             type: SkillType.GIVE,
-//           },
-//           include: {
-//             skill: true,
-//           },
-//         },
-//       },
-//     })
-
-//     if (!mentor) {
-//       return null
-//     }
-
-//     return {
-//       ...mentor,
-//       teachingSkills: mentor.skills.map(us => us.skill),
-//     }
-//   } catch (error) {
-//     console.error('Error fetching mentor:', error)
-//     return null
-//   }
-// }
 'use server'
 
 import { prisma } from '@/lib/prisma'
@@ -331,7 +35,6 @@ interface RawMentorResult {
   similarity: number
 }
 
-// ✨ REFACTORED: Granular skill-level auto-matching (eliminates vector dilution)
 interface GranularMatchResult {
   id: string
   email: string
@@ -347,7 +50,7 @@ interface GranularMatchResult {
 
 export async function getAutoMatchedMentors(currentUserId: string) {
   try {
-    console.log('🎯 Starting GRANULAR skill-level auto-match for user:', currentUserId)
+    console.log('Starting GRANULAR skill-level auto-match for user:', currentUserId)
     
     // Step 1: Get current user's learning goals (WANT skills)
     const userLearningSkills = await prisma.userSkill.findMany({
@@ -361,11 +64,11 @@ export async function getAutoMatchedMentors(currentUserId: string) {
     })
     
     const userLearningGoalNames = userLearningSkills.map(us => us.skill.name)
-    console.log('📚 User learning goals:', userLearningGoalNames)
+    console.log('User learning goals:', userLearningGoalNames)
 
     // If user has no learning goals, return empty results
     if (userLearningGoalNames.length === 0) {
-      console.log('⚠️ User has no learning goals, returning empty results')
+      console.log('User has no learning goals, returning empty results')
       return {
         bestMatches: [],
         otherMentors: [],
@@ -374,10 +77,8 @@ export async function getAutoMatchedMentors(currentUserId: string) {
     }
 
     // Step 2: Perform GRANULAR skill-level similarity search with CROSS JOIN
-   // Step 2: Perform GRANULAR skill-level similarity search with CROSS JOIN
-   console.log('🤖 Using GRANULAR skill-level embedding comparison...')
+   console.log(' Using GRANULAR skill-level embedding comparison...')
     
-   // 👇 THÊM DÒNG NÀY ĐỂ TẠO MẪU TÌM KIẾM CHO BIO:
    const ilikePatterns = userLearningGoalNames.map(name => `%${name}%`)
    
    const rawMentors = await prisma.$queryRaw<GranularMatchResult[]>`
@@ -436,7 +137,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
      LIMIT 30
    `
 
-    console.log(`✅ Found ${rawMentors.length} mentors via granular skill-level search`)
+    console.log(`Found ${rawMentors.length} mentors via granular skill-level search`)
 
     // Step 3: Enrich with full teaching skills and isVerified status
     const mentorsWithSkills = await Promise.all(
@@ -476,7 +177,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
       })
     )
 
-    console.log('\n📊 GRANULAR SKILL-LEVEL MATCH SCORES:')
+    console.log('\nGRANULAR SKILL-LEVEL MATCH SCORES:')
     mentorsWithSkills.forEach(m => {
       console.log(`   - ${m.name}: ${(m.similarity * 100).toFixed(1)}% (Keyword: ${m.hasKeywordMatch ? 'YES' : 'NO'})`)
     })
@@ -500,7 +201,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
     const bestMatches = [...keywordMatches, ...topSemantic];
     const otherMentors = remainingSemantic;
 
-    console.log(`🎯 Static Auto-Match results (Cutoff: ${STATIC_CUTOFF}):`)
+    console.log(`Static Auto-Match results (Cutoff: ${STATIC_CUTOFF}):`)
     console.log(`   Learning goals: ${userLearningGoalNames.join(', ')}`)
     console.log(`   Best matches: ${bestMatches.length} (keyword OR semantic >= ${STATIC_CUTOFF})`)
     console.log(`   Other mentors: ${otherMentors.length} (fallback list)`)
@@ -511,10 +212,10 @@ export async function getAutoMatchedMentors(currentUserId: string) {
       userLearningGoals: userLearningGoalNames,
     }
   } catch (error) {
-    console.error('❌ Error in granular auto-match:', error)
+    console.error('Error in granular auto-match:', error)
     
     // Fallback: Try keyword matching if granular search fails
-    console.log('⚠️ Falling back to keyword matching...')
+    console.log('Falling back to keyword matching...')
     
     try {
       const userLearningSkills = await prisma.userSkill.findMany({
@@ -592,7 +293,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
       const bestMatches = mentorsWithSkills.filter(m => m.matchScore > 0)
       const otherMentors = mentorsWithSkills.filter(m => m.matchScore === 0)
 
-      console.log(`🔤 Keyword fallback results: ${bestMatches.length} matches`)
+      console.log(`Keyword fallback results: ${bestMatches.length} matches`)
 
       return {
         bestMatches,
@@ -600,7 +301,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
         userLearningGoals: userLearningGoalNames,
       }
     } catch (fallbackError) {
-      console.error('❌ Fallback also failed:', fallbackError)
+      console.error('Fallback also failed:', fallbackError)
       return {
         bestMatches: [],
         otherMentors: [],
@@ -637,7 +338,7 @@ export async function getMentors(excludeUserId?: string) {
       ...mentor,
       teachingSkills: mentor.skills.map(us => ({
         ...us.skill,
-        isVerified: us.isVerified, // ✨ Show verified status
+        isVerified: us.isVerified, 
       })),
     }))
   } catch (error) {
@@ -670,7 +371,7 @@ export async function getMentorById(mentorId: string) {
       ...mentor,
       teachingSkills: mentor.skills.map(us => ({
         ...us.skill,
-        isVerified: us.isVerified, // ✨ Show verified status
+        isVerified: us.isVerified, 
       })),
     }
   } catch (error) {
@@ -679,7 +380,6 @@ export async function getMentorById(mentorId: string) {
   }
 }
 
-// ✨ REFACTORED: Granular skill-level semantic search with hybrid matching
 interface SemanticSearchResult {
   id: string
   email: string
@@ -695,10 +395,10 @@ interface SemanticSearchResult {
 
 export async function searchMentorsSemantically(query: string, currentUserId: string) {
   try {
-    console.log(`🔍 Starting GRANULAR skill-level semantic search for: "${query}"`)
+    console.log(`Starting GRANULAR skill-level semantic search for: "${query}"`)
 
     if (!query || query.trim().length === 0) {
-      console.warn('⚠️ Empty search query, returning empty results')
+      console.warn('Empty search query, returning empty results')
       return {
         mentors: [],
         query: query,
@@ -707,14 +407,14 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
     }
 
     // Step A: Generate embedding for the search query
-    console.log('🤖 Generating query embedding...')
+    console.log('Generating query embedding...')
     const queryEmbedding = await generateEmbedding(query)
     const embeddingString = `[${queryEmbedding.join(',')}]`
 
     // Step B: Perform GRANULAR skill-level similarity search with HYBRID matching
     const queryLower = query.toLowerCase()
     
-    console.log('🎯 Executing hybrid search (keyword + semantic at skill level)...')
+    console.log('Executing hybrid search (keyword + semantic at skill level)...')
     
     const rawResults = await prisma.$queryRaw<SemanticSearchResult[]>`
       SELECT 
@@ -765,13 +465,13 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
         "maxSimilarity" DESC
       LIMIT 50
     `
-    // 👇 THÊM DÒNG MÁY QUÉT NÀY VÀO NGAY SAU KHI CHẠY XONG SQL:
-    console.log("🕵️ MÁY QUÉT ĐIỂM SỐ AI THỰC TẾ:");
+  
+    console.log("MĐIỂM SỐ AI THỰC TẾ:");
     rawResults.forEach(r => {
-      console.log(`   👉 ${r.name}: ${r.maxSimilarity}`);
+      console.log(`  ${r.name}: ${r.maxSimilarity}`);
     });
 
-    console.log(`📊 Hybrid search found ${rawResults.length} mentors`)
+    console.log(`Hybrid search found ${rawResults.length} mentors`)
     console.log(`   - Keyword matches: ${rawResults.filter(r => r.hasKeywordMatch).length}`)
     console.log(`   - Pure semantic matches: ${rawResults.filter(r => !r.hasKeywordMatch).length}`)
 
@@ -816,7 +516,7 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
       })
     )
 
-    console.log(`✅ Granular semantic search complete! Returning ${mentorsWithSkills.length} mentors`)
+    console.log(`Granular semantic search complete! Returning ${mentorsWithSkills.length} mentors`)
 
     return {
       mentors: mentorsWithSkills,
@@ -824,7 +524,7 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
       totalFound: mentorsWithSkills.length,
     }
   } catch (error) {
-    console.error('❌ Error in granular semantic search:', error)
+    console.error('Error in granular semantic search:', error)
     throw new Error('Failed to perform semantic search')
   }
 }

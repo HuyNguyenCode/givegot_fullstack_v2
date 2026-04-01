@@ -3,12 +3,12 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function backfillTransactions() {
-  console.log('🔄 Starting transaction backfill...\n')
+  console.log('Starting transaction backfill...\n')
 
   try {
     // Get all users
     const users = await prisma.user.findMany()
-    console.log(`📊 Found ${users.length} users\n`)
+    console.log(`Found ${users.length} users\n`)
 
     for (const user of users) {
       console.log(`Processing user: ${user.name || user.email}`)
@@ -31,7 +31,7 @@ async function backfillTransactions() {
             bookingId: null,
           },
         })
-        console.log(`  ✅ Created INITIAL_BONUS transaction (+3 points)`)
+        console.log(`  Created INITIAL_BONUS transaction (+3 points)`)
       }
 
       // Get all bookings for this user
@@ -45,7 +45,7 @@ async function backfillTransactions() {
         orderBy: { createdAt: 'asc' },
       })
 
-      console.log(`  📅 Found ${bookings.length} bookings`)
+      console.log(`Found ${bookings.length} bookings`)
 
       for (const booking of bookings) {
         const isMentor = booking.mentorId === user.id
@@ -69,7 +69,7 @@ async function backfillTransactions() {
                 bookingId: booking.id,
               },
             })
-            console.log(`  ✅ Created BOOKING_CREATED transaction (-1 point) for booking ${booking.id.slice(0, 8)}`)
+            console.log(`Created BOOKING_CREATED transaction (-1 point) for booking ${booking.id.slice(0, 8)}`)
           }
 
           // Check for refund if cancelled
@@ -91,7 +91,7 @@ async function backfillTransactions() {
                   bookingId: booking.id,
                 },
               })
-              console.log(`  ✅ Created BOOKING_CANCELLED transaction (+1 point refund) for booking ${booking.id.slice(0, 8)}`)
+              console.log(`Created BOOKING_CANCELLED transaction (+1 point refund) for booking ${booking.id.slice(0, 8)}`)
             }
           }
         } else {
@@ -114,18 +114,18 @@ async function backfillTransactions() {
                   bookingId: booking.id,
                 },
               })
-              console.log(`  ✅ Created BOOKING_COMPLETED transaction (+1 point earned) for booking ${booking.id.slice(0, 8)}`)
+              console.log(`Created BOOKING_COMPLETED transaction (+1 point earned) for booking ${booking.id.slice(0, 8)}`)
             }
           }
         }
       }
 
-      console.log(`  ✅ Completed user: ${user.name || user.email}\n`)
+      console.log(`Completed user: ${user.name || user.email}\n`)
     }
 
-    console.log('✅ Transaction backfill complete!')
+    console.log('Transaction backfill complete!')
   } catch (error) {
-    console.error('❌ Error during backfill:', error)
+    console.error('Error during backfill:', error)
     throw error
   } finally {
     await prisma.$disconnect()
@@ -134,10 +134,10 @@ async function backfillTransactions() {
 
 backfillTransactions()
   .then(() => {
-    console.log('\n🎉 All done! Transaction history is now complete.')
+    console.log('\nAll done! Transaction history is now complete.')
     process.exit(0)
   })
   .catch((error) => {
-    console.error('❌ Backfill failed:', error)
+    console.error('Backfill failed:', error)
     process.exit(1)
   })

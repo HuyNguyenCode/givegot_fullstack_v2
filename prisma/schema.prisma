@@ -108,36 +108,36 @@ model UserSkill {
   @@unique([userId, skillId, type]) 
 }
 
-// 3. Bảng AvailableSlot (✨ NEW: Calendar-based availability)
+// 3. Bảng AvailableSlot ( NEW: Calendar-based availability)
 model AvailableSlot {
   id        String    @id @default(uuid())
   mentorId  String
   
   startTime DateTime
   endTime   DateTime
-  isBooked  Boolean   @default(false) // ✨ CRITICAL: Concurrency control flag
+  isBooked  Boolean   @default(false) //  CRITICAL: Concurrency control flag
   
   mentor    User      @relation(fields: [mentorId], references: [id], onDelete: Cascade)
-  booking   Booking?  // ✨ 1-to-1: One slot can only have one booking
+  booking   Booking?  //  1-to-1: One slot can only have one booking
   
   createdAt DateTime  @default(now())
   
-  // ✨ Prevent overlapping slots for the same mentor
+  //  Prevent overlapping slots for the same mentor
   @@unique([mentorId, startTime, endTime])
-  @@index([mentorId, isBooked]) // ✨ Optimize queries for available slots
+  @@index([mentorId, isBooked]) //  Optimize queries for available slots
 }
 
-// 4. Bảng Booking (✨ UPDATED: Now references AvailableSlot)
+// 4. Bảng Booking ( UPDATED: Now references AvailableSlot)
 model Booking {
   id        String        @id @default(uuid())
   
   mentorId  String
   menteeId  String
-  slotId    String?       @unique // ✨ NEW: Link to the booked slot (nullable for backward compatibility)
+  slotId    String?       @unique //  NEW: Link to the booked slot (nullable for backward compatibility)
   
   mentor    User          @relation("MentorBooking", fields: [mentorId], references: [id])
   mentee    User          @relation("MenteeBooking", fields: [menteeId], references: [id])
-  slot      AvailableSlot? @relation(fields: [slotId], references: [id]) // ✨ NEW: 1-to-1 relation
+  slot      AvailableSlot? @relation(fields: [slotId], references: [id]) //  NEW: 1-to-1 relation
   
   startTime DateTime
   endTime   DateTime
@@ -147,7 +147,7 @@ model Booking {
   createdAt DateTime      @default(now())
 
   review    Review?
-  transactions TransactionLog[] // ✨ NEW: Audit trail
+  transactions TransactionLog[] //  NEW: Audit trail
 }
 
 // 5. Bảng Review
@@ -175,7 +175,7 @@ enum BookingStatus {
   CANCELLED 
 }
 
-// 6. NextAuth Models (✨ NEW: Authentication)
+// 6. NextAuth Models ( NEW: Authentication)
 model Account {
   id                String  @id @default(uuid())
   userId            String
@@ -211,7 +211,7 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// 7. TransactionLog (✨ NEW: Time-Banking Audit Trail)
+// 7. TransactionLog ( NEW: Time-Banking Audit Trail)
 model TransactionLog {
   id        String              @id @default(uuid())
   userId    String
@@ -236,7 +236,7 @@ enum TransactionType {
   ADMIN_ADJUSTMENT    // Manual adjustment
 }
 
-// 8. Report Model (✨ NEW: User reporting system)
+// 8. Report Model ( NEW: User reporting system)
 model Report {
   id             String       @id @default(uuid())
   reporterId     String

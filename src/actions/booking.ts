@@ -10,16 +10,14 @@ interface BookingResult {
   bookingId?: string
 }
 
-// ✨ NEW: Atomic slot-based booking with concurrency control
 export async function bookAvailableSlot(
   slotId: string,
   menteeId: string,
   note?: string
 ): Promise<BookingResult> {
   try {
-    console.log('🔒 Attempting atomic slot booking:', { slotId, menteeId })
+    console.log('Attempting atomic slot booking:', { slotId, menteeId })
 
-    // ✨ CRITICAL: Use transaction with READ COMMITTED isolation level
     // This ensures that concurrent transactions see consistent data
     const result = await prisma.$transaction(
       async (tx) => {
@@ -81,7 +79,7 @@ export async function bookAvailableSlot(
           },
         })
 
-        // ✨ Step 6a: Log transaction (AUDIT TRAIL)
+        // Step 6a: Log transaction (AUDIT TRAIL)
         await tx.transactionLog.create({
           data: {
             userId: menteeId,
@@ -97,8 +95,8 @@ export async function bookAvailableSlot(
           data: { isBooked: true },
         })
 
-        console.log('✅ Slot booked successfully:', booking.id)
-        console.log('📝 Transaction logged: -1 point (BOOKING_CREATED)')
+        console.log('Slot booked successfully:', booking.id)
+        console.log('Transaction logged: -1 point (BOOKING_CREATED)')
 
         return booking
       },
@@ -117,17 +115,17 @@ export async function bookAvailableSlot(
 
     return {
       success: true,
-      message: '✅ Slot booked! 1 GivePoint held. Waiting for mentor to accept.',
+      message: 'Slot booked! 1 GivePoint held. Waiting for mentor to accept.',
       bookingId: result.id,
     }
   } catch (error: any) {
-    console.error('❌ Error booking slot:', error)
+    console.error('Error booking slot:', error)
 
     // Handle specific error cases
     if (error.message === 'SLOT_TAKEN') {
       return {
         success: false,
-        message: '⚠️ Oops! Someone just booked this slot. Please choose another time.',
+        message: 'Oops! Someone just booked this slot. Please choose another time.',
       }
     }
 
@@ -156,7 +154,7 @@ export async function createBooking(
   note?: string
 ): Promise<BookingResult> {
   try {
-    console.log('🔵 Creating booking:', { mentorId, menteeId, startTime, endTime, note })
+    console.log('Creating booking:', { mentorId, menteeId, startTime, endTime, note })
     
     const mentee = await prisma.user.findUnique({ where: { id: menteeId } })
     const mentor = await prisma.user.findUnique({ where: { id: mentorId } })
@@ -279,7 +277,7 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
           where: { id: booking.slotId },
           data: { isBooked: false },
         })
-        console.log(`🔓 Slot ${booking.slotId} released`)
+        console.log(`Slot ${booking.slotId} released`)
       }
 
       // Refund 1 point to mentee
@@ -288,7 +286,7 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
         data: { givePoints: { increment: 1 } },
       })
 
-      // ✨ Log refund transaction (AUDIT TRAIL)
+
       await tx.transactionLog.create({
         data: {
           userId: booking.menteeId,
@@ -297,7 +295,7 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
           bookingId,
         },
       })
-      console.log('📝 Transaction logged: +1 point refund (BOOKING_DECLINED)')
+      console.log('Transaction logged: +1 point refund (BOOKING_DECLINED)')
     })
 
     revalidatePath('/')
@@ -322,7 +320,7 @@ export async function completeSessionWithReview(
   comment?: string
 ): Promise<BookingResult> {
   try {
-    console.log('🔵 Complete session with review:', { bookingId, menteeId, rating, comment })
+    console.log('Complete session with review:', { bookingId, menteeId, rating, comment })
     
     const booking = await prisma.booking.findUnique({ 
       where: { id: bookingId },
@@ -382,7 +380,7 @@ export async function completeSessionWithReview(
         data: { givePoints: { increment: 1 } },
       })
 
-      // ✨ 4. Log transaction (AUDIT TRAIL)
+      // 4. Log transaction (AUDIT TRAIL)
       await tx.transactionLog.create({
         data: {
           userId: booking.mentorId,
@@ -393,9 +391,9 @@ export async function completeSessionWithReview(
       })
     })
 
-    console.log('📝 Transaction logged: +1 point to mentor (BOOKING_COMPLETED)')
+    console.log('Transaction logged: +1 point to mentor (BOOKING_COMPLETED)')
 
-    console.log('🔵 Review added, booking completed, point transferred')
+    console.log('Review added, booking completed, point transferred')
 
     revalidatePath('/')
     revalidatePath('/dashboard')
@@ -445,13 +443,13 @@ export async function cancelBooking(bookingId: string, userId: string): Promise<
         data: { status: BookingStatus.CANCELLED },
       })
 
-      // ✨ NEW: Release the slot (make it available again)
+  
       if (booking.slotId) {
         await tx.availableSlot.update({
           where: { id: booking.slotId },
           data: { isBooked: false },
         })
-        console.log(`🔓 Slot ${booking.slotId} released and available again`)
+        console.log(`Slot ${booking.slotId} released and available again`)
       }
 
       // Refund point to mentee if booking was PENDING or CONFIRMED
@@ -461,7 +459,6 @@ export async function cancelBooking(bookingId: string, userId: string): Promise<
           data: { givePoints: { increment: 1 } },
         })
 
-        // ✨ Log refund transaction (AUDIT TRAIL)
         await tx.transactionLog.create({
           data: {
             userId: booking.menteeId,
@@ -470,7 +467,7 @@ export async function cancelBooking(bookingId: string, userId: string): Promise<
             bookingId,
           },
         })
-        console.log('📝 Transaction logged: +1 point refund (BOOKING_CANCELLED)')
+        console.log('Transaction logged: +1 point refund (BOOKING_CANCELLED)')
       }
     })
 
@@ -492,7 +489,7 @@ export async function cancelBooking(bookingId: string, userId: string): Promise<
 
 export async function getMyBookings(userId: string) {
   try {
-    console.log('🔵 Getting bookings for user:', userId)
+    console.log('Getting bookings for user:', userId)
     
     const bookings = await prisma.booking.findMany({
       where: {
@@ -511,7 +508,7 @@ export async function getMyBookings(userId: string) {
     const asMentor = bookings.filter(b => b.mentorId === userId)
     const asMentee = bookings.filter(b => b.menteeId === userId)
     
-    console.log('🔵 As mentor:', asMentor.length, 'As mentee:', asMentee.length)
+    console.log('As mentor:', asMentor.length, 'As mentee:', asMentee.length)
     
     return {
       asMentor,

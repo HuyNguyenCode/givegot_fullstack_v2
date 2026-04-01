@@ -214,7 +214,6 @@ export default function MentorProfilePage({ params }: { params: Promise<{ mentor
               )}
             </section>
 
-            {/* ✨ Calendar-based booking */}
             {currentUser && currentUser.id !== mentor.id && (
               <section className="border-t border-gray-200 pt-8">
                 <MenteeBookingCalendar

@@ -92,15 +92,14 @@ function DiscoverContent() {
             })
           )
           
-          // Chỉ update UI nếu component chưa bị hủy hoặc chưa có query mới đè lên
           if (!isCancelled) {
             setBestMatches(mentorsWithRatings)
             setOtherMentors([])
             setUserGoals([]) // Not applicable for search
-            console.log(`✅ Semantic search found ${mentorsWithRatings.length} relevant mentors`)
+            console.log(`Semantic search found ${mentorsWithRatings.length} relevant mentors`)
           }
         } catch (error) {
-          console.error('❌ Semantic search failed:', error)
+          console.error('Semantic search failed:', error)
           if (!isCancelled) {
             setBestMatches([])
             setOtherMentors([])
@@ -108,7 +107,7 @@ function DiscoverContent() {
         }
       } else {
         // No search query - use default AI matching based on user profile
-        console.log('🎯 Loading default AI-matched mentors')
+        console.log('Loading default AI-matched mentors')
         
         try {
           const result = await getAutoMatchedMentors(currentUser.id)
@@ -133,7 +132,7 @@ function DiscoverContent() {
             setUserGoals(result.userLearningGoals)
           }
         } catch (error) {
-          console.error('❌ Auto match failed:', error)
+          console.error('Auto match failed:', error)
           if (!isCancelled) {
             setBestMatches([])
             setOtherMentors([])
@@ -148,7 +147,6 @@ function DiscoverContent() {
 
     loadMentors()
 
-    // BÁO HỦY: Khi debouncedSearchQuery thay đổi, effect cũ sẽ bị báo tử
     return () => {
       isCancelled = true
     }

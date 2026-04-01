@@ -74,7 +74,7 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
 
     if (result.success) {
       await refreshUser()
-      alert(`✅ ${result.message}`)
+      alert(`${result.message}`)
       router.push('/dashboard')
     } else {
       setError(result.message)

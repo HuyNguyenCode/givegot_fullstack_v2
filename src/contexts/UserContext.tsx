@@ -32,7 +32,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const users = await getAllUsers()
         setAllUsers(users)
         
-        // ✨ DevBar Mode: Use localStorage override
+        // DevBar Mode: Use localStorage override
         if (devBarEnabled) {
           const savedUserId = localStorage.getItem('mockUserId')
           
@@ -49,7 +49,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('mockUserId', users[0].id)
           }
         } else {
-          // ✨ Production Mode: Use NextAuth session
+          // Production Mode: Use NextAuth session
           // In production, the session will be fetched from NextAuth
           // For now, we'll fetch from server action that reads the session
           const response = await fetch('/api/auth/session')
@@ -87,7 +87,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   const switchUser = async (userId: string) => {
-    // ✨ DevBar override: Switch user in dev mode
+    // DevBar override: Switch user in dev mode
     if (!isDevMode) {
       console.warn('User switching is only available in dev mode')
       return

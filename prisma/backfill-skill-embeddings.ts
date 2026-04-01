@@ -4,7 +4,7 @@ import { generateSkillEmbedding } from '../src/lib/gemini'
 const prisma = new PrismaClient()
 
 async function backfillSkillEmbeddings() {
-  console.log('🚀 Starting skill embedding backfill...')
+  console.log('Starting skill embedding backfill...')
 
   try {
     // Get all skills from database
@@ -12,7 +12,7 @@ async function backfillSkillEmbeddings() {
       orderBy: { name: 'asc' },
     })
 
-    console.log(`📚 Found ${skills.length} skills in database`)
+    console.log(`Found ${skills.length} skills in database`)
 
     let updated = 0
     let skipped = 0
@@ -28,13 +28,13 @@ async function backfillSkillEmbeddings() {
         `
 
         if (hasEmbedding[0]?.hasEmbedding) {
-          console.log(`⏭️  Skipping "${skill.name}" (already has embedding)`)
+          console.log(`Skipping "${skill.name}" (already has embedding)`)
           skipped++
           continue
         }
 
         // Generate embedding for this skill
-        console.log(`🤖 Generating embedding for: "${skill.name}"`)
+        console.log(`Generating embedding for: "${skill.name}"`)
         const embedding = await generateSkillEmbedding([skill.name])
         const vectorString = `[${embedding.join(',')}]`
 
@@ -45,24 +45,24 @@ async function backfillSkillEmbeddings() {
           WHERE id = ${skill.id}
         `
 
-        console.log(`✅ Updated "${skill.name}" with embedding`)
+        console.log(`Updated "${skill.name}" with embedding`)
         updated++
 
         // Add delay to avoid rate limiting (adjust based on your Gemini API quota)
         await new Promise(resolve => setTimeout(resolve, 500))
       } catch (skillError) {
-        console.error(`❌ Error processing skill "${skill.name}":`, skillError)
+        console.error(`Error processing skill "${skill.name}":`, skillError)
         errors++
       }
     }
 
-    console.log('\n📊 Backfill Summary:')
-    console.log(`   ✅ Updated: ${updated} skills`)
-    console.log(`   ⏭️  Skipped: ${skipped} skills (already had embeddings)`)
-    console.log(`   ❌ Errors: ${errors} skills`)
-    console.log('\n🎉 Skill embedding backfill complete!')
+    console.log('\nBackfill Summary:')
+    console.log(`   Updated: ${updated} skills`)
+    console.log(`   Skipped: ${skipped} skills (already had embeddings)`)
+    console.log(`   Errors: ${errors} skills`)
+    console.log('\nSkill embedding backfill complete!')
   } catch (error) {
-    console.error('❌ Fatal error during backfill:', error)
+    console.error('Fatal error during backfill:', error)
     throw error
   } finally {
     await prisma.$disconnect()
@@ -72,10 +72,10 @@ async function backfillSkillEmbeddings() {
 // Run the backfill
 backfillSkillEmbeddings()
   .then(() => {
-    console.log('✅ Script completed successfully')
+    console.log('Script completed successfully')
     process.exit(0)
   })
   .catch((error) => {
-    console.error('❌ Script failed:', error)
+    console.error('Script failed:', error)
     process.exit(1)
   })

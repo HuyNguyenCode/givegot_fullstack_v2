@@ -19,13 +19,12 @@ export async function addMentorSlots(
   slots: SlotInput[]
 ): Promise<SlotResult> {
   try {
-    console.log(`📅 Adding ${slots.length} slots for mentor:`, mentorId)
+    console.log(`Adding ${slots.length} slots for mentor:`, mentorId)
 
     if (slots.length === 0) {
       return { success: false, message: 'No slots provided' }
     }
 
-    // Ép kiểu Date object chuẩn, diệt gọn lỗi Overlapping ảo của chuỗi String
     const processedSlots = slots.map(s => ({
       startTime: new Date(s.startTime),
       endTime: new Date(s.endTime)
@@ -69,7 +68,7 @@ export async function addMentorSlots(
       })),
     })
 
-    console.log(`✅ Created ${result.count} available slots`)
+    console.log(`Created ${result.count} available slots`)
 
     revalidatePath('/dashboard')
     revalidatePath(`/mentor/${mentorId}`)
@@ -80,7 +79,7 @@ export async function addMentorSlots(
       createdCount: result.count,
     }
   } catch (error) {
-    console.error('❌ Error adding mentor slots:', error)
+    console.error('Error adding mentor slots:', error)
     return { success: false, message: 'Failed to add slots.' }
   }
 }
@@ -94,7 +93,7 @@ export async function getAvailableSlots(mentorId: string) {
       where: {
         mentorId,
         isBooked: false,
-        startTime: { gte: now }, // Mentee chỉ được thấy slot tương lai để đặt
+        startTime: { gte: now },
       },
       orderBy: { startTime: 'asc' },
     })
@@ -106,9 +105,6 @@ export async function getAllMentorSlots(mentorId: string) {
   try {
     noStore(); 
     
-    // 🌟 FIX LỖI TÀNG HÌNH: 
-    // Cho phép lấy lùi lại 7 ngày trước để UI hiển thị đủ tất cả slot trong tuần,
-    // Tránh bị server nuốt mất slot do lệch vài tiếng đồng hồ.
     const startLimit = new Date();
     startLimit.setDate(startLimit.getDate() - 7);
 
@@ -129,11 +125,11 @@ export async function getAllMentorSlots(mentorId: string) {
       orderBy: { startTime: 'asc' },
     })
 
-    console.log(`📅 Found ${slots.length} total slots for mentor ${mentorId}`)
+    console.log(`Found ${slots.length} total slots for mentor ${mentorId}`)
 
     return slots
   } catch (error) {
-    console.error('❌ Error fetching mentor slots:', error)
+    console.error('Error fetching mentor slots:', error)
     return []
   }
 }

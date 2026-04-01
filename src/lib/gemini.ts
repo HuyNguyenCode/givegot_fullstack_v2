@@ -5,23 +5,22 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
     if (!text || text.trim().length === 0) {
-      console.warn('⚠️ Empty text provided for embedding generation')
+      console.warn('Empty text provided for embedding generation')
       return new Array(768).fill(0)
     }
 
-    console.log('🤖 Generating embedding for:', text.substring(0, 100))
+    console.log('Generating embedding for:', text.substring(0, 100))
     
     const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' })
     const result = await model.embedContent(text)
     
-    // ĐÃ SỬA: Lấy mảng gốc (3072 số) và dùng slice cắt đúng 768 số đầu tiên
     const embedding = result.embedding.values.slice(0, 768)
 
-    console.log(`✅ Generated embedding and sliced to ${embedding.length} dimensions`)
+    console.log(`Generated embedding and sliced to ${embedding.length} dimensions`)
     
     return embedding
   } catch (error) {
-    console.error('❌ Error generating embedding:', error)
+    console.error('Error generating embedding:', error)
     throw new Error('Failed to generate embedding')
   }
 }
@@ -41,10 +40,9 @@ export async function generateSkillEmbedding(skills: string[]): Promise<number[]
     const textToEmbed = skills.join(', ')
     const result = await model.embedContent(textToEmbed)
     
-    // --- GỌT XUỐNG 768 CHIỀU Ở ĐÂY ---
     const embedding = result.embedding.values.slice(0, 768)
     
-    console.log(`📏 Kích thước Vector vừa nặn: ${embedding.length} chiều!`)
+    console.log(`Kích thước Vector vừa nặn: ${embedding.length} chiều!`)
     return embedding
   } catch (error) {
     console.error("Lỗi khi tạo Embedding:", error)
@@ -67,7 +65,7 @@ export interface RoadmapStep {
 
 export async function generateLearningRoadmap(skillName: string): Promise<RoadmapStep[]> {
   try {
-    console.log(`🗺️ Generating learning roadmap for skill: ${skillName}`)
+    console.log(`Generating learning roadmap for skill: ${skillName}`)
     
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
     
@@ -125,7 +123,7 @@ Now generate the roadmap for "${skillName}". Return ONLY the JSON array, nothing
     const response = await result.response
     let text = response.text()
 
-    console.log('📄 Raw AI roadmap response:', text.substring(0, 300))
+    console.log('Raw AI roadmap response:', text.substring(0, 300))
 
     // Clean up response - remove markdown code blocks if present
     text = text.replace(/```json/gi, '').replace(/```/gi, '').trim()
@@ -133,7 +131,7 @@ Now generate the roadmap for "${skillName}". Return ONLY the JSON array, nothing
     // Find JSON array in the response
     const jsonMatch = text.match(/\[[\s\S]*\]/)
     if (!jsonMatch) {
-      console.error('❌ No JSON array found in roadmap response')
+      console.error('No JSON array found in roadmap response')
       throw new Error('AI did not return valid JSON roadmap')
     }
 
@@ -157,11 +155,11 @@ Now generate the roadmap for "${skillName}". Return ONLY the JSON array, nothing
       }
     }
 
-    console.log(`✅ Generated ${roadmap.length} valid roadmap steps`)
+    console.log(`Generated ${roadmap.length} valid roadmap steps`)
 
     return roadmap
   } catch (error) {
-    console.error('❌ Error generating roadmap:', error)
+    console.error('Error generating roadmap:', error)
     throw new Error('Failed to generate learning roadmap')
   }
 }
@@ -198,7 +196,7 @@ Generate the 5 questions now. Return ONLY the JSON array, nothing else.`
     let text = response.text()
 
     
-    console.log('📄 Raw AI response:', text.substring(0, 200))
+    console.log('Raw AI response:', text.substring(0, 200))
     
     // Clean up response - remove markdown code blocks if present
     text = text.replace(/```json/gi, '').replace(/```/gi, '').trim()
@@ -212,7 +210,7 @@ Generate the 5 questions now. Return ONLY the JSON array, nothing else.`
     // Find JSON array in the response
     const jsonMatch = text.match(/\[[\s\S]*\]/)
     if (!jsonMatch) {
-      console.error('❌ No JSON array found in response')
+      console.error('No JSON array found in response')
       throw new Error('AI did not return valid JSON')
     }
     
@@ -230,11 +228,11 @@ Generate the 5 questions now. Return ONLY the JSON array, nothing else.`
       }
     }
     
-    console.log(`✅ Generated ${questions.length} valid quiz questions`)
+    console.log(`Generated ${questions.length} valid quiz questions`)
     
     return questions
   } catch (error) {
-    console.error('❌ Error generating quiz:', error)
+    console.error('Error generating quiz:', error)
     throw new Error('Failed to generate quiz')
   }
 }

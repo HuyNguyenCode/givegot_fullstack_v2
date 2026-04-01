@@ -12,7 +12,7 @@ interface QuizResult {
 
 export async function getQuizForSkill(skillName: string): Promise<QuizResult> {
   try {
-    console.log(`🎯 Getting quiz for skill: ${skillName}`)
+    console.log(`Getting quiz for skill: ${skillName}`)
     
     const questions = await generateSkillQuiz(skillName)
     
@@ -36,7 +36,7 @@ interface VerifyResult {
 
 export async function verifyUserSkill(userSkillId: string): Promise<VerifyResult> {
   try {
-    console.log(`✅ Verifying user skill: ${userSkillId}`)
+    console.log(`Verifying user skill: ${userSkillId}`)
     
     // Update the UserSkill to mark as verified
     await prisma.userSkill.update({
@@ -48,7 +48,7 @@ export async function verifyUserSkill(userSkillId: string): Promise<VerifyResult
     revalidatePath('/profile')
     revalidatePath('/')
     
-    console.log(`🎉 User skill ${userSkillId} verified successfully!`)
+    console.log(`User skill ${userSkillId} verified successfully!`)
     
     return {
       success: true,

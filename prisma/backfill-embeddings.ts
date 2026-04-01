@@ -13,7 +13,7 @@ async function generateEmbedding(text: string): Promise<number[]> {
   }
 
   try {
-    console.log(`   🤖 Generating embedding for: "${text.substring(0, 60)}..."`)
+    console.log(`Generating embedding for: "${text.substring(0, 60)}..."`)
     
     const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' })
     const result = await model.embedContent(text)
@@ -22,13 +22,13 @@ async function generateEmbedding(text: string): Promise<number[]> {
 
     return embedding
   } catch (error) {
-    console.error('   ❌ Error generating embedding:', error)
+    console.error('   Error generating embedding:', error)
     throw error
   }
 }
 
 async function main() {
-  console.log('🌟 Starting Embedding Backfill Process...\n')
+  console.log('Starting Embedding Backfill Process...\n')
 
   // Get all users
   const users = await prisma.user.findMany({
@@ -41,7 +41,7 @@ async function main() {
     },
   })
 
-  console.log(`📊 Found ${users.length} users to process\n`)
+  console.log(`Found ${users.length} users to process\n`)
 
   let processed = 0
   let skipped = 0
@@ -63,8 +63,8 @@ async function main() {
         .filter(us => us.type === SkillType.WANT)
         .map(us => us.skill.name)
 
-      console.log(`🎓 Teaching Skills: [${teachingSkills.join(', ') || 'None'}]`)
-      console.log(`📚 Learning Goals: [${learningGoals.join(', ') || 'None'}]`)
+      console.log(`Teaching Skills: [${teachingSkills.join(', ') || 'None'}]`)
+      console.log(`Learning Goals: [${learningGoals.join(', ') || 'None'}]`)
 
       let teachingUpdated = false
       let learningUpdated = false
@@ -81,10 +81,10 @@ async function main() {
           WHERE id = ${user.id}
         `
         
-        console.log(`   ✅ Teaching embedding saved (768 dimensions)`)
+        console.log(`Teaching embedding saved (768 dimensions)`)
         teachingUpdated = true
       } else {
-        console.log(`   ⏭️  No teaching skills - skipping teaching embedding`)
+        console.log(`    No teaching skills - skipping teaching embedding`)
       }
 
       // Generate and save learning embedding
@@ -99,10 +99,10 @@ async function main() {
           WHERE id = ${user.id}
         `
         
-        console.log(`   ✅ Learning embedding saved (768 dimensions)`)
+        console.log(`Learning embedding saved (768 dimensions)`)
         learningUpdated = true
       } else {
-        console.log(`   ⏭️  No learning goals - skipping learning embedding`)
+        console.log(`    No learning goals - skipping learning embedding`)
       }
 
       if (teachingUpdated || learningUpdated) {
@@ -115,20 +115,20 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 1000))
 
     } catch (error) {
-      console.error(`   ❌ Failed to process ${user.name}:`, error)
+      console.error(`   Failed to process ${user.name}:`, error)
       errors++
     }
   }
 
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('🎉 Embedding Backfill Complete!')
+  console.log('Embedding Backfill Complete!')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log(`\n📊 Summary:`)
-  console.log(`   ✅ Processed: ${processed} users`)
-  console.log(`   ⏭️ Skipped: ${skipped} users (no skills)`)
-  console.log(`   ❌ Errors: ${errors} users`)
-  console.log(`\n🚀 Your database now has AI-powered embeddings!`)
-  console.log(`\n💡 Next: Restart your dev server and test the auto-match feature.`)
+  console.log(`\nSummary:`)
+  console.log(`Processed: ${processed} users`)
+  console.log(`   Skipped: ${skipped} users (no skills)`)
+  console.log(`   Errors: ${errors} users`)
+  console.log(`\nYour database now has AI-powered embeddings!`)
+  console.log(`\nNext: Restart your dev server and test the auto-match feature.`)
 }
 
 main()
@@ -136,7 +136,7 @@ main()
     await prisma.$disconnect()
   })
   .catch(async (e) => {
-    console.error('❌ Fatal error during backfill:', e)
+    console.error('Fatal error during backfill:', e)
     await prisma.$disconnect()
     process.exit(1)
   })

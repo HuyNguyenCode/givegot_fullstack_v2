@@ -113,7 +113,7 @@ export default function ProfilePage() {
     // Get UserSkill ID
     const userSkill = await getUserSkillDetails(currentUser.id, skillName, 'GIVE')
     if (!userSkill) {
-      alert(`⚠️ Vui lòng kéo xuống dưới cùng và bấm "Save Profile" để lưu kỹ năng [${skillName}] vào hệ thống trước khi làm bài Sát hạch nhé!`)
+      alert(`Vui lòng kéo xuống dưới cùng và bấm "Save Profile" để lưu kỹ năng [${skillName}] vào hệ thống trước khi làm bài Sát hạch nhé!`)
       // alert('Không tìm thấy kỹ năng này')
       setIsLoadingQuiz(false)
       return
@@ -275,7 +275,7 @@ export default function ProfilePage() {
       setShowSuccessToast(true)
       setTimeout(() => setShowSuccessToast(false), 4000)
     } else {
-      alert(`❌ ${result.message}`)
+      alert(`${result.message}`)
     }
 
     setIsSaving(false)

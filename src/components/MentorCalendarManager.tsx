@@ -122,7 +122,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
 
   const handleSaveSlots = async () => {
     if (selectedSlots.size === 0) {
-      alert('⚠️ Please select at least one time slot')
+      alert('Please select at least one time slot')
       return
     }
 
@@ -138,7 +138,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
       setSelectedSlots(new Set())
       await loadExistingSlots()
     } else {
-      alert(`❌ ${result.message}`)
+      alert(`${result.message}`)
     }
 
     setIsSaving(false)
@@ -154,7 +154,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
     if (result.success) {
       await loadExistingSlots()
     } else {
-      alert(`❌ ${result.message}`)
+      alert(`${result.message}`)
     }
   }
 

@@ -12,7 +12,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🔧 Starting migration: Approve all existing skills...\n')
+  console.log('Starting migration: Approve all existing skills...\n')
 
   // Update all skills that don't have a status or have PENDING status to APPROVED
   const result = await prisma.skill.updateMany({
@@ -27,7 +27,7 @@ async function main() {
     }
   })
 
-  console.log(`✅ Updated ${result.count} skills to APPROVED status`)
+  console.log(`Updated ${result.count} skills to APPROVED status`)
   
   // Show summary
   const statusCounts = await prisma.skill.groupBy({
@@ -35,18 +35,18 @@ async function main() {
     _count: true
   })
 
-  console.log('\n📊 Current skill status breakdown:')
+  console.log('\nCurrent skill status breakdown:')
   statusCounts.forEach(stat => {
     console.log(`   - ${stat.status}: ${stat._count} skills`)
   })
 
-  console.log('\n✅ Migration complete! All existing skills are now approved.')
+  console.log('\nMigration complete! All existing skills are now approved.')
   console.log('   New skills added by users will require admin approval.\n')
 }
 
 main()
   .catch((error) => {
-    console.error('❌ Migration failed:', error)
+    console.error('Migration failed:', error)
     process.exit(1)
   })
   .finally(async () => {
