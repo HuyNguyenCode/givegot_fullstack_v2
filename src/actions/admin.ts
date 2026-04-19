@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { UserRole, ReportStatus, SkillStatus } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from './notifications'
 
 // ==========================================
 // ADMIN STATISTICS
@@ -114,6 +115,16 @@ export async function adjustUserPoints(userId: string, amount: number, reason: s
         type: 'ADMIN_ADJUSTMENT'
       }
     })
+
+    // Notify user about admin point adjustment
+    const sign = amount >= 0 ? `+${amount}` : `${amount}`
+    await createNotification(
+      userId,
+      'GivePoints Updated',
+      `An admin has adjusted your balance: ${sign} GivePoints. Reason: ${reason}. New balance: ${user.givePoints} pts.`,
+      'POINTS',
+      '/history'
+    )
 
     revalidatePath('/admin/users')
     return { 
@@ -301,19 +312,52 @@ export async function getPendingSkills() {
 
 export async function approveSkill(skillId: string) {
   try {
-    await prisma.skill.update({
+    const skill = await prisma.skill.update({
       where: { id: skillId },
-      data: {
-        status: SkillStatus.APPROVED
-      }
+      data: { status: SkillStatus.APPROVED },
     })
 
+    // Matching notification: find users who WANT this skill and notify them
+    await notifyMatchingUsers(skill.id, skill.name)
+
     revalidatePath('/admin/skills')
-    revalidatePath('/discover') // Refresh discover page
+    revalidatePath('/discover')
     return { success: true, message: 'Skill approved successfully' }
   } catch (error) {
     console.error('Failed to approve skill:', error)
     return { success: false, message: 'Failed to approve skill' }
+  }
+}
+
+/**
+ * Notifies users who have `skillId` as a WANT skill that a new mentor
+ * teaching that skill is now available (triggered on skill approval).
+ */
+async function notifyMatchingUsers(skillId: string, skillName: string): Promise<void> {
+  try {
+    // Users who want to learn this skill
+    const wantUsers = await prisma.userSkill.findMany({
+      where: { skillId, type: 'WANT' },
+      select: { userId: true },
+    })
+
+    // Users who give (teach) this skill — check if there is at least one mentor
+    const giveCount = await prisma.userSkill.count({ where: { skillId, type: 'GIVE' } })
+    if (giveCount === 0) return // No mentors to match with yet
+
+    await Promise.all(
+      wantUsers.map(({ userId }) =>
+        createNotification(
+          userId,
+          'New Match Found!',
+          `The skill "${skillName}" has been approved and mentors are available. Check out the Discover page to book a session!`,
+          'MATCHING',
+          '/discover'
+        )
+      )
+    )
+  } catch (error) {
+    console.error('[Notification] Failed to send matching notifications:', error)
   }
 }
 

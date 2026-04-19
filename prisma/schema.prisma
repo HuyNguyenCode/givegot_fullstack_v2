@@ -57,6 +57,7 @@ model User {
   // NextAuth relations
   accounts        Account[]
   sessions        Session[]
+  notifications   Notification[]
 }
 
 // Admin: User Role Enum
@@ -257,4 +258,27 @@ model Report {
 enum ReportStatus {
   PENDING
   RESOLVED
+}
+
+// 9. Notification Model (NEW: In-app notification system)
+enum NotificationType {
+  BOOKING
+  MATCHING
+  POINTS
+  SYSTEM
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  link      String?          // Optional deep-link for routing (e.g. "/dashboard")
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
 }

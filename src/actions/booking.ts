@@ -3,6 +3,7 @@
 import { BookingStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from './notifications'
 
 interface BookingResult {
   success: boolean
@@ -113,6 +114,26 @@ export async function bookAvailableSlot(
     revalidatePath('/history')
     revalidatePath(`/mentor/${result.mentorId}`)
 
+    // Notify the mentor about the new booking request
+    const mentee = await prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } })
+    const menteeName = mentee?.name || mentee?.email || 'A mentee'
+    await createNotification(
+      result.mentorId,
+      'New Booking Request',
+      `${menteeName} has requested a session with you. Review it in your dashboard.`,
+      'BOOKING',
+      '/dashboard'
+    )
+
+    // Notify the mentee that their booking is pending
+    await createNotification(
+      menteeId,
+      'Booking Submitted',
+      'Your booking request has been sent. 1 GivePoint is held until the mentor responds.',
+      'POINTS',
+      '/dashboard'
+    )
+
     return {
       success: true,
       message: 'Slot booked! 1 GivePoint held. Waiting for mentor to accept.',
@@ -197,6 +218,17 @@ export async function createBooking(
     revalidatePath('/discover')
     revalidatePath('/dashboard')
 
+    // Notify mentor about new booking request
+    const menteeUser = await prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } })
+    const menteeName = menteeUser?.name || menteeUser?.email || 'A mentee'
+    await createNotification(
+      mentorId,
+      'New Booking Request',
+      `${menteeName} has requested a session with you.`,
+      'BOOKING',
+      '/dashboard'
+    )
+
     return {
       success: true,
       message: '1 GivePoint held. Waiting for mentor to accept.',
@@ -232,6 +264,17 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
     revalidatePath('/')
     revalidatePath('/dashboard')
     revalidatePath('/history')
+
+    // Notify mentee that their booking was accepted
+    const mentor = await prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } })
+    const mentorName = mentor?.name || mentor?.email || 'Your mentor'
+    await createNotification(
+      booking.menteeId,
+      'Booking Accepted!',
+      `${mentorName} has accepted your booking request. Your session is confirmed!`,
+      'BOOKING',
+      '/history'
+    )
 
     return {
       success: true,
@@ -301,6 +344,26 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
     revalidatePath('/')
     revalidatePath('/dashboard')
     revalidatePath('/history')
+
+    // Notify mentee that their booking was declined and point refunded
+    const decliningMentor = await prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } })
+    const decliningMentorName = decliningMentor?.name || decliningMentor?.email || 'Your mentor'
+    await createNotification(
+      booking.menteeId,
+      'Booking Declined',
+      `${decliningMentorName} has declined your booking request. Your GivePoint has been refunded.`,
+      'BOOKING',
+      '/discover'
+    )
+
+    // Points refund notification
+    await createNotification(
+      booking.menteeId,
+      'GivePoint Refunded',
+      '+1 GivePoint has been returned to your balance.',
+      'POINTS',
+      '/history'
+    )
 
     return {
       success: true,
@@ -392,7 +455,6 @@ export async function completeSessionWithReview(
     })
 
     console.log('Transaction logged: +1 point to mentor (BOOKING_COMPLETED)')
-
     console.log('Review added, booking completed, point transferred')
 
     revalidatePath('/')
@@ -400,6 +462,17 @@ export async function completeSessionWithReview(
     revalidatePath('/discover')
     revalidatePath('/history')
     revalidatePath(`/mentor/${booking.mentorId}`)
+
+    // Notify mentor they earned a GivePoint
+    const completingMentee = await prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } })
+    const completingMenteeName = completingMentee?.name || completingMentee?.email || 'Your mentee'
+    await createNotification(
+      booking.mentorId,
+      'Session Completed — +1 GivePoint!',
+      `${completingMenteeName} marked your session as complete and left a ${rating}-star review. +1 GivePoint added to your balance.`,
+      'POINTS',
+      '/history'
+    )
 
     return {
       success: true,
@@ -475,6 +548,41 @@ export async function cancelBooking(bookingId: string, userId: string): Promise<
     revalidatePath('/dashboard')
     revalidatePath('/history')
     revalidatePath(`/mentor/${booking.mentorId}`)
+
+    // Notify the other party about the cancellation
+    const cancelledByMentee = booking.menteeId === userId
+    if (cancelledByMentee) {
+      // Mentee cancelled — notify mentor
+      const cancellingMentee = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
+      const cancellingMenteeName = cancellingMentee?.name || cancellingMentee?.email || 'Your mentee'
+      await createNotification(
+        booking.mentorId,
+        'Booking Cancelled',
+        `${cancellingMenteeName} has cancelled their booking request.`,
+        'BOOKING',
+        '/dashboard'
+      )
+    } else {
+      // Mentor cancelled — notify mentee with refund message
+      const cancellingMentor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
+      const cancellingMentorName = cancellingMentor?.name || cancellingMentor?.email || 'Your mentor'
+      await createNotification(
+        booking.menteeId,
+        'Booking Cancelled',
+        `${cancellingMentorName} has cancelled your session. Your GivePoint has been refunded.`,
+        'BOOKING',
+        '/discover'
+      )
+      if (booking.status === BookingStatus.PENDING || booking.status === BookingStatus.CONFIRMED) {
+        await createNotification(
+          booking.menteeId,
+          'GivePoint Refunded',
+          '+1 GivePoint has been returned to your balance.',
+          'POINTS',
+          '/history'
+        )
+      }
+    }
 
     return {
       success: true,
