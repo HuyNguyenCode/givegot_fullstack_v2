@@ -423,7 +423,7 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-wrap">
                       {booking.status === BookingStatus.PENDING && (
                         <>
                           <button
@@ -443,18 +443,40 @@ export default function DashboardPage() {
                         </>
                       )}
                       {booking.status === BookingStatus.CONFIRMED && (
-                        <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                          <p className="text-sm text-blue-800">
-                            ⏰ Session confirmed. Waiting for mentee to mark as complete.
-                          </p>
-                        </div>
+                        <>
+                          <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                            <p className="text-sm text-blue-800">
+                              ⏰ Session confirmed. Waiting for mentee to mark as complete.
+                            </p>
+                          </div>
+                          <Link
+                            href={`/chat?bookingId=${booking.id}`}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition text-sm shadow-sm"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            Message
+                          </Link>
+                        </>
                       )}
                       {booking.status === BookingStatus.COMPLETED && (
-                        <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                          <p className="text-sm text-green-800">
-                            ✅ Session completed! You earned 1 GivePoint.
-                          </p>
-                        </div>
+                        <>
+                          <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                            <p className="text-sm text-green-800">
+                              ✅ Session completed! You earned 1 GivePoint.
+                            </p>
+                          </div>
+                          <Link
+                            href={`/chat?bookingId=${booking.id}`}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition text-sm"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            Chat
+                          </Link>
+                        </>
                       )}
                     </div>
                   </div>
@@ -534,7 +556,7 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-wrap">
                       {booking.status === BookingStatus.PENDING && (
                         <>
                           <div className="flex-1 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
@@ -560,6 +582,15 @@ export default function DashboardPage() {
                           >
                             {actionLoading === booking.id ? 'Processing...' : 'Submit Review & Complete'}
                           </button>
+                          <Link
+                            href={`/chat?bookingId=${booking.id}`}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition text-sm shadow-sm"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            Message
+                          </Link>
                           <button
                             onClick={() => handleCancel(booking.id)}
                             disabled={actionLoading === booking.id}
@@ -570,11 +601,22 @@ export default function DashboardPage() {
                         </>
                       )}
                       {booking.status === BookingStatus.COMPLETED && (
-                        <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                          <p className="text-sm text-green-800">
-                            ✅ Session completed! 1 GivePoint transferred.
-                          </p>
-                        </div>
+                        <>
+                          <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                            <p className="text-sm text-green-800">
+                              ✅ Session completed! 1 GivePoint transferred.
+                            </p>
+                          </div>
+                          <Link
+                            href={`/chat?bookingId=${booking.id}`}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition text-sm"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            Chat
+                          </Link>
+                        </>
                       )}
                       {booking.status === BookingStatus.CANCELLED && (
                         <div className="flex-1 bg-red-50 border border-red-200 rounded-lg p-3 text-center">

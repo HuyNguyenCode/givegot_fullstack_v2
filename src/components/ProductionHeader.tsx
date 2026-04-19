@@ -37,6 +37,12 @@ export function ProductionHeader() {
           >
             History
           </Link>
+          <Link
+            href="/chat"
+            className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Messages
+          </Link>
 
           {/* Notification Bell */}
           <NotificationBell userId={currentUser.id} />

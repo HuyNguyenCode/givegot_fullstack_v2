@@ -1,68 +1,76 @@
 import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+
+// NOTE: Do NOT import `prisma` here. Middleware runs in the Edge Runtime
+// which has no access to Node.js APIs (TCP, crypto, etc.) that Prisma needs.
+// Suspension checks are handled in src/app/layout.tsx (Node.js server component).
 
 const isDevMode = process.env.NEXT_PUBLIC_SHOW_DEV_BAR === 'true'
 
+// Paths that must always be accessible without any auth or suspension check
+const PUBLIC_PATHS = ['/', '/auth/signin', '/suspended']
+
+function isPublicPath(pathname: string): boolean {
+  return (
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/cron')
+  )
+}
+
 export default auth(async (req) => {
-  // DevMode: Skip all auth checks
+  // ── Dev mode: bypass all checks ──────────────────────────────────────────
   if (isDevMode) {
-    return NextResponse.next()
+    return withPathname(req)
   }
 
   const { pathname } = req.nextUrl
 
-  // Allow public access to sign-in page and NextAuth API routes
-  if (pathname === '/auth/signin' || pathname.startsWith('/api/auth')) {
-    return NextResponse.next()
+  // ── Public paths: always allow through ───────────────────────────────────
+  if (isPublicPath(pathname)) {
+    // If an authenticated user hits the root landing page, redirect to app
+    if (pathname === '/' && req.auth) {
+      return NextResponse.redirect(new URL('/homepage', req.url))
+    }
+    return withPathname(req)
   }
 
-  // If authenticated user visits root, redirect to homepage
-  if (pathname === '/' && req.auth) {
-    return NextResponse.redirect(new URL('/homepage', req.url))
-  }
-
-  // Allow public access to landing page
-  if (pathname === '/') {
-    return NextResponse.next()
-  }
-
-  // No session and not on auth/public routes -> redirect to sign-in
+  // ── Unauthenticated user on a protected route ─────────────────────────────
   if (!req.auth) {
     const signInUrl = new URL('/auth/signin', req.url)
-    signInUrl.searchParams.set('callbackUrl', pathname || '/homepage')
+    signInUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(signInUrl)
   }
 
-  // Check if user is suspended (except for admin routes)
-  if (req.auth?.user?.email && !pathname.startsWith('/admin')) {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { email: req.auth.user.email },
-        select: { isSuspended: true }
-      })
-
-      if (user?.isSuspended) {
-        // Redirect suspended users to a suspended page or sign-in
-        return NextResponse.redirect(new URL('/auth/signin?error=suspended', req.url))
-      }
-    } catch (error) {
-      console.error('Failed to check suspension status:', error)
-    }
-  }
-
-  return NextResponse.next()
+  // ── Authenticated: proceed to the page ───────────────────────────────────
+  // The suspension check (which needs Prisma / Node.js) is done in layout.tsx.
+  return withPathname(req)
 })
+
+/**
+ * Returns a NextResponse.next() with the current pathname injected as a
+ * *request* header. Server Component layouts read it via `headers()` from
+ * `next/headers` — this is the standard Next.js pattern for passing middleware
+ * context downstream without the Edge ↔ Node.js boundary.
+ *
+ * Note: only call this for next() responses, not for redirects (redirects
+ * skip the layout render so the header is irrelevant there).
+ */
+function withPathname(req: Request): NextResponse {
+  const pathname = new URL(req.url).pathname
+  const reqHeaders = new Headers(req.headers)
+  reqHeaders.set('x-pathname', pathname)
+  return NextResponse.next({ request: { headers: reqHeaders } })
+}
 
 export const config = {
   matcher: [
     /*
      * Match all request paths except:
      * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - image/static file extensions
+     * - _next/image (image optimization)
+     * - favicon.ico
+     * - public static assets (svg, png, jpg, etc.)
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],

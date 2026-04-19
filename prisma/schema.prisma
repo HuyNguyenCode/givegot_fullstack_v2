@@ -55,9 +55,14 @@ model User {
   reportsReceived Report[]         @relation("ReportedUser")  // NEW: Reports against this user
   
   // NextAuth relations
-  accounts        Account[]
-  sessions        Session[]
-  notifications   Notification[]
+  accounts          Account[]
+  sessions          Session[]
+  notifications     Notification[]
+
+  // Messaging relations
+  conversationsAsA  Conversation[] @relation("ConversationUserA")
+  conversationsAsB  Conversation[] @relation("ConversationUserB")
+  sentMessages      Message[]
 }
 
 // Admin: User Role Enum
@@ -147,8 +152,9 @@ model Booking {
   
   createdAt DateTime      @default(now())
 
-  review    Review?
-  transactions TransactionLog[] //  NEW: Audit trail
+  review        Review?
+  transactions  TransactionLog[] //  NEW: Audit trail
+  conversation  Conversation?    //  Messaging: one conversation per booking
 }
 
 // 5. Bảng Review
@@ -281,4 +287,38 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead, createdAt])
+}
+
+// 10. Conversation Model (NEW: Real-time messaging between mentor & mentee)
+model Conversation {
+  id        String    @id @default(uuid())
+  bookingId String    @unique  // 1-to-1: one conversation per booking
+  userAId   String              // Mentee (initiator)
+  userBId   String              // Mentor
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userA     User      @relation("ConversationUserA", fields: [userAId], references: [id])
+  userB     User      @relation("ConversationUserB", fields: [userBId], references: [id])
+  messages  Message[]
+
+  @@index([userAId])
+  @@index([userBId])
+}
+
+// 11. Message Model (NEW: Individual chat messages)
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String       @db.Text
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
 }
