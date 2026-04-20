@@ -4,10 +4,14 @@ import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState } from 'react'
 import { getMyBookings, acceptBooking, declineBooking, cancelBooking, completeSessionWithReview } from '@/actions/booking'
 import { getUserLearningGoals } from '@/actions/user'
+import { getPointHistory, getTopRequestedSkills, getPopularMentors, PointHistoryEntry, SkillDemandEntry, PopularMentor } from '@/actions/analytics'
 import { BookingWithDetails } from '@/types'
 import { RoadmapStep } from '@/lib/gemini'
 import LearningRoadmapCard from '@/components/LearningRoadmapCard'
 import MentorCalendarManager from '@/components/MentorCalendarManager'
+import PointHistoryChart from '@/components/insights/PointHistoryChart'
+import SkillDemandChart from '@/components/insights/SkillDemandChart'
+import MentorLeaderboard from '@/components/insights/MentorLeaderboard'
 import Image from 'next/image'
 import { BookingStatus } from '@prisma/client'
 import Link from 'next/link'
@@ -27,6 +31,12 @@ export default function DashboardPage() {
   const [comment, setComment] = useState('')
   const [isSubmittingReview, setIsSubmittingReview] = useState(false)
 
+  // Analytics state
+  const [pointHistory, setPointHistory] = useState<PointHistoryEntry[]>([])
+  const [skillDemand, setSkillDemand] = useState<SkillDemandEntry[]>([])
+  const [popularMentors, setPopularMentors] = useState<PopularMentor[]>([])
+  const [analyticsLoading, setAnalyticsLoading] = useState(true)
+
   const loadBookings = async () => {
     if (!currentUser) return
     
@@ -43,8 +53,23 @@ export default function DashboardPage() {
     setIsLoading(false)
   }
 
+  const loadAnalytics = async () => {
+    if (!currentUser) return
+    setAnalyticsLoading(true)
+    const [history, skills, mentors] = await Promise.all([
+      getPointHistory(currentUser.id, 30),
+      getTopRequestedSkills(),
+      getPopularMentors(),
+    ])
+    setPointHistory(history)
+    setSkillDemand(skills)
+    setPopularMentors(mentors)
+    setAnalyticsLoading(false)
+  }
+
   useEffect(() => {
     loadBookings()
+    loadAnalytics()
   }, [currentUser?.id])
 
   const handleAccept = async (bookingId: string) => {
@@ -194,7 +219,11 @@ export default function DashboardPage() {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-2 text-gray-600">Manage your mentoring and learning sessions</p>
+            <p className="mt-1 text-gray-500 text-sm">
+              Welcome back,{' '}
+              <span className="font-semibold text-purple-600">{currentUser.name ?? 'there'}</span>
+              {' '}— here's your overview
+            </p>
           </div>
           <button
             onClick={loadBookings}
@@ -305,6 +334,89 @@ export default function DashboardPage() {
             Edit Profile
           </Link>
         </div>
+
+        {/* ── Insights Center ─────────────────────────────────────── */}
+        <section className="mb-10">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-gradient-to-br from-purple-600 to-blue-600 p-2.5 rounded-xl shadow-sm">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Insights Center</h2>
+              <p className="text-sm text-gray-500">Your activity analytics and community trends</p>
+            </div>
+          </div>
+
+          {/* Row 1: Points History — full width */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
+            <div className="flex items-start justify-between mb-1">
+              <div>
+                <h3 className="text-base font-semibold text-gray-800">GivePoints Balance</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Last 30 days — daily running balance</p>
+              </div>
+              <div className="flex items-center gap-1.5 bg-purple-50 px-3 py-1.5 rounded-full">
+                <div className="w-2 h-2 rounded-full bg-purple-600" />
+                <span className="text-xs font-semibold text-purple-700">
+                  {currentUser.givePoints} pts now
+                </span>
+              </div>
+            </div>
+            <PointHistoryChart data={pointHistory} isLoading={analyticsLoading} />
+          </div>
+
+          {/* Row 2: Skills Demand + Mentor Leaderboard — two columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Skills Demand vs Supply */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="mb-4">
+                <h3 className="text-base font-semibold text-gray-800">Skill Demand vs Supply</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Top 8 most-requested skills in the community</p>
+              </div>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm bg-purple-700" />
+                  <span className="text-xs text-gray-500">Demand (WANT)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm bg-emerald-500" />
+                  <span className="text-xs text-gray-500">Supply (GIVE)</span>
+                </div>
+              </div>
+              <SkillDemandChart data={skillDemand} isLoading={analyticsLoading} />
+              {!analyticsLoading && skillDemand.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-50">
+                  <p className="text-xs text-gray-400 text-center">
+                    Highest gap:{' '}
+                    <span className="font-semibold text-orange-500">
+                      {skillDemand.reduce((a, b) => (a.gap > b.gap ? a : b)).skill}
+                    </span>{' '}
+                    — consider teaching this skill!
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Mentor Popularity Leaderboard */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-800">Top Mentors</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Ranked by completed sessions</p>
+                </div>
+                <Link
+                  href="/discover"
+                  className="text-xs text-purple-600 hover:text-purple-700 font-medium transition"
+                >
+                  View all →
+                </Link>
+              </div>
+              <MentorLeaderboard data={popularMentors} isLoading={analyticsLoading} />
+            </div>
+          </div>
+        </section>
+        {/* ── End Insights Center ─────────────────────────────────── */}
 
         <section className="mb-8">
           <MentorCalendarManager mentorId={currentUser.id} />
