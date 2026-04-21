@@ -9,8 +9,10 @@ import {
   updateUserProfile,
 } from '@/actions/user'
 import { getQuizForSkill, getUserSkillDetails } from '@/actions/quiz'
+import { getUserTrustDashboard, TrustDashboardData } from '@/actions/analytics'
 import { QuizQuestion } from '@/lib/gemini'
 import QuizModal from '@/components/QuizModal'
+import TrustReputationCard from '@/components/TrustReputationCard'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
@@ -55,6 +57,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
+  const [trustData, setTrustData] = useState<TrustDashboardData | null>(null)
 
   useEffect(() => {
     async function loadProfileData() {
@@ -85,6 +88,9 @@ export default function ProfilePage() {
 
       // Load verification status for teaching skills
       await loadVerificationStatus(currentUser.id, teachingSkills)
+
+      const trustDashboard = await getUserTrustDashboard(currentUser.id)
+      setTrustData(trustDashboard)
 
       setIsLoading(false)
     }
@@ -343,6 +349,10 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {trustData && (
+            <TrustReputationCard data={trustData} isOwner={true} />
+          )}
 
           <form onSubmit={handleSubmit} className="p-8 space-y-8">
             {/* Basic Information */}

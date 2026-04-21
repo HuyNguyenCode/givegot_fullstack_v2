@@ -1,8 +1,9 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { SkillType, BookingStatus } from '@prisma/client'
+import { SkillType, BookingStatus, TransactionType } from '@prisma/client'
 import { subDays, format, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns'
+import { getUserBadges, Badge } from '@/lib/badges'
 
 export interface PointHistoryEntry {
   date: string
@@ -20,6 +21,7 @@ export interface PopularMentor {
   id: string
   name: string
   avatarUrl: string | null
+  trustScore: number
   totalSessions: number
   avgRating: number
   topSkill: string | null
@@ -147,62 +149,231 @@ export async function getTopRequestedSkills(): Promise<SkillDemandEntry[]> {
 }
 
 /**
- * Returns the top 5 mentors ranked by completed sessions and average rating.
+ * Returns the top 5 mentors ranked by Trust Score (desc), with completed
+ * sessions as a tie-breaker. Only mentors who have at least one completed
+ * session are included so the list reflects real activity.
  */
 export async function getPopularMentors(): Promise<PopularMentor[]> {
   try {
-    // Group completed bookings by mentorId
-    const sessionCounts = await prisma.booking.groupBy({
+    // Collect all mentor IDs that have at least one completed session
+    const completedGroups = await prisma.booking.groupBy({
       by: ['mentorId'],
       where: { status: BookingStatus.COMPLETED },
       _count: { mentorId: true },
-      orderBy: { _count: { mentorId: 'desc' } },
-      take: 5,
     })
 
-    if (sessionCounts.length === 0) return []
+    if (completedGroups.length === 0) return []
 
-    const topMentorIds = sessionCounts.map((s) => s.mentorId)
+    const activeMentorIds = completedGroups.map((g) => g.mentorId)
+    const sessionMap = new Map(
+      completedGroups.map((g) => [g.mentorId, g._count.mentorId])
+    )
 
-    // Average ratings per mentor
-    const avgRatings = await prisma.review.groupBy({
-      by: ['receiverId'],
-      where: { receiverId: { in: topMentorIds } },
-      _avg: { rating: true },
-    })
+    // Fetch profiles + trustScore for every active mentor in one query
+    const [mentors, avgRatings] = await Promise.all([
+      prisma.user.findMany({
+        where: { id: { in: activeMentorIds } },
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+          trustScore: true,
+          skills: {
+            where: { type: SkillType.GIVE },
+            include: { skill: { select: { name: true } } },
+            take: 1,
+          },
+        },
+      }),
+      prisma.review.groupBy({
+        by: ['receiverId'],
+        where: { receiverId: { in: activeMentorIds } },
+        _avg: { rating: true },
+      }),
+    ])
+
     const ratingMap = new Map(
       avgRatings.map((r) => [r.receiverId, r._avg.rating ?? 0])
     )
 
-    // Mentor profiles
-    const mentors = await prisma.user.findMany({
-      where: { id: { in: topMentorIds } },
-      select: {
-        id: true,
-        name: true,
-        avatarUrl: true,
-        skills: {
-          where: { type: SkillType.GIVE },
-          include: { skill: { select: { name: true } } },
-          take: 1,
-        },
-      },
-    })
-    const mentorMap = new Map(mentors.map((m) => [m.id, m]))
-
-    return sessionCounts.map((s, idx) => {
-      const mentor = mentorMap.get(s.mentorId)
-      return {
-        id: s.mentorId,
-        name: mentor?.name ?? 'Unknown',
-        avatarUrl: mentor?.avatarUrl ?? null,
-        totalSessions: s._count.mentorId,
-        avgRating: Number((ratingMap.get(s.mentorId) ?? 0).toFixed(1)),
-        topSkill: mentor?.skills[0]?.skill.name ?? null,
-      }
-    })
+    return mentors
+      .map((m) => ({
+        id: m.id,
+        name: m.name ?? 'Unknown',
+        avatarUrl: m.avatarUrl ?? null,
+        trustScore: m.trustScore,
+        totalSessions: sessionMap.get(m.id) ?? 0,
+        avgRating: Number((ratingMap.get(m.id) ?? 0).toFixed(1)),
+        topSkill: m.skills[0]?.skill.name ?? null,
+      }))
+      .sort((a, b) => {
+        // Primary: Trust Score descending
+        if (b.trustScore !== a.trustScore) return b.trustScore - a.trustScore
+        // Tie-breaker: completed sessions descending
+        return b.totalSessions - a.totalSessions
+      })
+      .slice(0, 5)
   } catch (error) {
     console.error('Error fetching popular mentors:', error)
     return []
+  }
+}
+
+// ── Trust Dashboard ───────────────────────────────────────────────────────────
+
+export interface TrustBreakdownDisplay {
+  completionRate: number      // 0–1 e.g. 0.87
+  completionScore: number     // 0–100
+  avgRating: number           // 1–5
+  ratingScore: number         // 0–100
+  avgResponseHours: number | null
+  responseTimeScore: number   // 0–100
+  cancellationRate: number    // 0–1
+  cancellationScore: number   // 0–100
+  completedSessions: number
+  totalSessions: number
+}
+
+export interface TrustDashboardData {
+  trustScore: number
+  breakdown: TrustBreakdownDisplay
+  badges: Badge[]
+}
+
+/**
+ * Computes a read-only trust dashboard for a user — does NOT update the DB.
+ * All computation mirrors the trust-algorithm.ts logic but avoids side-effects.
+ */
+export async function getUserTrustDashboard(
+  userId: string,
+): Promise<TrustDashboardData> {
+  const fallback: TrustDashboardData = {
+    trustScore: 50,
+    breakdown: {
+      completionRate: 0,
+      completionScore: 70,
+      avgRating: 0,
+      ratingScore: 70,
+      avgResponseHours: null,
+      responseTimeScore: 80,
+      cancellationRate: 0,
+      cancellationScore: 100,
+      completedSessions: 0,
+      totalSessions: 0,
+    },
+    badges: [],
+  }
+
+  try {
+    // Use a raw query for trustScore to avoid TypeScript issues when the Prisma
+    // client cache hasn't been refreshed after a schema migration.
+    const [userRows, bookings, reviews, declineLogs] = await Promise.all([
+      prisma.$queryRaw<{ trustScore: number }[]>`
+        SELECT "trustScore" FROM "User" WHERE id = ${userId} LIMIT 1
+      `,
+      prisma.booking.findMany({
+        where: { mentorId: userId },
+        select: { status: true, createdAt: true, id: true },
+      }),
+      prisma.review.findMany({
+        where: { receiverId: userId },
+        select: { rating: true },
+      }),
+      prisma.transactionLog.findMany({
+        where: { userId, type: TransactionType.BOOKING_DECLINED },
+        select: { createdAt: true, bookingId: true },
+      }),
+    ])
+
+    const user = userRows[0]
+    if (!user) return fallback
+
+    // Completion
+    const confirmedOrCompleted = bookings.filter((b) =>
+      b.status === BookingStatus.CONFIRMED ||
+      b.status === BookingStatus.COMPLETED ||
+      b.status === BookingStatus.CANCELLED,
+    )
+    const completed = bookings.filter((b) => b.status === BookingStatus.COMPLETED)
+    const completionRate =
+      confirmedOrCompleted.length > 0
+        ? completed.length / confirmedOrCompleted.length
+        : 0
+    const completionScore =
+      confirmedOrCompleted.length > 0
+        ? Math.min(100, Math.max(0, Math.round(completionRate * 100)))
+        : 70
+
+    // Rating
+    const avgRating =
+      reviews.length > 0
+        ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+        : 0
+    const ratingScore =
+      reviews.length > 0
+        ? Math.min(100, Math.max(0, Math.round(((avgRating - 1) / 4) * 100)))
+        : 70
+
+    // Response time
+    const declineMap = new Map(declineLogs.map((d) => [d.bookingId, d.createdAt]))
+    const measurableDeltas: number[] = []
+    for (const b of bookings) {
+      const respondedAt = declineMap.get(b.id)
+      if (respondedAt) {
+        measurableDeltas.push(
+          (respondedAt.getTime() - b.createdAt.getTime()) / 3_600_000,
+        )
+      }
+    }
+    const avgResponseHours =
+      measurableDeltas.length > 0
+        ? measurableDeltas.reduce((s, h) => s + h, 0) / measurableDeltas.length
+        : null
+
+    const responseTimeScore = (() => {
+      if (avgResponseHours === null) return 80
+      if (avgResponseHours < 1) return 100
+      if (avgResponseHours <= 12)
+        return Math.round(100 - ((avgResponseHours - 1) / 11) * 50)
+      if (avgResponseHours <= 24)
+        return Math.round(50 - ((avgResponseHours - 12) / 12) * 50)
+      return 0
+    })()
+
+    // Cancellation
+    const cancelled = bookings.filter((b) => b.status === BookingStatus.CANCELLED)
+    const totalEverBookings = bookings.length
+    const cancellationRate =
+      totalEverBookings > 0 ? cancelled.length / totalEverBookings : 0
+    const cancellationScore = Math.min(
+      100,
+      Math.max(0, Math.round(100 - cancellationRate * 200)),
+    )
+
+    const breakdown: TrustBreakdownDisplay = {
+      completionRate,
+      completionScore,
+      avgRating,
+      ratingScore,
+      avgResponseHours,
+      responseTimeScore,
+      cancellationRate,
+      cancellationScore,
+      completedSessions: completed.length,
+      totalSessions: totalEverBookings,
+    }
+
+    const avgResponseMinutes = avgResponseHours !== null ? avgResponseHours * 60 : null
+    const badges = getUserBadges({
+      trustScore: user.trustScore,
+      completedSessions: completed.length,
+      avgRating,
+      avgResponseTimeMinutes: avgResponseMinutes,
+    })
+
+    return { trustScore: user.trustScore, breakdown, badges }
+  } catch (error) {
+    console.error('Error fetching trust dashboard:', error)
+    return fallback
   }
 }

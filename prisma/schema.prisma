@@ -32,7 +32,10 @@ model User {
   isSuspended  Boolean  @default(false)
   
   // Time-banking logic
-  givePoints Int      @default(3)
+  givePoints   Int @default(3)
+  
+  // Trust Score system
+  trustScore   Int @default(50)
   
   // --- TRƯỜNG DỮ LIỆU MỚI CHO AI SEMANTIC MATCHING ---
   // Lưu tọa độ Vector (chuỗi số do Gemini tạo ra) từ kỹ năng DẠY và HỌC
@@ -53,6 +56,7 @@ model User {
   transactions    TransactionLog[] // NEW: Point transaction history
   reportsCreated  Report[]         @relation("ReportCreator") // NEW: Reports filed by this user
   reportsReceived Report[]         @relation("ReportedUser")  // NEW: Reports against this user
+  trustHistory    TrustHistory[]
   
   // NextAuth relations
   accounts          Account[]
@@ -145,10 +149,11 @@ model Booking {
   mentee    User          @relation("MenteeBooking", fields: [menteeId], references: [id])
   slot      AvailableSlot? @relation(fields: [slotId], references: [id]) //  NEW: 1-to-1 relation
   
-  startTime DateTime
-  endTime   DateTime
-  status    BookingStatus @default(PENDING) 
-  note      String?       @db.Text 
+  startTime  DateTime
+  endTime    DateTime
+  status     BookingStatus @default(PENDING) 
+  note       String?       @db.Text 
+  meetingUrl String?       // Google Meet link, populated when booking is CONFIRMED
   
   createdAt DateTime      @default(now())
 
@@ -166,10 +171,10 @@ model Review {
   
   rating     Int      
   comment    String?  @db.Text
+  isHidden   Boolean  @default(true)  // Trust moderation: hidden until trust system approves
   
   booking    Booking  @relation(fields: [bookingId], references: [id])
   receiver   User     @relation("ReviewReceiver", fields: [receiverId], references: [id])
-  // ĐÃ SỬA: Khai báo relation cho người viết review
   author     User     @relation("ReviewAuthor", fields: [authorId], references: [id])
   
   createdAt  DateTime @default(now())
@@ -235,15 +240,31 @@ model TransactionLog {
 }
 
 enum TransactionType {
-  BOOKING_CREATED     // -1 point (mentee books)
-  BOOKING_COMPLETED   // +1 point (mentor earns)
-  BOOKING_CANCELLED   // +1 point (refund to mentee)
-  BOOKING_DECLINED    // +1 point (refund to mentee)
-  INITIAL_BONUS       // +3 points (new user bonus)
-  ADMIN_ADJUSTMENT    // Manual adjustment
+  BOOKING_CREATED          // -1 point (mentee books)
+  BOOKING_COMPLETED        // +1 point (mentor earns)
+  BOOKING_CANCELLED        // +1 point (refund to mentee)
+  BOOKING_DECLINED         // +1 point (refund to mentee)
+  INITIAL_BONUS            // +3 points (new user bonus)
+  ADMIN_ADJUSTMENT         // Manual adjustment
+  CANCELLATION_COMPENSATION // +1 point to mentor (late cancellation by mentee)
 }
 
-// 8. Report Model ( NEW: User reporting system)
+// 8. TrustHistory Model (NEW: Trust Score audit log)
+model TrustHistory {
+  id            String   @id @default(uuid())
+  userId        String
+  previousScore Int
+  newScore      Int
+  reason        String   // Human-readable explanation of what drove the change
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  
+  @@index([userId, createdAt])
+}
+
+// 9. Report Model ( NEW: User reporting system)
 model Report {
   id             String       @id @default(uuid())
   reporterId     String
@@ -266,7 +287,7 @@ enum ReportStatus {
   RESOLVED
 }
 
-// 9. Notification Model (NEW: In-app notification system)
+// 10. Notification Model (NEW: In-app notification system)
 enum NotificationType {
   BOOKING
   MATCHING
@@ -289,7 +310,7 @@ model Notification {
   @@index([userId, isRead, createdAt])
 }
 
-// 10. Conversation Model (NEW: Real-time messaging between mentor & mentee)
+// 11. Conversation Model (NEW: Real-time messaging between mentor & mentee)
 model Conversation {
   id        String    @id @default(uuid())
   bookingId String    @unique  // 1-to-1: one conversation per booking
@@ -308,7 +329,7 @@ model Conversation {
   @@index([userBId])
 }
 
-// 11. Message Model (NEW: Individual chat messages)
+// 12. Message Model (NEW: Individual chat messages)
 model Message {
   id             String       @id @default(uuid())
   conversationId String

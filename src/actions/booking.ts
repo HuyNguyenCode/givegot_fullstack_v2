@@ -1,14 +1,68 @@
 'use server'
 
-import { BookingStatus } from '@prisma/client'
+import { BookingStatus, TransactionType } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { pusherServer } from '@/lib/pusher'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
+import { calculateAndUpdateTrustScore } from '@/lib/trust-algorithm'
+import { createGoogleMeetLink } from '@/lib/google-meet'
+
+// ── Cancellation Policy Constants ─────────────────────────────────────────────
+const CANCELLATION_THRESHOLD_HOURS = 12
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface BookingResult {
   success: boolean
   message: string
   bookingId?: string
+}
+
+export interface ReviewGateStatus {
+  blocked: boolean
+  pendingCount: number
+  sessions: Array<{
+    bookingId: string
+    mentorName: string
+    sessionDate: Date
+  }>
+}
+
+// ── Review Gate ───────────────────────────────────────────────────────────────
+//
+// A mentee must review any session that ended > 24 h ago before they can book
+// a new one. This keeps the review dataset healthy and enforces community norms.
+
+export async function checkReviewGate(menteeId: string): Promise<ReviewGateStatus> {
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+  // CONFIRMED + endTime in the past by > 24 h means: the session happened but
+  // the mentee never submitted their review to mark it COMPLETED.
+  const overdueConfirmed = await prisma.booking.findMany({
+    where: {
+      menteeId,
+      status: BookingStatus.CONFIRMED,
+      endTime: { lt: twentyFourHoursAgo },
+    },
+    select: {
+      id: true,
+      endTime: true,
+      mentor: { select: { name: true, email: true } },
+    },
+  })
+
+  const sessions = overdueConfirmed.map((b) => ({
+    bookingId: b.id,
+    mentorName: b.mentor.name ?? b.mentor.email,
+    sessionDate: b.endTime,
+  }))
+
+  return {
+    blocked: sessions.length > 0,
+    pendingCount: sessions.length,
+    sessions,
+  }
 }
 
 export async function bookAvailableSlot(
@@ -17,6 +71,15 @@ export async function bookAvailableSlot(
   note?: string
 ): Promise<BookingResult> {
   try {
+    // ── Review Gate: block new bookings if overdue reviews exist ─────────────
+    const gate = await checkReviewGate(menteeId)
+    if (gate.blocked) {
+      return {
+        success: false,
+        message: `REVIEW_GATE_BLOCKED:${gate.pendingCount}`,
+      }
+    }
+
     console.log('Attempting atomic slot booking:', { slotId, menteeId })
 
     // This ensures that concurrent transactions see consistent data
@@ -112,7 +175,7 @@ export async function bookAvailableSlot(
     revalidatePath('/discover')
     revalidatePath('/dashboard')
     revalidatePath('/history')
-    revalidatePath(`/mentor/${result.mentorId}`)
+    revalidatePath(`/profile/${result.mentorId}`)
 
     // Notify the mentor about the new booking request
     const mentee = await prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } })
@@ -157,6 +220,10 @@ export async function bookAvailableSlot(
       }
     }
 
+    if (error.message?.startsWith('REVIEW_GATE_BLOCKED')) {
+      return { success: false, message: error.message }
+    }
+
     return {
       success: false,
       message: 'Failed to book slot. Please try again.',
@@ -175,8 +242,17 @@ export async function createBooking(
   note?: string
 ): Promise<BookingResult> {
   try {
+    // ── Review Gate ──────────────────────────────────────────────────────────
+    const gate = await checkReviewGate(menteeId)
+    if (gate.blocked) {
+      return {
+        success: false,
+        message: `REVIEW_GATE_BLOCKED:${gate.pendingCount}`,
+      }
+    }
+
     console.log('Creating booking:', { mentorId, menteeId, startTime, endTime, note })
-    
+
     const mentee = await prisma.user.findUnique({ where: { id: menteeId } })
     const mentor = await prisma.user.findUnique({ where: { id: mentorId } })
 
@@ -256,29 +332,53 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
       return { success: false, message: `Cannot accept booking with status: ${booking.status}` }
     }
 
+    // Fetch both participants in parallel — needed for Meet link and notification
+    const [mentor, mentee] = await Promise.all([
+      prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } }),
+      prisma.user.findUnique({ where: { id: booking.menteeId }, select: { name: true, email: true } }),
+    ])
+
+    // Attempt Google Meet creation. Non-fatal: booking proceeds even if this fails.
+    let meetingUrl: string | null = null
+    if (mentor?.email && mentee?.email) {
+      meetingUrl = await createGoogleMeetLink(
+        booking.startTime,
+        booking.endTime,
+        mentee.email,
+        mentor.email
+      )
+    }
+
+    // Persist CONFIRMED status and Meet URL atomically
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await prisma.booking.update({
       where: { id: bookingId },
-      data: { status: BookingStatus.CONFIRMED },
+      // meetingUrl is valid after `prisma db push`; cast needed until `prisma generate` re-runs
+      data: { status: BookingStatus.CONFIRMED, meetingUrl } as any,
     })
 
     revalidatePath('/')
     revalidatePath('/dashboard')
     revalidatePath('/history')
 
-    // Notify mentee that their booking was accepted
-    const mentor = await prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } })
     const mentorName = mentor?.name || mentor?.email || 'Your mentor'
+    const meetMessage = meetingUrl
+      ? ` Your Google Meet link is ready: ${meetingUrl}`
+      : ' Check your dashboard to join the session.'
+
     await createNotification(
       booking.menteeId,
       'Booking Accepted!',
-      `${mentorName} has accepted your booking request. Your session is confirmed!`,
+      `${mentorName} has accepted your booking request. Your session is confirmed!${meetMessage}`,
       'BOOKING',
-      '/history'
+      '/dashboard'
     )
 
     return {
       success: true,
-      message: 'Booking confirmed! Session is scheduled.',
+      message: meetingUrl
+        ? 'Booking confirmed! Google Meet link created and sent to both participants.'
+        : 'Booking confirmed! Session is scheduled.',
       bookingId,
     }
   } catch (error) {
@@ -383,67 +483,70 @@ export async function completeSessionWithReview(
   comment?: string
 ): Promise<BookingResult> {
   try {
-    console.log('Complete session with review:', { bookingId, menteeId, rating, comment })
-    
-    const booking = await prisma.booking.findUnique({ 
+    const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { mentor: true, mentee: true }
+      include: { mentor: true, mentee: true },
     })
 
-    if (!booking) {
-      return { success: false, message: 'Booking not found' }
-    }
-
+    if (!booking) return { success: false, message: 'Booking not found' }
     if (booking.menteeId !== menteeId) {
       return { success: false, message: 'Unauthorized: You are not the mentee for this session' }
     }
-
     if (booking.status !== BookingStatus.CONFIRMED) {
-      return { 
-        success: false, 
-        message: `Cannot complete booking with status: ${booking.status}. Booking must be confirmed first.` 
+      return {
+        success: false,
+        message: `Cannot complete booking with status: ${booking.status}. Booking must be confirmed first.`,
       }
     }
-
     if (rating < 1 || rating > 5) {
       return { success: false, message: 'Rating must be between 1 and 5' }
     }
 
-    // Check if review already exists
-    const existingReview = await prisma.review.findUnique({
-      where: { bookingId },
-    })
-
+    const existingReview = await prisma.review.findUnique({ where: { bookingId } })
     if (existingReview) {
       return { success: false, message: 'Review already submitted for this session' }
     }
 
-    // Use transaction for atomic operations
+    // ── Phase 2 — Review Reveal ───────────────────────────────────────────────
+    //
+    // In the current one-directional system (only mentee → mentor), we reveal
+    // the review immediately on submission (isHidden = false).
+    //
+    // When bi-directional reviews are introduced, this check becomes:
+    //   const counterReviewExists = !!(await prisma.review.findFirst({
+    //     where: { bookingId, authorId: booking.mentorId }
+    //   }))
+    //   const shouldReveal = counterReviewExists
+    // And then also unhide the counter-review if shouldReveal is true.
+    const shouldReveal = true
+
+    // ── Core atomic transaction ───────────────────────────────────────────────
     await prisma.$transaction(async (tx) => {
-      // 1. Create review
+      // 1. Create review (visible immediately in current one-sided system)
       await tx.review.create({
         data: {
           bookingId,
           receiverId: booking.mentorId,
           authorId: booking.menteeId,
           rating,
-          comment: comment || null,
+          comment: comment ?? null,
+          isHidden: !shouldReveal,
         },
       })
 
-      // 2. Update booking status
+      // 2. Mark booking COMPLETED
       await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.COMPLETED },
       })
 
-      // 3. Transfer 1 point to mentor
+      // 3. Transfer 1 GivePoint to mentor
       await tx.user.update({
         where: { id: booking.mentorId },
         data: { givePoints: { increment: 1 } },
       })
 
-      // 4. Log transaction (AUDIT TRAIL)
+      // 4. Audit log
       await tx.transactionLog.create({
         data: {
           userId: booking.mentorId,
@@ -454,18 +557,71 @@ export async function completeSessionWithReview(
       })
     })
 
-    console.log('Transaction logged: +1 point to mentor (BOOKING_COMPLETED)')
-    console.log('Review added, booking completed, point transferred')
+    // ── Phase 2 — Active Reviewer Bonus ──────────────────────────────────────
+    //
+    // The first time a mentee's total review count crosses 3 (i.e. reaches
+    // exactly 4), they earn a one-time +5 Trust Score bonus.
+    // We detect this by counting AFTER the new review was committed.
+    const totalReviews = await prisma.review.count({ where: { authorId: menteeId } })
+
+    if (totalReviews === 4) {
+      const menteeData = await prisma.user.findUnique({
+        where: { id: menteeId },
+        select: { trustScore: true },
+      })
+      if (menteeData) {
+        const previousScore = menteeData.trustScore
+        const newScore = Math.min(100, previousScore + 5)
+        await prisma.$transaction([
+          prisma.user.update({
+            where: { id: menteeId },
+            data: { trustScore: newScore },
+          }),
+          prisma.trustHistory.create({
+            data: {
+              userId: menteeId,
+              previousScore,
+              newScore,
+              reason: 'Active Reviewer Bonus: Reached 4+ submitted reviews (+5 Trust Score)',
+            },
+          }),
+        ])
+        // Notify the mentee about their bonus
+        await createNotification(
+          menteeId,
+          '🏅 Active Reviewer Bonus!',
+          'You\'ve submitted 4+ reviews — your Trust Score just increased by 5 points!',
+          'POINTS',
+          '/dashboard'
+        )
+      }
+    }
+
+    // ── Phase 2 — Recalculate mentor's Trust Score ────────────────────────────
+    //
+    // Run after the transaction so the new review and completed-booking status
+    // are visible to the algorithm's DB reads.
+    try {
+      await calculateAndUpdateTrustScore(booking.mentorId)
+    } catch (trustErr) {
+      // Trust score failure must never break the primary booking flow
+      console.error('Trust score recalculation failed (non-fatal):', trustErr)
+    }
 
     revalidatePath('/')
     revalidatePath('/dashboard')
     revalidatePath('/discover')
     revalidatePath('/history')
-    revalidatePath(`/mentor/${booking.mentorId}`)
+    revalidatePath(`/profile/${booking.mentorId}`)
 
-    // Notify mentor they earned a GivePoint
-    const completingMentee = await prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } })
-    const completingMenteeName = completingMentee?.name || completingMentee?.email || 'Your mentee'
+    // Notify mentor
+    const completingMentee = await prisma.user.findUnique({
+      where: { id: menteeId },
+      select: { name: true, email: true },
+    })
+    const completingMenteeName =
+      completingMentee?.name ?? completingMentee?.email ?? 'Your mentee'
+
     await createNotification(
       booking.mentorId,
       'Session Completed — +1 GivePoint!',
@@ -485,18 +641,32 @@ export async function completeSessionWithReview(
   }
 }
 
-export async function cancelBooking(bookingId: string, userId: string): Promise<BookingResult> {
+// ── Cancellation payload sent via Pusher to the other party ──────────────────
+interface CancellationPusherPayload {
+  bookingId: string
+  cancelledBy: 'mentee' | 'mentor'
+  cancellerName: string
+  timing: 'early' | 'late' | 'pending'
+  pointsChange: { userId: string; delta: number }[]
+  trustChange: { userId: string; delta: number } | null
+  message: string
+}
+
+export async function cancelBooking(bookingId: string, canceledByUserId: string): Promise<BookingResult> {
   try {
-    const booking = await prisma.booking.findUnique({ 
+    // ── 1. Fetch booking with both parties ───────────────────────────────────
+    const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { slot: true }
+      include: {
+        slot: true,
+        mentor: { select: { id: true, name: true, email: true, trustScore: true } },
+        mentee: { select: { id: true, name: true, email: true, trustScore: true } },
+      },
     })
 
-    if (!booking) {
-      return { success: false, message: 'Booking not found' }
-    }
+    if (!booking) return { success: false, message: 'Booking not found' }
 
-    if (booking.mentorId !== userId && booking.menteeId !== userId) {
+    if (booking.mentorId !== canceledByUserId && booking.menteeId !== canceledByUserId) {
       return { success: false, message: 'Unauthorized: You are not part of this booking' }
     }
 
@@ -508,91 +678,236 @@ export async function cancelBooking(bookingId: string, userId: string): Promise<
       return { success: false, message: 'Booking is already cancelled' }
     }
 
-    // Use transaction for refund and slot release
-    await prisma.$transaction(async (tx) => {
-      // Cancel booking
+    // ── 2. Determine context ─────────────────────────────────────────────────
+    const isMenteeCancelling = canceledByUserId === booking.menteeId
+    const isConfirmed        = booking.status === BookingStatus.CONFIRMED
+    const hoursUntilSession  = (booking.startTime.getTime() - Date.now()) / (1000 * 60 * 60)
+    const isLateCancel       = hoursUntilSession < CANCELLATION_THRESHOLD_HOURS
+
+    const cancellerName = isMenteeCancelling
+      ? (booking.mentee.name ?? booking.mentee.email ?? 'Mentee')
+      : (booking.mentor.name ?? booking.mentor.email ?? 'Mentor')
+    const notifyRecipientId = isMenteeCancelling ? booking.mentorId : booking.menteeId
+
+    // ── 3. Atomic transaction ────────────────────────────────────────────────
+    // All point moves, trust deductions, and status updates succeed or fail together.
+    const summary = await prisma.$transaction(async (tx) => {
+      // a) Cancel the booking
       await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.CANCELLED },
       })
 
-  
+      // b) Free the slot so other mentees can book it
       if (booking.slotId) {
         await tx.availableSlot.update({
           where: { id: booking.slotId },
           data: { isBooked: false },
         })
-        console.log(`Slot ${booking.slotId} released and available again`)
       }
 
-      // Refund point to mentee if booking was PENDING or CONFIRMED
-      if (booking.status === BookingStatus.PENDING || booking.status === BookingStatus.CONFIRMED) {
+      // c) PENDING booking: simple full refund, no trust penalty
+      if (!isConfirmed) {
         await tx.user.update({
           where: { id: booking.menteeId },
           data: { givePoints: { increment: 1 } },
         })
-
         await tx.transactionLog.create({
+          data: { userId: booking.menteeId, amount: 1, type: TransactionType.BOOKING_CANCELLED, bookingId },
+        })
+        return { timing: 'pending' as const, trustDelta: 0, penalisedUserId: null, pointsNote: 'Refunded to mentee' }
+      }
+
+      // d) CONFIRMED booking: re-read trust scores inside the transaction to avoid stale reads
+      const [latestMentor, latestMentee] = await Promise.all([
+        tx.user.findUnique({ where: { id: booking.mentorId }, select: { trustScore: true } }),
+        tx.user.findUnique({ where: { id: booking.menteeId }, select: { trustScore: true } }),
+      ])
+
+      if (!latestMentor || !latestMentee) throw new Error('User records missing inside transaction')
+
+      let timing: 'early' | 'late'    = isLateCancel ? 'late' : 'early'
+      let trustDelta: number
+      let penalisedUserId: string
+
+      if (isMenteeCancelling) {
+        penalisedUserId = booking.menteeId
+
+        if (!isLateCancel) {
+          // ── Early cancel by mentee (> 12 h) ───────────────────────────────
+          // Refund 1 point; deduct 2 Trust Score
+          trustDelta = -2
+          const newTrust = Math.max(0, latestMentee.trustScore + trustDelta)
+
+          await tx.user.update({
+            where: { id: booking.menteeId },
+            data: { givePoints: { increment: 1 }, trustScore: newTrust },
+          })
+          await tx.transactionLog.create({
+            data: { userId: booking.menteeId, amount: 1, type: TransactionType.BOOKING_CANCELLED, bookingId },
+          })
+          await tx.trustHistory.create({
+            data: {
+              userId: booking.menteeId,
+              previousScore: latestMentee.trustScore,
+              newScore: newTrust,
+              reason: `Early cancellation by mentee (>${CANCELLATION_THRESHOLD_HOURS}h notice) for booking ${bookingId}`,
+            },
+          })
+        } else {
+          // ── Late cancel by mentee (< 12 h) ────────────────────────────────
+          // Forfeit: 1 point transferred to mentor as compensation; deduct 10 Trust Score
+          trustDelta = -10
+          const newTrust = Math.max(0, latestMentee.trustScore + trustDelta)
+
+          await tx.user.update({
+            where: { id: booking.mentorId },
+            data: { givePoints: { increment: 1 } },
+          })
+          await tx.transactionLog.create({
+            // @ts-expect-error CANCELLATION_COMPENSATION is valid in DB; run `npm run db:generate` after restarting dev server
+            data: { userId: booking.mentorId, amount: 1, type: 'CANCELLATION_COMPENSATION', bookingId },
+          })
+          await tx.user.update({
+            where: { id: booking.menteeId },
+            data: { trustScore: newTrust },
+          })
+          await tx.trustHistory.create({
+            data: {
+              userId: booking.menteeId,
+              previousScore: latestMentee.trustScore,
+              newScore: newTrust,
+              reason: `Late cancellation by mentee (<${CANCELLATION_THRESHOLD_HOURS}h notice) for booking ${bookingId} — 1 GivePoint forfeited to mentor`,
+            },
+          })
+        }
+      } else {
+        // ── Mentor cancels ────────────────────────────────────────────────────
+        // Always refund the mentee their 1 point
+        penalisedUserId = booking.mentorId
+        trustDelta      = isLateCancel ? -20 : -5
+        const newTrust  = Math.max(0, latestMentor.trustScore + trustDelta)
+
+        await tx.user.update({
+          where: { id: booking.menteeId },
+          data: { givePoints: { increment: 1 } },
+        })
+        await tx.transactionLog.create({
+          data: { userId: booking.menteeId, amount: 1, type: TransactionType.BOOKING_CANCELLED, bookingId },
+        })
+        await tx.user.update({
+          where: { id: booking.mentorId },
+          data: { trustScore: newTrust },
+        })
+        await tx.trustHistory.create({
           data: {
-            userId: booking.menteeId,
-            amount: 1,
-            type: 'BOOKING_CANCELLED',
-            bookingId,
+            userId: booking.mentorId,
+            previousScore: latestMentor.trustScore,
+            newScore: newTrust,
+            reason: `${isLateCancel ? 'Late' : 'Early'} cancellation by mentor (${isLateCancel ? '<' : '>'}${CANCELLATION_THRESHOLD_HOURS}h notice) for booking ${bookingId}`,
           },
         })
-        console.log('Transaction logged: +1 point refund (BOOKING_CANCELLED)')
       }
+
+      return { timing, trustDelta, penalisedUserId }
     })
 
+    // ── 4. Revalidate pages ──────────────────────────────────────────────────
     revalidatePath('/')
     revalidatePath('/dashboard')
     revalidatePath('/history')
-    revalidatePath(`/mentor/${booking.mentorId}`)
+    revalidatePath(`/profile/${booking.mentorId}`)
 
-    // Notify the other party about the cancellation
-    const cancelledByMentee = booking.menteeId === userId
-    if (cancelledByMentee) {
-      // Mentee cancelled — notify mentor
-      const cancellingMentee = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
-      const cancellingMenteeName = cancellingMentee?.name || cancellingMentee?.email || 'Your mentee'
-      await createNotification(
-        booking.mentorId,
-        'Booking Cancelled',
-        `${cancellingMenteeName} has cancelled their booking request.`,
-        'BOOKING',
-        '/dashboard'
-      )
+    // ── 5. Build human-readable outcome messages ─────────────────────────────
+    let cancellerNotifTitle   = ''
+    let cancellerNotifMessage = ''
+    let recipientNotifTitle   = ''
+    let recipientNotifMessage = ''
+
+    if (summary.timing === 'pending') {
+      cancellerNotifTitle   = 'Booking Cancelled'
+      cancellerNotifMessage = 'Your booking has been cancelled. 1 GivePoint has been refunded to your balance.'
+      recipientNotifTitle   = 'Booking Cancelled'
+      recipientNotifMessage = isMenteeCancelling
+        ? `${cancellerName} has cancelled their booking request.`
+        : `${cancellerName} has cancelled your session. 1 GivePoint has been refunded.`
+    } else if (isMenteeCancelling) {
+      if (summary.timing === 'early') {
+        cancellerNotifTitle   = 'Booking Cancelled — Early'
+        cancellerNotifMessage = `You cancelled with more than ${CANCELLATION_THRESHOLD_HOURS}h notice. 1 GivePoint refunded. −2 Trust Score applied.`
+        recipientNotifTitle   = 'Session Cancelled by Mentee'
+        recipientNotifMessage = `${cancellerName} cancelled your upcoming session with more than ${CANCELLATION_THRESHOLD_HOURS}h notice.`
+      } else {
+        cancellerNotifTitle   = 'Booking Cancelled — Late'
+        cancellerNotifMessage = `You cancelled with less than ${CANCELLATION_THRESHOLD_HOURS}h notice. Your GivePoint was sent to the mentor as compensation. −10 Trust Score applied.`
+        recipientNotifTitle   = 'Late Cancellation — +1 GivePoint Compensation'
+        recipientNotifMessage = `${cancellerName} cancelled your session with less than ${CANCELLATION_THRESHOLD_HOURS}h notice. 1 GivePoint has been added to your balance as compensation.`
+      }
     } else {
-      // Mentor cancelled — notify mentee with refund message
-      const cancellingMentor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
-      const cancellingMentorName = cancellingMentor?.name || cancellingMentor?.email || 'Your mentor'
-      await createNotification(
-        booking.menteeId,
-        'Booking Cancelled',
-        `${cancellingMentorName} has cancelled your session. Your GivePoint has been refunded.`,
-        'BOOKING',
-        '/discover'
-      )
-      if (booking.status === BookingStatus.PENDING || booking.status === BookingStatus.CONFIRMED) {
-        await createNotification(
-          booking.menteeId,
-          'GivePoint Refunded',
-          '+1 GivePoint has been returned to your balance.',
-          'POINTS',
-          '/history'
-        )
+      if (summary.timing === 'early') {
+        cancellerNotifTitle   = 'Session Cancelled — Early'
+        cancellerNotifMessage = `You cancelled with more than ${CANCELLATION_THRESHOLD_HOURS}h notice. −5 Trust Score applied.`
+        recipientNotifTitle   = 'Session Cancelled by Mentor'
+        recipientNotifMessage = `${cancellerName} cancelled your upcoming session. 1 GivePoint has been refunded.`
+      } else {
+        cancellerNotifTitle   = 'Session Cancelled — Late'
+        cancellerNotifMessage = `You cancelled with less than ${CANCELLATION_THRESHOLD_HOURS}h notice. −20 Trust Score applied.`
+        recipientNotifTitle   = 'Session Cancelled Last-Minute'
+        recipientNotifMessage = `${cancellerName} cancelled your session with less than ${CANCELLATION_THRESHOLD_HOURS}h notice. 1 GivePoint has been refunded.`
       }
     }
 
-    return {
-      success: true,
-      message: 'Booking cancelled. Point refunded and slot is available again.',
+    // ── 6. In-app DB notifications ───────────────────────────────────────────
+    await Promise.all([
+      createNotification(canceledByUserId, cancellerNotifTitle, cancellerNotifMessage, 'BOOKING', '/history'),
+      createNotification(notifyRecipientId, recipientNotifTitle, recipientNotifMessage, 'BOOKING', '/history'),
+    ])
+
+    // ── 7. Pusher real-time event — instant delivery to both parties ─────────
+    const pusherPayload: CancellationPusherPayload = {
       bookingId,
+      cancelledBy: isMenteeCancelling ? 'mentee' : 'mentor',
+      cancellerName,
+      timing: summary.timing,
+      pointsChange: buildPointsChange(summary.timing, isMenteeCancelling, booking.mentorId, booking.menteeId),
+      trustChange: summary.timing !== 'pending' && summary.penalisedUserId
+        ? { userId: summary.penalisedUserId, delta: summary.trustDelta }
+        : null,
+      message: recipientNotifMessage,
     }
+
+    await Promise.allSettled([
+      pusherServer.trigger(`user-${canceledByUserId}`, 'booking-cancelled', {
+        ...pusherPayload,
+        message: cancellerNotifMessage,
+      }),
+      pusherServer.trigger(`user-${notifyRecipientId}`, 'booking-cancelled', pusherPayload),
+    ])
+
+    const successMessage = summary.timing === 'late' && isMenteeCancelling
+      ? 'Booking cancelled. 1 GivePoint forfeited to mentor. −10 Trust Score.'
+      : summary.timing === 'late' && !isMenteeCancelling
+      ? 'Session cancelled. Mentee refunded. −20 Trust Score.'
+      : 'Booking cancelled.'
+
+    return { success: true, message: successMessage, bookingId }
   } catch (error) {
-    console.error('Error cancelling booking:', error)
+    console.error('[cancelBooking] Error:', error)
     return { success: false, message: 'Failed to cancel booking. Please try again.' }
   }
+}
+
+function buildPointsChange(
+  timing: 'pending' | 'early' | 'late',
+  isMenteeCancelling: boolean,
+  mentorId: string,
+  menteeId: string
+): CancellationPusherPayload['pointsChange'] {
+  if (timing === 'pending' || timing === 'early' || !isMenteeCancelling) {
+    return [{ userId: menteeId, delta: 1 }]
+  }
+  // Late cancel by mentee: point goes to mentor
+  return [{ userId: mentorId, delta: 1 }]
 }
 
 export async function getMyBookings(userId: string) {
@@ -663,7 +978,7 @@ export async function getReviewsByMentorId(mentorId: string) {
 export async function getReviewsWithReviewerDetails(mentorId: string) {
   try {
     const reviews = await prisma.review.findMany({
-      where: { receiverId: mentorId },
+      where: { receiverId: mentorId, isHidden: false },
       include: {
         booking: {
           include: {
@@ -693,7 +1008,7 @@ export async function getReviewsWithReviewerDetails(mentorId: string) {
 export async function getMentorRating(mentorId: string) {
   try {
     const reviews = await prisma.review.findMany({
-      where: { receiverId: mentorId },
+      where: { receiverId: mentorId, isHidden: false },
     })
     
     if (reviews.length === 0) {

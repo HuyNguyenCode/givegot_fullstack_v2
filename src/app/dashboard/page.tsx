@@ -37,6 +37,15 @@ export default function DashboardPage() {
   const [popularMentors, setPopularMentors] = useState<PopularMentor[]>([])
   const [analyticsLoading, setAnalyticsLoading] = useState(true)
 
+  // Tracks the current time, refreshed every minute so Join Meeting button
+  // appears/disappears without requiring a page reload.
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
   const loadBookings = async () => {
     if (!currentUser) return
     
@@ -211,6 +220,18 @@ export default function DashboardPage() {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  /**
+   * Returns true when the session window is open: starting 10 minutes before
+   * startTime and closing at endTime. Relies on `currentTime` state so the
+   * button appears/disappears without a page reload.
+   */
+  const isNearSession = (startTime: Date, endTime: Date): boolean => {
+    const start = new Date(startTime)
+    const end = new Date(endTime)
+    const tenMinBefore = new Date(start.getTime() - 10 * 60 * 1000)
+    return currentTime >= tenMinBefore && currentTime <= end
   }
 
   return (
@@ -403,7 +424,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-base font-semibold text-gray-800">Top Mentors</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Ranked by completed sessions</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Ranked by Trust Score</p>
                 </div>
                 <Link
                   href="/discover"
@@ -556,11 +577,25 @@ export default function DashboardPage() {
                       )}
                       {booking.status === BookingStatus.CONFIRMED && (
                         <>
-                          <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                            <p className="text-sm text-blue-800">
-                              ⏰ Session confirmed. Waiting for mentee to mark as complete.
-                            </p>
-                          </div>
+                          {booking.meetingUrl && isNearSession(booking.startTime, booking.endTime) ? (
+                            <a
+                              href={booking.meetingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 flex-1 justify-center bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition text-sm shadow-sm"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Join Meeting
+                            </a>
+                          ) : (
+                            <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                              <p className="text-sm text-blue-800">
+                                ⏰ Session confirmed. {booking.meetingUrl ? 'Join Meeting button appears 10 min before start.' : 'Waiting for mentee to mark as complete.'}
+                              </p>
+                            </div>
+                          )}
                           <Link
                             href={`/chat?bookingId=${booking.id}`}
                             className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition text-sm shadow-sm"
@@ -687,6 +722,19 @@ export default function DashboardPage() {
                       )}
                       {booking.status === BookingStatus.CONFIRMED && (
                         <>
+                          {booking.meetingUrl && isNearSession(booking.startTime, booking.endTime) && (
+                            <a
+                              href={booking.meetingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 justify-center w-full bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition text-sm shadow-sm mb-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Join Meeting
+                            </a>
+                          )}
                           <button
                             onClick={() => handleComplete(booking)}
                             disabled={actionLoading === booking.id}

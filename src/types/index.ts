@@ -9,6 +9,9 @@ export type UserWithSkills = User & {
 export type BookingWithDetails = Booking & {
   mentor: User
   mentee: User
+  // meetingUrl is a real DB column added via `prisma db push`. Forward-declared here
+  // until `prisma generate` is re-run after restarting the dev server.
+  meetingUrl: string | null
 }
 
 export interface Review {

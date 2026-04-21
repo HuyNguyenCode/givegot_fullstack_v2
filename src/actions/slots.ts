@@ -71,7 +71,7 @@ export async function addMentorSlots(
     console.log(`Created ${result.count} available slots`)
 
     revalidatePath('/dashboard')
-    revalidatePath(`/mentor/${mentorId}`)
+    revalidatePath(`/profile/${mentorId}`)
     
     return {
       success: true,
@@ -143,7 +143,51 @@ export async function deleteMentorSlot(slotId: string, mentorId: string): Promis
 
     await prisma.availableSlot.delete({ where: { id: slotId } })
     revalidatePath('/dashboard')
-    revalidatePath(`/mentor/${mentorId}`)
+    revalidatePath(`/profile/${mentorId}`)
     return { success: true, message: 'Slot deleted successfully' }
   } catch (error) { return { success: false, message: 'Failed to delete slot.' } }
+}
+
+export async function updateMentorSlot(
+  slotId: string,
+  mentorId: string,
+  newStart: Date,
+  newEnd: Date
+): Promise<SlotResult> {
+  try {
+    const slot = await prisma.availableSlot.findUnique({ where: { id: slotId } })
+    if (!slot) return { success: false, message: 'Slot not found' }
+    if (slot.mentorId !== mentorId) return { success: false, message: 'Unauthorized' }
+    if (slot.isBooked) return { success: false, message: 'Cannot move a booked slot.' }
+
+    // Validate the new time range
+    if (newEnd <= newStart) return { success: false, message: 'End time must be after start time.' }
+
+    // Check for overlaps with other slots (excluding this one)
+    const overlapping = await prisma.availableSlot.findFirst({
+      where: {
+        mentorId,
+        id: { not: slotId },
+        AND: [
+          { startTime: { lt: newEnd } },
+          { endTime: { gt: newStart } },
+        ],
+      },
+    })
+    if (overlapping) {
+      return { success: false, message: 'This time overlaps with an existing slot.' }
+    }
+
+    await prisma.availableSlot.update({
+      where: { id: slotId },
+      data: { startTime: newStart, endTime: newEnd },
+    })
+
+    revalidatePath('/dashboard')
+    revalidatePath(`/profile/${mentorId}`)
+    return { success: true, message: 'Slot updated successfully' }
+  } catch (error) {
+    console.error('Error updating mentor slot:', error)
+    return { success: false, message: 'Failed to update slot.' }
+  }
 }

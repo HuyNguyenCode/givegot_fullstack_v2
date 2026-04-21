@@ -15,6 +15,7 @@ interface MentorMatch {
   avatarUrl: string | null
   bio: string | null
   givePoints: number
+  trustScore: number
   teachingSkills: Array<{
     id: string
     name: string
@@ -187,19 +188,60 @@ function DiscoverContent() {
         isMatch ? 'border-green-400 bg-gradient-to-br from-white to-green-50' : 'border-gray-200'
       }`}
     >
-      {isMatch && mentor.matchScore > 0 && (
-        <div className="flex items-center gap-2 mb-3 bg-green-100 px-3 py-1.5 rounded-lg">
-          <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {isMatch && mentor.matchScore > 0 && (
+          <div className="flex items-center gap-2 bg-green-100 px-3 py-1.5 rounded-lg">
+            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm font-bold text-green-800">
+              {Math.round(mentor.matchScore * 100)}% AI Match
+            </span>
+          </div>
+        )}
+        {/* Trust score chip — always visible so users can compare at a glance */}
+        <div
+          title="Trust Score is calculated from session completion rate, ratings, response time, and reliability."
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-default ${
+            mentor.trustScore >= 85
+              ? 'bg-emerald-50 border-emerald-200'
+              : mentor.trustScore >= 50
+              ? 'bg-amber-50 border-amber-200'
+              : 'bg-red-50 border-red-200'
+          }`}
+        >
+          <svg
+            className={`w-3.5 h-3.5 flex-shrink-0 ${
+              mentor.trustScore >= 85
+                ? 'text-emerald-600'
+                : mentor.trustScore >= 50
+                ? 'text-amber-600'
+                : 'text-red-500'
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
-          <span className="text-sm font-bold text-green-800">
-            {Math.round(mentor.matchScore * 100)}% AI Match
+          <span
+            className={`text-xs font-semibold ${
+              mentor.trustScore >= 85
+                ? 'text-emerald-700'
+                : mentor.trustScore >= 50
+                ? 'text-amber-700'
+                : 'text-red-600'
+            }`}
+          >
+            {mentor.trustScore >= 85 ? 'High Trust · ' : 'Trust: '}
+            <span className="font-bold">{mentor.trustScore}</span>
+            <span className="font-normal opacity-70">/100</span>
           </span>
         </div>
-      )}
+      </div>
 
       <div className="flex items-start gap-4 mb-4">
-        <Link href={`/mentor/${mentor.id}`} className="flex-shrink-0 group">
+        <Link href={`/profile/${mentor.id}`} className="flex-shrink-0 group">
           {mentor.avatarUrl && (
             <Image
               src={mentor.avatarUrl}
@@ -211,14 +253,14 @@ function DiscoverContent() {
           )}
         </Link>
         <div className="flex-1 min-w-0">
-          <Link href={`/mentor/${mentor.id}`} className="group">
+          <Link href={`/profile/${mentor.id}`} className="group">
             <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
               {mentor.name || 'Anonymous Mentor'}
             </h3>
           </Link>
           <p className="text-sm text-gray-500">{mentor.email}</p>
           {mentor.rating && mentor.rating.count > 0 && (
-            <Link href={`/mentor/${mentor.id}`} className="inline-block group">
+            <Link href={`/profile/${mentor.id}`} className="inline-block group">
               <div className="flex items-center gap-2 mt-1 group-hover:opacity-80 transition-opacity">
                 <div className="flex items-center gap-1">
                   <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
@@ -284,7 +326,7 @@ function DiscoverContent() {
 
       <div className="space-y-2">
         <Link
-          href={`/mentor/${mentor.id}`}
+          href={`/profile/${mentor.id}`}
           className={`block w-full text-white text-center py-2.5 rounded-lg font-medium transition ${
             isMatch
               ? 'bg-green-600 hover:bg-green-700 shadow-md'
@@ -294,7 +336,7 @@ function DiscoverContent() {
           📅 View Available Slots
         </Link>
         <Link
-          href={`/mentor/${mentor.id}#reviews`}
+          href={`/profile/${mentor.id}#reviews`}
           className="block text-center text-sm text-purple-600 hover:text-purple-700 font-medium transition"
         >
           View Full Profile & Reviews →
@@ -469,6 +511,14 @@ function DiscoverContent() {
                           <p className="text-green-100 text-sm">
                             These mentors teach skills you want to learn
                           </p>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <span className="inline-flex items-center gap-1 bg-white/15 text-white/90 text-xs font-medium px-2.5 py-0.5 rounded-full ring-1 ring-white/20">
+                              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Ranked by Skill Match &times; Trust Score
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-3">

@@ -11,6 +11,8 @@ interface MenteeBookingCalendarProps {
   mentorName: string
   currentUserId: string
   currentUserPoints: number
+  bookingDisabled?: boolean
+  pendingReviewCount?: number
 }
 
 interface AvailableSlot {
@@ -25,6 +27,8 @@ export default function MenteeBookingCalendar({
   mentorName,
   currentUserId,
   currentUserPoints,
+  bookingDisabled = false,
+  pendingReviewCount = 0,
 }: MenteeBookingCalendarProps) {
   const router = useRouter()
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([])
@@ -49,6 +53,11 @@ export default function MenteeBookingCalendar({
   }, [mentorId])
 
   const handleSlotClick = (slot: AvailableSlot) => {
+    if (bookingDisabled) {
+      // Gate is handled by the parent banner — do nothing silently
+      return
+    }
+
     if (currentUserPoints < 1) {
       alert('You need at least 1 GivePoint to book a session. Teach to earn more points!')
       return
@@ -131,7 +140,34 @@ export default function MenteeBookingCalendar({
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-lg p-6">
+      <div className="relative bg-white rounded-xl shadow-lg p-6">
+
+        {/* ── Review Gate Overlay ─────────────────────────────────────────── */}
+        {bookingDisabled && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm rounded-xl px-6 text-center">
+            <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl px-8 py-7 max-w-md shadow-lg">
+              <div className="flex items-center justify-center w-14 h-14 bg-amber-100 rounded-full mx-auto mb-4">
+                <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-amber-900 mb-2">Booking Locked</h3>
+              <p className="text-sm text-amber-800 leading-relaxed mb-4">
+                You have{' '}
+                <span className="font-bold">{pendingReviewCount} overdue session review{pendingReviewCount !== 1 ? 's' : ''}</span>.
+                Please go to your Dashboard, submit your review(s), then return to book new sessions.
+              </p>
+              <a
+                href="/dashboard"
+                className="inline-block bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition shadow-md"
+              >
+                Go to Dashboard →
+              </a>
+            </div>
+          </div>
+        )}
+
+        <div className={bookingDisabled ? 'pointer-events-none select-none opacity-30' : ''}>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-2">
             <span className="text-2xl">📅</span>
@@ -224,6 +260,7 @@ export default function MenteeBookingCalendar({
             )
           })}
         </div>
+        </div>{/* end dimming wrapper */}
       </div>
 
       {/* Booking Confirmation Modal */}

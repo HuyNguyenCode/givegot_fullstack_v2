@@ -12,6 +12,7 @@ interface MentorMatch {
   avatarUrl: string | null
   bio: string | null
   givePoints: number
+  trustScore: number
   createdAt: Date
   updatedAt: Date
   teachingSkills: Array<{
@@ -42,6 +43,7 @@ interface GranularMatchResult {
   avatarUrl: string | null
   bio: string | null
   givePoints: number
+  trustScore: number
   createdAt: Date
   updatedAt: Date
   maxSimilarity: number
@@ -89,6 +91,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
        u."avatarUrl",
        u.bio,
        u."givePoints",
+       u."trustScore",
        u."createdAt",
        u."updatedAt",
        -- GRANULAR: Compare each mentor's GIVE skill against ALL user's WANT skills
@@ -119,7 +122,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
     ) s_want
     WHERE u.id != ${currentUserId}
       AND s_give.embedding IS NOT NULL
-     GROUP BY u.id, u.email, u.name, u."avatarUrl", u.bio, u."givePoints", u."createdAt", u."updatedAt"
+     GROUP BY u.id, u.email, u.name, u."avatarUrl", u.bio, u."givePoints", u."trustScore", u."createdAt", u."updatedAt"
      HAVING 
        -- Include if keyword match (Skill OR Bio) OR semantic >= 0.55
        BOOL_OR(
@@ -167,39 +170,51 @@ export async function getAutoMatchedMentors(currentUserId: string) {
           .filter(skill => userLearningGoalNames.includes(skill.name))
           .map(skill => skill.name)
 
+        // Trust-weighted match score: a mentor with higher trust floats up the rankings
+        const adjustedScore = mentor.maxSimilarity * (mentor.trustScore / 100)
+
         return {
           ...mentor,
           teachingSkills,
           matchedSkills,
-          matchScore: mentor.maxSimilarity,
+          matchScore: adjustedScore,
           similarity: mentor.maxSimilarity,
         }
       })
     )
 
-    console.log('\nGRANULAR SKILL-LEVEL MATCH SCORES:')
+    console.log('\nGRANULAR SKILL-LEVEL MATCH SCORES (trust-weighted):')
     mentorsWithSkills.forEach(m => {
-      console.log(`   - ${m.name}: ${(m.similarity * 100).toFixed(1)}% (Keyword: ${m.hasKeywordMatch ? 'YES' : 'NO'})`)
+      console.log(`   - ${m.name}: raw=${(m.similarity * 100).toFixed(1)}% trust=${m.trustScore} adjusted=${(m.matchScore * 100).toFixed(1)}% (Keyword: ${m.hasKeywordMatch ? 'YES' : 'NO'})`)
     })
     console.log('-------------------------------------------\n')
 
-    // Step 4: 🧠 THUẬT TOÁN NGƯỠNG ĐỘNG CÓ PHANH ABS
-    // Step 4: 🧠 SỬ DỤNG MỐC VÀNG TĨNH CHO AUTO-MATCH (Nhiều mục tiêu)
-    const keywordMatches = mentorsWithSkills.filter(m => m.hasKeywordMatch);
-    const semanticMatches = mentorsWithSkills
-      .filter(m => !m.hasKeywordMatch)
-      .sort((a, b) => b.maxSimilarity - a.maxSimilarity);
-
-    // Mốc vàng 0.585 đã được kiểm chứng:
-    // - Vớt được: React -> Web Dev (0.631) | Python -> ML (0.588)
-    // - Chặn được: React -> ML (0.582)
+    // Step 4: Partition by raw semantic cutoff, then sort each bucket by trust-adjusted score
     const STATIC_CUTOFF = 0.585;
 
-    const topSemantic = semanticMatches.filter(m => m.maxSimilarity >= STATIC_CUTOFF);
-    const remainingSemantic = semanticMatches.filter(m => m.maxSimilarity < STATIC_CUTOFF);
+    const keywordMatches = mentorsWithSkills
+      .filter(m => m.hasKeywordMatch)
+      .sort((a, b) => b.matchScore - a.matchScore);
 
-    const bestMatches = [...keywordMatches, ...topSemantic];
-    const otherMentors = remainingSemantic;
+    const semanticMatches = mentorsWithSkills
+      .filter(m => !m.hasKeywordMatch)
+      .sort((a, b) => b.matchScore - a.matchScore);
+
+    // Cutoff is based on raw similarity, not adjusted score, to avoid excluding good matches
+    const topSemantic = semanticMatches.filter(m => m.similarity >= STATIC_CUTOFF);
+    const remainingSemantic = semanticMatches.filter(m => m.similarity < STATIC_CUTOFF);
+
+    // Merge keyword and top-semantic matches into one list, then sort the whole
+    // thing by finalScore (= similarity × trustScore/100) so the label
+    // "Ranked by Skill Match × Trust Score" is actually true.
+    // Tie-breaker: higher trustScore wins when finalScores are equal.
+    const bestMatches = [...keywordMatches, ...topSemantic]
+      .sort((a, b) => {
+        if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore
+        return b.trustScore - a.trustScore
+      })
+
+    const otherMentors = remainingSemantic
 
     console.log(`Static Auto-Match results (Cutoff: ${STATIC_CUTOFF}):`)
     console.log(`   Learning goals: ${userLearningGoalNames.join(', ')}`)
@@ -387,6 +402,7 @@ interface SemanticSearchResult {
   avatarUrl: string | null
   bio: string | null
   givePoints: number
+  trustScore: number
   createdAt: Date
   updatedAt: Date
   maxSimilarity: number // Highest similarity score among all their skills
@@ -424,6 +440,7 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
         u."avatarUrl",
         u.bio,
         u."givePoints",
+        u."trustScore",
         u."createdAt",
         u."updatedAt",
         -- GRANULAR: Find the BEST matching SKILL for each mentor (not aggregated user embedding)
@@ -443,7 +460,7 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
       INNER JOIN "UserSkill" us ON us."userId" = u.id AND us.type = 'GIVE'
       INNER JOIN "Skill" s ON s.id = us."skillId" AND s.status = 'APPROVED'
       WHERE u.id != ${currentUserId}
-      GROUP BY u.id, u.email, u.name, u."avatarUrl", u.bio, u."givePoints", u."createdAt", u."updatedAt"
+      GROUP BY u.id, u.email, u.name, u."avatarUrl", u.bio, u."givePoints", u."trustScore", u."createdAt", u."updatedAt"
       HAVING 
         -- HYBRID FILTER: Include if keyword match OR semantic score >= 55%
         BOOL_OR(
@@ -506,22 +523,33 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
           )
           .map(skill => skill.name)
 
+        // Trust-weighted score for search results
+        const adjustedScore = mentor.maxSimilarity * (mentor.trustScore / 100)
+
         return {
           ...mentor,
           teachingSkills,
           matchedSkills, // Skills that directly match the keyword
-          matchScore: mentor.maxSimilarity,
+          matchScore: adjustedScore,
           similarity: mentor.maxSimilarity,
         }
       })
     )
 
-    console.log(`Granular semantic search complete! Returning ${mentorsWithSkills.length} mentors`)
+    // Sort purely by finalScore (= similarity × trustScore/100) so the list
+    // matches the UI label "Ranked by Skill Match × Trust Score".
+    // Tie-breaker: higher trustScore wins when finalScores are equal.
+    const sortedResults = mentorsWithSkills.sort((a, b) => {
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore
+      return b.trustScore - a.trustScore
+    })
+
+    console.log(`Granular semantic search complete! Returning ${sortedResults.length} mentors`)
 
     return {
-      mentors: mentorsWithSkills,
+      mentors: sortedResults,
       query: query,
-      totalFound: mentorsWithSkills.length,
+      totalFound: sortedResults.length,
     }
   } catch (error) {
     console.error('Error in granular semantic search:', error)

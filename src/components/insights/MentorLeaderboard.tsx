@@ -107,7 +107,7 @@ export default function MentorLeaderboard({ data, isLoading }: Props) {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <Link
-                href={`/discover?mentor=${mentor.id}`}
+                href={`/profile/${mentor.id}`}
                 className="text-sm font-semibold text-gray-900 hover:text-purple-600 transition-colors truncate block"
               >
                 {mentor.name}
@@ -120,10 +120,37 @@ export default function MentorLeaderboard({ data, isLoading }: Props) {
             </div>
 
             {/* Stats */}
-            <div className="text-right flex-shrink-0">
-              <p className="text-sm font-bold text-gray-800">
-                {mentor.totalSessions}
-                <span className="text-xs font-normal text-gray-500 ml-0.5">sessions</span>
+            <div className="text-right flex-shrink-0 space-y-1">
+              {/* Trust Score — primary ranking signal */}
+              <div
+                title="Trust Score: calculated from completion rate, ratings, response time, and reliability."
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold cursor-default ${
+                  mentor.trustScore >= 85
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : mentor.trustScore >= 50
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-red-100 text-red-600'
+                }`}
+              >
+                <svg
+                  className={`w-3 h-3 flex-shrink-0 ${
+                    mentor.trustScore >= 85
+                      ? 'text-emerald-500'
+                      : mentor.trustScore >= 50
+                      ? 'text-amber-500'
+                      : 'text-red-400'
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                {mentor.trustScore}/100
+              </div>
+              {/* Secondary: sessions + star rating */}
+              <p className="text-xs text-gray-400">
+                {mentor.totalSessions} session{mentor.totalSessions !== 1 ? 's' : ''}
               </p>
               <StarRating rating={mentor.avgRating} />
             </div>
