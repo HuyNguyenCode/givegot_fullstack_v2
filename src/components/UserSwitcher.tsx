@@ -2,6 +2,7 @@
 
 import { useUser } from '@/contexts/UserContext'
 import Image from 'next/image'
+import { Wallet } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 
 export function UserSwitcher() {
@@ -63,6 +64,14 @@ export function UserSwitcher() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <span className="text-sm font-medium hidden sm:inline">Profile</span>
+          </a>
+          <a
+            href="/wallet"
+            className="text-white/90 hover:text-white transition flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg"
+            title="My Wallet"
+          >
+            <Wallet className="w-4 h-4" />
+            <span className="text-sm font-medium hidden sm:inline">Wallet</span>
           </a>
           
           <label htmlFor="user-select" className="text-sm font-medium text-white">

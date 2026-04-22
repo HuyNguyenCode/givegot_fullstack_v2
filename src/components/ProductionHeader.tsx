@@ -3,6 +3,7 @@
 import { useUser } from '@/contexts/UserContext'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Wallet } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import { NotificationBell } from './NotificationBell'
 
@@ -24,6 +25,7 @@ export function ProductionHeader() {
         <Link href="/homepage" className="font-bold text-purple-600 hover:text-purple-700 text-lg">
           GiveGot
         </Link>
+
         <div className="flex items-center gap-1">
           <Link
             href="/dashboard"
@@ -47,8 +49,21 @@ export function ProductionHeader() {
           {/* Notification Bell */}
           <NotificationBell userId={currentUser.id} />
 
-          <div className="w-px h-5 bg-gray-200 mx-1" />
+          <div className="w-px h-5 bg-gray-200 mx-2" />
 
+          {/* Balance pill — primary entry point to /wallet */}
+          <Link
+            href="/wallet"
+            className="group flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-full text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all duration-150"
+            title="My Wallet"
+          >
+            <Wallet className="w-3.5 h-3.5 text-purple-500 group-hover:text-purple-700 transition-colors" />
+            <span className="text-xs font-bold tabular-nums">
+              {currentUser.givePoints.toLocaleString()} pts
+            </span>
+          </Link>
+
+          {/* Avatar + name → profile */}
           <Link
             href="/profile"
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
@@ -67,10 +82,8 @@ export function ProductionHeader() {
               </span>
             )}
             <span className="text-sm font-medium">{currentUser.name || currentUser.email}</span>
-            <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
-              {currentUser.givePoints} pts
-            </span>
           </Link>
+
           <SignOutButton />
         </div>
       </div>

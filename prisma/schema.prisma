@@ -64,9 +64,12 @@ model User {
   notifications     Notification[]
 
   // Messaging relations
-  conversationsAsA  Conversation[] @relation("ConversationUserA")
-  conversationsAsB  Conversation[] @relation("ConversationUserB")
+  conversationsAsA  Conversation[]   @relation("ConversationUserA")
+  conversationsAsB  Conversation[]   @relation("ConversationUserB")
   sentMessages      Message[]
+
+  // Fiat payment relations
+  withdrawRequests  WithdrawRequest[]
 }
 
 // Admin: User Role Enum
@@ -223,30 +226,41 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// 7. TransactionLog ( NEW: Time-Banking Audit Trail)
+// 7. TransactionLog ( UPDATED: Fiat ledger support)
 model TransactionLog {
-  id        String              @id @default(uuid())
-  userId    String
-  amount    Int                 // +1 (earned) or -1 (spent)
-  type      TransactionType
-  bookingId String?
-  
+  id          String            @id @default(uuid())
+  userId      String
+  amount      Int               // positive = credited, negative = debited (in GivePoints)
+  type        TransactionType
+  status      TransactionStatus @default(SUCCESS) // PENDING until payment gateway confirms
+  bookingId   String?
+  referenceId String?           // Payment gateway transaction ID (VNPay / Momo / Stripe)
+
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   booking   Booking?            @relation(fields: [bookingId], references: [id])
-  
+
   createdAt DateTime            @default(now())
-  
-  @@index([userId, createdAt])  // Optimize history queries
+
+  @@index([userId, createdAt])
+  @@index([status])             // Efficient PENDING reconciliation queries
 }
 
 enum TransactionType {
-  BOOKING_CREATED          // -1 point (mentee books)
-  BOOKING_COMPLETED        // +1 point (mentor earns)
-  BOOKING_CANCELLED        // +1 point (refund to mentee)
-  BOOKING_DECLINED         // +1 point (refund to mentee)
-  INITIAL_BONUS            // +3 points (new user bonus)
-  ADMIN_ADJUSTMENT         // Manual adjustment
+  BOOKING_CREATED           // -1 point (mentee books)
+  BOOKING_COMPLETED         // +1 point (mentor earns)
+  BOOKING_CANCELLED         // +1 point (refund to mentee)
+  BOOKING_DECLINED          // +1 point (refund to mentee)
+  INITIAL_BONUS             // +3 points (new user bonus)
+  ADMIN_ADJUSTMENT          // Manual adjustment
   CANCELLATION_COMPENSATION // +1 point to mentor (late cancellation by mentee)
+  TOPUP                     // Fiat → Points (top-up via payment gateway)
+  CASHOUT                   // Points → Fiat (cash-out / withdrawal request)
+}
+
+enum TransactionStatus {
+  PENDING // Awaiting payment gateway confirmation
+  SUCCESS // Confirmed and applied to wallet
+  FAILED  // Payment failed or reversed — points NOT credited/debited
 }
 
 // 8. TrustHistory Model (NEW: Trust Score audit log)
@@ -342,4 +356,28 @@ model Message {
   sender         User         @relation(fields: [senderId], references: [id])
 
   @@index([conversationId, createdAt])
+}
+
+// 13. WithdrawRequest Model (NEW: Fiat cash-out requests for admin review)
+model WithdrawRequest {
+  id              String         @id @default(uuid())
+  mentorId        String
+  pointsRequested Int            // GivePoints to be exchanged
+  fiatAmount      Int            // Expected VND equivalent (pointsRequested × exchange rate)
+  bankDetails     String         @db.Text // e.g. "VCB – 0123456789 – Nguyen Van A"
+  status          WithdrawStatus @default(PENDING)
+
+  mentor    User     @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([mentorId, status])
+  @@index([status, createdAt]) // Admin dashboard: all pending requests sorted by date
+}
+
+enum WithdrawStatus {
+  PENDING  // Awaiting admin review
+  APPROVED // Bank transfer completed
+  REJECTED // Request denied (e.g. fraud check)
 }

@@ -26,3 +26,15 @@ export interface Review {
 
 export { BookingStatus }
 
+// ── Wallet ────────────────────────────────────────────────────────────────────
+
+export interface WalletResult {
+  success: boolean
+  message: string
+  data?: Record<string, unknown>
+}
+
+export interface TopupIntentResult extends WalletResult {
+  transactionId?: string
+}
+
