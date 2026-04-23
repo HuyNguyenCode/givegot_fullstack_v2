@@ -44,7 +44,13 @@ export default function MenteeBookingCalendar({
   const loadSlots = async () => {
     setIsLoading(true)
     const slots = await getAvailableSlots(mentorId)
-    setAvailableSlots(slots)
+    // Defensive guard: the server action already filters isBooked=false and
+    // startTime > now, but we re-apply here to protect against stale React
+    // state caused by the client-side router cache.
+    const now = new Date()
+    setAvailableSlots(
+      slots.filter((s) => !s.isBooked && new Date(s.startTime) > now)
+    )
     setIsLoading(false)
   }
 
@@ -58,8 +64,12 @@ export default function MenteeBookingCalendar({
       return
     }
 
+    // Client-side pre-flight: spare the network round-trip when we already know
+    // the balance is empty. The server validates again as the authoritative guard.
     if (currentUserPoints < 1) {
-      alert('You need at least 1 GivePoint to book a session. Teach to earn more points!')
+      setErrorMessage('Bạn không đủ GivePoints để đặt lịch. Vui lòng nạp thêm!')
+      setShowErrorToast(true)
+      setTimeout(() => setShowErrorToast(false), 5000)
       return
     }
 
@@ -83,8 +93,15 @@ export default function MenteeBookingCalendar({
       }, 2000)
       setIsModalOpen(false)
       await loadSlots()
+    } else if (result.message === 'INSUFFICIENT_POINTS') {
+      // Balance was drained between the UI check and the server call (race condition
+      // or stale client state). Keep the modal open so the user sees the context.
+      setErrorMessage('Bạn không đủ GivePoints để đặt lịch. Vui lòng nạp thêm!')
+      setShowErrorToast(true)
+      setTimeout(() => setShowErrorToast(false), 5000)
+      // Modal stays open — do NOT call setIsModalOpen(false)
     } else {
-      // Handle concurrency error gracefully
+      // All other errors (slot taken, review gate, network, …)
       setErrorMessage(result.message)
       setShowErrorToast(true)
       setTimeout(() => setShowErrorToast(false), 4000)

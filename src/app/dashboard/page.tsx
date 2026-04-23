@@ -15,6 +15,7 @@ import MentorLeaderboard from '@/components/insights/MentorLeaderboard'
 import Image from 'next/image'
 import { BookingStatus } from '@prisma/client'
 import Link from 'next/link'
+import CancelBookingDialog from '@/components/CancelBookingDialog'
 
 export default function DashboardPage() {
   const { currentUser, refreshUser, isLoading: userLoading } = useUser()
@@ -605,6 +606,11 @@ export default function DashboardPage() {
                             </svg>
                             Message
                           </Link>
+                          <CancelBookingDialog
+                            booking={booking}
+                            userId={currentUser.id}
+                            onSuccess={loadBookings}
+                          />
                         </>
                       )}
                       {booking.status === BookingStatus.COMPLETED && (

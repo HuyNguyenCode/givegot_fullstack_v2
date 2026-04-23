@@ -72,7 +72,8 @@ export async function addMentorSlots(
 
     revalidatePath('/dashboard')
     revalidatePath(`/profile/${mentorId}`)
-    
+    revalidatePath(`/book/${mentorId}`)
+
     return {
       success: true,
       message: `Successfully added ${result.count} slot(s)!`,
@@ -144,6 +145,7 @@ export async function deleteMentorSlot(slotId: string, mentorId: string): Promis
     await prisma.availableSlot.delete({ where: { id: slotId } })
     revalidatePath('/dashboard')
     revalidatePath(`/profile/${mentorId}`)
+    revalidatePath(`/book/${mentorId}`)
     return { success: true, message: 'Slot deleted successfully' }
   } catch (error) { return { success: false, message: 'Failed to delete slot.' } }
 }
@@ -185,6 +187,7 @@ export async function updateMentorSlot(
 
     revalidatePath('/dashboard')
     revalidatePath(`/profile/${mentorId}`)
+    revalidatePath(`/book/${mentorId}`)
     return { success: true, message: 'Slot updated successfully' }
   } catch (error) {
     console.error('Error updating mentor slot:', error)

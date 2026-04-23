@@ -19,6 +19,7 @@ import {
   deleteMentorSlot,
   updateMentorSlot,
 } from '@/actions/slots'
+import { cancelBooking } from '@/actions/booking'
 
 interface MentorCalendarManagerProps {
   mentorId: string
@@ -30,6 +31,8 @@ interface ExistingSlot {
   endTime: Date
   isBooked: boolean
   booking?: {
+    id: string
+    status: string          // BookingStatus: PENDING | CONFIRMED | COMPLETED | CANCELLED
     mentee: {
       id: string
       name: string | null
@@ -37,6 +40,14 @@ interface ExistingSlot {
       email: string
     }
   } | null
+}
+
+// Payload kept in state while the cancel dialog is open
+interface CancelTarget {
+  bookingId: string
+  menteeName: string
+  startTime: Date
+  sessionLabel: string   // pre-formatted "Mon Jun 9, 3:00 PM – 4:00 PM"
 }
 
 interface Toast {
@@ -53,6 +64,8 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
   const [isSaving, setIsSaving] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null)
+  const [isCancelling, setIsCancelling] = useState(false)
   const calendarRef = useRef<FullCalendar>(null)
 
   useEffect(() => {
@@ -81,23 +94,90 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
 
   // ── Convert DB slots → FullCalendar EventInput ────────────────────────
   const calendarEvents: EventInput[] = existingSlots.map((slot) => {
+    const isPast = new Date(slot.startTime) < new Date()
+
     if (slot.isBooked && slot.booking) {
+      const { status } = slot.booking
+      const menteeName = slot.booking.mentee.name ?? slot.booking.mentee.email ?? 'Booked'
+
+      let bgColor: string
+      let borderColor: string
+      let textColor = '#fff'
+      let statusIcon: string
+      let statusLabel: string
+
+      if (status === 'CONFIRMED') {
+        if (isPast) {
+          // Past confirmed = likely a missed / not-yet-reviewed session
+          bgColor     = '#fecaca' // red-200
+          borderColor = '#f87171' // red-400
+          textColor   = '#991b1b' // red-800
+          statusIcon  = '⏰'
+          statusLabel = 'Missed'
+        } else {
+          bgColor     = '#f97316' // orange-500
+          borderColor = '#ea580c'
+          statusIcon  = '✅'
+          statusLabel = 'Confirmed'
+        }
+      } else if (status === 'COMPLETED') {
+        bgColor     = '#22c55e' // green-500
+        borderColor = '#16a34a'
+        statusIcon  = '🎓'
+        statusLabel = 'Completed'
+      } else {
+        // PENDING
+        if (isPast) {
+          bgColor     = '#fef3c7' // amber-100 (muted, expired look)
+          borderColor = '#fbbf24' // amber-400
+          textColor   = '#78350f' // amber-900
+          statusIcon  = '⚠️'
+          statusLabel = 'Expired'
+        } else {
+          bgColor     = '#f59e0b' // amber-500
+          borderColor = '#d97706'
+          statusIcon  = '⏳'
+          statusLabel = 'Pending'
+        }
+      }
+
       return {
         id: `slot-${slot.id}`,
-        title: `📌 ${slot.booking.mentee.name ?? 'Booked'}`,
+        title: `${statusIcon} ${menteeName} · ${statusLabel}`,
         start: new Date(slot.startTime),
         end: new Date(slot.endTime),
-        backgroundColor: '#f97316',
-        borderColor: '#ea580c',
-        textColor: '#fff',
+        backgroundColor: bgColor,
+        borderColor,
+        textColor,
         editable: false,
         extendedProps: {
-          type: 'booking',
-          slotId: slot.id,
-          mentee: slot.booking.mentee,
+          type:          'booking',
+          slotId:        slot.id,
+          bookingId:     slot.booking.id,
+          bookingStatus: status,
+          mentee:        slot.booking.mentee,
+          startTime:     slot.startTime,
+          endTime:       slot.endTime,
+          isPast,
         },
       }
     }
+
+    // ── Available slot ─────────────────────────────────────────────────
+    if (isPast) {
+      return {
+        id: `slot-${slot.id}`,
+        title: '✗ Past slot',
+        start: new Date(slot.startTime),
+        end: new Date(slot.endTime),
+        backgroundColor: '#e2e8f0', // slate-200
+        borderColor:     '#94a3b8', // slate-400
+        textColor:       '#475569', // slate-600
+        editable: false,
+        extendedProps: { type: 'available', slotId: slot.id, isPast: true },
+      }
+    }
+
     return {
       id: `slot-${slot.id}`,
       title: '✓ Available',
@@ -107,10 +187,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
       borderColor: '#059669',
       textColor: '#fff',
       editable: true,
-      extendedProps: {
-        type: 'available',
-        slotId: slot.id,
-      },
+      extendedProps: { type: 'available', slotId: slot.id, isPast: false },
     }
   })
 
@@ -197,28 +274,69 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
     }
   }
 
+  // ── Cancel confirmed booking ──────────────────────────────────────────
+  const handleCancelBooking = async () => {
+    if (!cancelTarget) return
+    setIsCancelling(true)
+    try {
+      const result = await cancelBooking(cancelTarget.bookingId, mentorId)
+      if (result.success) {
+        showToast(result.message, 'success')
+        setCancelTarget(null)
+        await loadSlots()
+      } else {
+        showToast(result.message, 'error')
+      }
+    } catch {
+      showToast('Failed to cancel booking. Please try again.', 'error')
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
   // ── Click: show info or delete ────────────────────────────────────────
   const handleEventClick = async (clickInfo: EventClickArg) => {
     const { event } = clickInfo
+    const isPast = event.extendedProps.isPast as boolean
 
     if (event.extendedProps.type === 'booking') {
-      const mentee = event.extendedProps.mentee as ExistingSlot['booking'] extends undefined | null ? never : NonNullable<ExistingSlot['booking']>['mentee']
-      showToast(
-        `Booked by ${mentee?.name ?? 'a mentee'} — confirmed session`,
-        'info'
-      )
+      const mentee        = event.extendedProps.mentee as NonNullable<ExistingSlot['booking']>['mentee']
+      const bookingStatus = event.extendedProps.bookingStatus as string
+      const bookingId     = event.extendedProps.bookingId as string
+      const slotStart     = new Date(event.extendedProps.startTime as Date)
+      const slotEnd       = new Date(event.extendedProps.endTime as Date)
+
+      if (bookingStatus === 'CONFIRMED') {
+        // Allow cancel even for past sessions (mentor may still want to log it)
+        setCancelTarget({
+          bookingId,
+          menteeName:   mentee?.name ?? mentee?.email ?? 'Mentee',
+          startTime:    slotStart,
+          sessionLabel: formatTimeRange(slotStart, slotEnd),
+        })
+      } else if (bookingStatus === 'PENDING') {
+        if (isPast) {
+          // Expired request — block acceptance
+          showToast('This request has expired.', 'info')
+        } else {
+          showToast(
+            `Pending request from ${mentee?.name ?? 'a mentee'} — accept or decline in your dashboard.`,
+            'info',
+          )
+        }
+      }
+      // COMPLETED slots are read-only; no action needed on click
       return
     }
 
     if (event.extendedProps.type === 'available') {
+      // Past available slots are inert — clicking them does nothing
+      if (isPast) return
+
       const slotId = event.extendedProps.slotId as string
-      const start = event.start!
-      const end = event.end!
-      if (
-        window.confirm(
-          `Delete available slot?\n${formatTimeRange(start, end)}`
-        )
-      ) {
+      const start  = event.start!
+      const end    = event.end!
+      if (window.confirm(`Delete available slot?\n${formatTimeRange(start, end)}`)) {
         setIsSaving(true)
         const result = await deleteMentorSlot(slotId, mentorId)
         setIsSaving(false)
@@ -300,18 +418,39 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
           <p><strong>Click &amp; drag</strong> an empty area to create a new available slot.</p>
           <p><strong>Drag</strong> a green slot to reschedule it. <strong>Resize</strong> its bottom edge to adjust duration.</p>
           <p><strong>Click</strong> a green slot to delete it. Orange (booked) slots are locked.</p>
+          <p><strong>Click</strong> a orange slot to cancel it. Orange (booked) slots are locked.</p>
         </div>
       </div>
 
       {/* ── Legend ─────────────────────────────────────────────────────── */}
-      <div className="px-6 pt-3 pb-1 flex flex-wrap items-center gap-4 text-xs text-gray-600">
+      <div className="px-6 pt-3 pb-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-emerald-500" />
-          Available (saved)
+          Available
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-amber-500" />
+          Pending request
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-orange-500" />
-          Booked by mentee
+          Confirmed (click to cancel)
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-green-500" />
+          Completed
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-slate-300" />
+          Past slot
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded" style={{ backgroundColor: '#fef3c7', border: '1px solid #fbbf24' }} />
+          Expired request
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded" style={{ backgroundColor: '#fecaca', border: '1px solid #f87171' }} />
+          Missed session
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-purple-200 border-2 border-dashed border-purple-400" />
@@ -388,10 +527,27 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
             eventResize={handleEventResize}
             eventClick={handleEventClick}
             eventDidMount={(info) => {
-              // Add tooltip title
-              const props = info.event.extendedProps
+              const props  = info.event.extendedProps
+              const isPast = props.isPast as boolean
+
               if (props.type === 'booking' && props.mentee) {
-                info.el.setAttribute('title', `Booked by ${props.mentee.name ?? 'mentee'} · ${props.mentee.email}`)
+                let action: string
+                if (props.bookingStatus === 'CONFIRMED') {
+                  action = isPast ? 'Missed session — click to cancel/log' : 'Click to cancel session'
+                } else if (props.bookingStatus === 'COMPLETED') {
+                  action = 'Session completed'
+                } else {
+                  action = isPast ? 'Request expired' : 'Pending — accept or decline from dashboard'
+                }
+                info.el.setAttribute(
+                  'title',
+                  `${props.mentee.name ?? props.mentee.email} · ${action}`,
+                )
+              } else if (isPast) {
+                // Past available: visually disable pointer
+                info.el.style.pointerEvents = 'none'
+                info.el.style.cursor = 'default'
+                info.el.setAttribute('title', 'Past slot — no action available')
               } else {
                 info.el.setAttribute('title', 'Click to delete · Drag to move · Resize to adjust')
               }
@@ -413,6 +569,133 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
             {toast.message}
           </div>
         ))}
+      </div>
+
+      {/* ── Cancel Confirmation Modal ────────────────────────────────────── */}
+      {cancelTarget && (
+        <CancelBookingModal
+          target={cancelTarget}
+          isCancelling={isCancelling}
+          onConfirm={handleCancelBooking}
+          onDismiss={() => setCancelTarget(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Cancel Booking Modal ──────────────────────────────────────────────────────
+
+const CANCEL_THRESHOLD_HOURS = 12
+
+interface CancelBookingModalProps {
+  target: CancelTarget
+  isCancelling: boolean
+  onConfirm: () => void
+  onDismiss: () => void
+}
+
+function CancelBookingModal({ target, isCancelling, onConfirm, onDismiss }: CancelBookingModalProps) {
+  const hoursUntil = (target.startTime.getTime() - Date.now()) / (1000 * 60 * 60)
+  const isLate     = hoursUntil < CANCEL_THRESHOLD_HOURS
+  const penalty    = isLate ? 20 : 5
+
+  const timingLabel  = isLate
+    ? `Less than ${CANCEL_THRESHOLD_HOURS} hours until session`
+    : `More than ${CANCEL_THRESHOLD_HOURS} hours until session`
+
+  const refundNote = 'The mentee will be fully refunded 1 GivePoint.'
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onDismiss}
+      />
+
+      {/* Dialog */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fade-in overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-red-500 to-orange-500 p-5 text-white">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl leading-none mt-0.5">⚠️</span>
+            <div>
+              <h2 className="text-base font-bold">Cancel Confirmed Session?</h2>
+              <p className="text-red-100 text-sm mt-0.5">This action cannot be undone.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* Session summary */}
+          <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-medium">Mentee</span>
+              <span className="font-semibold text-gray-800">{target.menteeName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-medium">Session</span>
+              <span className="font-semibold text-gray-800 text-right max-w-[200px]">
+                {target.sessionLabel}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-medium">Timing</span>
+              <span className={`font-semibold ${isLate ? 'text-red-600' : 'text-amber-600'}`}>
+                {timingLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* Penalty banner */}
+          <div className={`rounded-xl p-4 border ${
+            isLate
+              ? 'bg-red-50 border-red-200'
+              : 'bg-amber-50 border-amber-200'
+          }`}>
+            <p className={`text-sm font-bold mb-1 ${isLate ? 'text-red-700' : 'text-amber-700'}`}>
+              Trust Score penalty: −{penalty} points
+              {isLate && ' (severe — late cancellation)'}
+            </p>
+            <p className={`text-xs leading-relaxed ${isLate ? 'text-red-600' : 'text-amber-600'}`}>
+              {isLate
+                ? `Cancelling with less than ${CANCEL_THRESHOLD_HOURS} hours notice carries a −20 Trust Score penalty because it disrupts the mentee's schedule.`
+                : `Cancelling with more than ${CANCEL_THRESHOLD_HOURS} hours notice carries a −5 Trust Score penalty. Try to give more notice when possible.`}
+            </p>
+          </div>
+
+          {/* Refund note */}
+          <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+            <span className="text-base">✅</span>
+            {refundNote}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={onDismiss}
+              disabled={isCancelling}
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Keep Session
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isCancelling}
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 rounded-xl text-sm font-bold text-white hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              {isCancelling ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Cancelling…
+                </span>
+              ) : (
+                `Cancel Session (−${penalty} pts)`
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

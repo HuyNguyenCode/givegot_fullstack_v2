@@ -6,7 +6,7 @@ import { pusherServer } from '@/lib/pusher'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 import { calculateAndUpdateTrustScore } from '@/lib/trust-algorithm'
-import { createGoogleMeetLink } from '@/lib/google-meet'
+import { createGoogleMeetLink, verifyMeetingAttendance } from '@/lib/google-meet'
 
 // ── Cancellation Policy Constants ─────────────────────────────────────────────
 const CANCELLATION_THRESHOLD_HOURS = 12
@@ -71,6 +71,18 @@ export async function bookAvailableSlot(
   note?: string
 ): Promise<BookingResult> {
   try {
+    // ── Layer 1 — Balance guard (pre-transaction fast-path) ───────────────────
+    // Read the balance before acquiring any DB locks so we can reject immediately
+    // without paying the cost of a full transaction. Layer 2 (inside the tx)
+    // re-validates under a SELECT FOR UPDATE to close the race-condition window.
+    const menteeSnapshot = await prisma.user.findUnique({
+      where:  { id: menteeId },
+      select: { givePoints: true },
+    })
+    if (!menteeSnapshot || menteeSnapshot.givePoints < 1) {
+      return { success: false, message: 'INSUFFICIENT_POINTS' }
+    }
+
     // ── Review Gate: block new bookings if overdue reviews exist ─────────────
     const gate = await checkReviewGate(menteeId)
     if (gate.blocked) {
@@ -111,9 +123,10 @@ export async function bookAvailableSlot(
           throw new Error('SLOT_TAKEN') // Special error code for UI handling
         }
 
-        // Step 3: Verify mentee has enough points
+        // Step 3: Re-verify balance under lock (Layer 2 — closes race-condition window)
         const mentee = await tx.user.findUnique({
-          where: { id: menteeId },
+          where:  { id: menteeId },
+          select: { givePoints: true },
         })
 
         if (!mentee) {
@@ -121,7 +134,7 @@ export async function bookAvailableSlot(
         }
 
         if (mentee.givePoints < 1) {
-          throw new Error(`Not enough GivePoints. You have ${mentee.givePoints}, need at least 1.`)
+          throw new Error('INSUFFICIENT_POINTS')
         }
 
         // Step 4: Deduct 1 point from mentee
@@ -176,6 +189,7 @@ export async function bookAvailableSlot(
     revalidatePath('/dashboard')
     revalidatePath('/history')
     revalidatePath(`/profile/${result.mentorId}`)
+    revalidatePath(`/book/${result.mentorId}`)
 
     // Notify the mentor about the new booking request
     const mentee = await prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } })
@@ -205,18 +219,14 @@ export async function bookAvailableSlot(
   } catch (error: any) {
     console.error('Error booking slot:', error)
 
-    // Handle specific error cases
+    if (error.message === 'INSUFFICIENT_POINTS') {
+      return { success: false, message: 'INSUFFICIENT_POINTS' }
+    }
+
     if (error.message === 'SLOT_TAKEN') {
       return {
         success: false,
         message: 'Oops! Someone just booked this slot. Please choose another time.',
-      }
-    }
-
-    if (error.message?.includes('GivePoints')) {
-      return {
-        success: false,
-        message: error.message,
       }
     }
 
@@ -242,6 +252,11 @@ export async function createBooking(
   note?: string
 ): Promise<BookingResult> {
   try {
+    // ── Time-gate: reject bookings in the past ────────────────────────────────
+    if (new Date(startTime) <= new Date()) {
+      return { success: false, message: 'Cannot book a session that starts in the past.' }
+    }
+
     // ── Review Gate ──────────────────────────────────────────────────────────
     const gate = await checkReviewGate(menteeId)
     if (gate.blocked) {
@@ -261,21 +276,17 @@ export async function createBooking(
     }
 
     if (mentee.givePoints < 1) {
-      return { 
-        success: false, 
-        message: `Not enough GivePoints. You have ${mentee.givePoints}, need at least 1.` 
-      }
+      return { success: false, message: 'INSUFFICIENT_POINTS' }
     }
 
-    // Use transaction to ensure atomicity
+    // Atomic: deduct point + create booking + write audit log — all or nothing
     const booking = await prisma.$transaction(async (tx) => {
-      // Deduct 1 point from mentee
+      // Escrow: deduct 1 point upfront before the mentor accepts
       await tx.user.update({
         where: { id: menteeId },
         data: { givePoints: { decrement: 1 } },
       })
 
-      // Create booking
       const newBooking = await tx.booking.create({
         data: {
           mentorId,
@@ -284,6 +295,16 @@ export async function createBooking(
           endTime,
           status: BookingStatus.PENDING,
           note,
+        },
+      })
+
+      // Audit trail — keeps wallet ledger in sync with bookAvailableSlot's pattern
+      await tx.transactionLog.create({
+        data: {
+          userId:    menteeId,
+          amount:    -1,
+          type:      TransactionType.BOOKING_CREATED,
+          bookingId: newBooking.id,
         },
       })
 
@@ -330,6 +351,13 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
 
     if (booking.status !== BookingStatus.PENDING) {
       return { success: false, message: `Cannot accept booking with status: ${booking.status}` }
+    }
+
+    if (booking.startTime <= new Date()) {
+      return {
+        success: false,
+        message: 'Cannot accept a booking that has already started or passed.',
+      }
     }
 
     // Fetch both participants in parallel — needed for Meet link and notification
@@ -406,21 +434,19 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
       return { success: false, message: `Cannot decline booking with status: ${booking.status}` }
     }
 
-    // Use transaction for refund and slot release
+    // Use transaction for refund and slot removal
     await prisma.$transaction(async (tx) => {
-      // Update booking status to CANCELLED
+      // Cancel the booking and sever the FK before touching the slot row
       await tx.booking.update({
         where: { id: bookingId },
-        data: { status: BookingStatus.CANCELLED },
+        data: { status: BookingStatus.CANCELLED, slotId: null },
       })
 
-      // Release the slot
+      // Mentor declined → they are still busy at that time, so permanently
+      // remove the slot instead of making it available to other mentees.
       if (booking.slotId) {
-        await tx.availableSlot.update({
-          where: { id: booking.slotId },
-          data: { isBooked: false },
-        })
-        console.log(`Slot ${booking.slotId} released`)
+        await tx.availableSlot.delete({ where: { id: booking.slotId } })
+        console.log(`Slot ${booking.slotId} deleted (mentor declined)`)
       }
 
       // Refund 1 point to mentee
@@ -444,6 +470,8 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
     revalidatePath('/')
     revalidatePath('/dashboard')
     revalidatePath('/history')
+    revalidatePath(`/profile/${mentorId}`)
+    revalidatePath(`/book/${mentorId}`)
 
     // Notify mentee that their booking was declined and point refunded
     const decliningMentor = await prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } })
@@ -692,18 +720,24 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
     // ── 3. Atomic transaction ────────────────────────────────────────────────
     // All point moves, trust deductions, and status updates succeed or fail together.
     const summary = await prisma.$transaction(async (tx) => {
-      // a) Cancel the booking
+      // a) Cancel the booking and sever the FK before touching the slot row
       await tx.booking.update({
         where: { id: bookingId },
-        data: { status: BookingStatus.CANCELLED },
+        data: { status: BookingStatus.CANCELLED, slotId: null },
       })
 
-      // b) Free the slot so other mentees can book it
+      // b) Slot handling depends on who is cancelling:
+      //    • Mentee cancels → mentor is still free at that time, restore the slot.
+      //    • Mentor cancels → they are busy at that time, permanently remove the slot.
       if (booking.slotId) {
-        await tx.availableSlot.update({
-          where: { id: booking.slotId },
-          data: { isBooked: false },
-        })
+        if (isMenteeCancelling) {
+          await tx.availableSlot.update({
+            where: { id: booking.slotId },
+            data: { isBooked: false },
+          })
+        } else {
+          await tx.availableSlot.delete({ where: { id: booking.slotId } })
+        }
       }
 
       // c) PENDING booking: simple full refund, no trust penalty
@@ -817,6 +851,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
     revalidatePath('/dashboard')
     revalidatePath('/history')
     revalidatePath(`/profile/${booking.mentorId}`)
+    revalidatePath(`/book/${booking.mentorId}`)
 
     // ── 5. Build human-readable outcome messages ─────────────────────────────
     let cancellerNotifTitle   = ''
@@ -1025,5 +1060,337 @@ export async function getMentorRating(mentorId: string) {
   } catch (error) {
     console.error('Error calculating mentor rating:', error)
     return { average: 0, count: 0 }
+  }
+}
+
+// ── No-Show Dispute Resolution ────────────────────────────────────────────────
+
+/** How long (in minutes) a participant must be present to be considered "attended". */
+const ATTENDANCE_MIN_MINUTES = 5
+
+/** Minimum minutes both parties must share to classify the session as completed (fraud gate). */
+const FRAUD_THRESHOLD_MINUTES = 30
+
+/** Mentee may file a no-show report within this many hours of the session end. */
+const NO_SHOW_GRACE_PERIOD_HOURS = 48
+
+type NoShowVerdict = 'MENTOR_NO_SHOW' | 'FRAUD_DETECTED' | 'DISPUTED'
+
+interface NoShowResult extends BookingResult {
+  verdict?: NoShowVerdict
+  attendanceSource?: 'api' | 'mock'
+}
+
+/**
+ * Allows a mentee to report that their mentor did not show up for a confirmed session.
+ *
+ * The action calls `verifyMeetingAttendance` to fetch (or mock) attendance data
+ * and then applies a three-way Judge Logic inside a single atomic Prisma transaction:
+ *
+ *   Scenario A — Mentor no-show (valid report):
+ *     mentorMinutes < 5 AND menteeMinutes ≥ 5
+ *     → Refund mentee +1 GP · Deduct mentor Trust −20 · Status → MISSED
+ *
+ *   Scenario B — Fraudulent report:
+ *     Both parties present > 30 minutes
+ *     → Pay mentor +1 GP (escrow release) · Deduct mentee Trust −30 · Status → COMPLETED
+ *
+ *   Scenario C — Inconclusive / API error:
+ *     Anything else, including null attendance data
+ *     → Freeze funds · Flag for admin · Status → DISPUTED
+ */
+export async function reportNoShow(
+  bookingId: string,
+  menteeId: string,
+): Promise<NoShowResult> {
+  try {
+    // ── 1. Fetch booking with both parties ───────────────────────────────────
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        mentor: { select: { id: true, name: true, email: true, trustScore: true } },
+        mentee: { select: { id: true, name: true, email: true, trustScore: true } },
+      },
+    })
+
+    if (!booking) {
+      return { success: false, message: 'Booking not found.' }
+    }
+
+    // ── 2. Authorization & eligibility guards ────────────────────────────────
+    if (booking.menteeId !== menteeId) {
+      return { success: false, message: 'Unauthorized: you are not the mentee for this booking.' }
+    }
+
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      return {
+        success: false,
+        message: `Only CONFIRMED sessions can have a no-show report (current status: ${booking.status}).`,
+      }
+    }
+
+    const now = Date.now()
+    const sessionEndMs = new Date(booking.endTime).getTime()
+
+    if (now <= sessionEndMs) {
+      return { success: false, message: 'The session has not ended yet.' }
+    }
+
+    const gracePeriodMs = NO_SHOW_GRACE_PERIOD_HOURS * 60 * 60 * 1000
+    if (now > sessionEndMs + gracePeriodMs) {
+      return {
+        success: false,
+        message: `The ${NO_SHOW_GRACE_PERIOD_HOURS}-hour reporting window has expired.`,
+      }
+    }
+
+    // ── 3. Verify meeting attendance ─────────────────────────────────────────
+    //
+    // When meetingUrl is absent (session booked without a Meet link), we cannot
+    // verify attendance — immediately fall into Scenario C (DISPUTED).
+    let attendance: Awaited<ReturnType<typeof verifyMeetingAttendance>> = null
+
+    if (booking.meetingUrl) {
+      attendance = await verifyMeetingAttendance(
+        booking.meetingUrl,
+        booking.mentor.email,
+        booking.mentee.email,
+        new Date(booking.startTime),
+        new Date(booking.endTime),
+      )
+    } else {
+      console.warn(`[reportNoShow] Booking ${bookingId} has no meetingUrl — defaulting to DISPUTED`)
+    }
+
+    // ── 4. Determine verdict ─────────────────────────────────────────────────
+    let verdict: NoShowVerdict
+
+    if (!attendance) {
+      verdict = 'DISPUTED'
+    } else {
+      const { mentorMinutes, menteeMinutes } = attendance
+
+      if (mentorMinutes < ATTENDANCE_MIN_MINUTES && menteeMinutes >= ATTENDANCE_MIN_MINUTES) {
+        verdict = 'MENTOR_NO_SHOW'
+      } else if (
+        mentorMinutes > FRAUD_THRESHOLD_MINUTES &&
+        menteeMinutes > FRAUD_THRESHOLD_MINUTES
+      ) {
+        verdict = 'FRAUD_DETECTED'
+      } else {
+        // Covers: both absent, mentor partial, mentee partial, or edge combinations
+        verdict = 'DISPUTED'
+      }
+    }
+
+    console.log(
+      `[reportNoShow] Booking ${bookingId} → verdict=${verdict} ` +
+        `mentor=${attendance?.mentorMinutes ?? '?'}m mentee=${attendance?.menteeMinutes ?? '?'}m ` +
+        `source=${attendance?.source ?? 'none'}`
+    )
+
+    // ── 5. Atomic transaction — execute verdict ──────────────────────────────
+    await prisma.$transaction(async (tx) => {
+      // Re-read trust scores inside the transaction to avoid stale reads
+      const [latestMentor, latestMentee] = await Promise.all([
+        tx.user.findUnique({ where: { id: booking.mentorId }, select: { trustScore: true } }),
+        tx.user.findUnique({ where: { id: booking.menteeId }, select: { trustScore: true } }),
+      ])
+      if (!latestMentor || !latestMentee) throw new Error('User records missing inside transaction')
+
+      if (verdict === 'MENTOR_NO_SHOW') {
+        // ── Scenario A: Valid no-show report ──────────────────────────────
+        // a) Update booking status
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: { status: 'MISSED' as BookingStatus },
+        })
+
+        // b) Refund mentee +1 GivePoint
+        await tx.user.update({
+          where: { id: booking.menteeId },
+          data: { givePoints: { increment: 1 } },
+        })
+        await tx.transactionLog.create({
+          data: {
+            userId:    booking.menteeId,
+            amount:    1,
+            // @ts-expect-error REFUND_NO_SHOW added to schema; run `npm run db:generate` after `prisma db push`
+            type:      'REFUND_NO_SHOW',
+            bookingId,
+          },
+        })
+
+        // c) Penalise mentor Trust Score −20
+        const newMentorTrust = Math.max(0, latestMentor.trustScore - 20)
+        await tx.user.update({
+          where: { id: booking.mentorId },
+          data: { trustScore: newMentorTrust },
+        })
+        await tx.trustHistory.create({
+          data: {
+            userId:        booking.mentorId,
+            previousScore: latestMentor.trustScore,
+            newScore:      newMentorTrust,
+            reason:        `No-show penalty: mentor absent from confirmed session ${bookingId} (verified by attendance API)`,
+          },
+        })
+      } else if (verdict === 'FRAUD_DETECTED') {
+        // ── Scenario B: Fraudulent no-show report ─────────────────────────
+        // a) Mark booking COMPLETED (session did happen)
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: { status: BookingStatus.COMPLETED },
+        })
+
+        // b) Release escrowed GivePoint to mentor
+        await tx.user.update({
+          where: { id: booking.mentorId },
+          data: { givePoints: { increment: 1 } },
+        })
+        await tx.transactionLog.create({
+          data: {
+            userId:    booking.mentorId,
+            amount:    1,
+            // @ts-expect-error FRAUD_DETECTION added to schema; run `npm run db:generate` after `prisma db push`
+            type:      'FRAUD_DETECTION',
+            bookingId,
+          },
+        })
+
+        // c) Penalise mentee Trust Score −30 (severe: fraudulent report)
+        const newMenteeTrust = Math.max(0, latestMentee.trustScore - 30)
+        await tx.user.update({
+          where: { id: booking.menteeId },
+          data: { trustScore: newMenteeTrust },
+        })
+        await tx.trustHistory.create({
+          data: {
+            userId:        booking.menteeId,
+            previousScore: latestMentee.trustScore,
+            newScore:      newMenteeTrust,
+            reason:        `Fraud penalty: mentee filed a false no-show report for booking ${bookingId} (both parties confirmed present > ${FRAUD_THRESHOLD_MINUTES} min)`,
+          },
+        })
+      } else {
+        // ── Scenario C: Inconclusive — freeze funds ───────────────────────
+        // Update booking status; no GivePoint movement, no trust change.
+        // An admin Report is created outside the transaction (after commit).
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: { status: 'DISPUTED' as BookingStatus },
+        })
+      }
+    })
+
+    // ── 6. Post-transaction side-effects ─────────────────────────────────────
+
+    // For DISPUTED cases, create an admin Report so it surfaces in the review queue.
+    if (verdict === 'DISPUTED') {
+      await prisma.report.create({
+        data: {
+          reporterId:     booking.menteeId,
+          reportedUserId: booking.mentorId,
+          reason:
+            `[AUTO] No-show dispute for booking ${bookingId}. ` +
+            `Attendance data was inconclusive ` +
+            `(mentor=${attendance?.mentorMinutes ?? '?'}m mentee=${attendance?.menteeMinutes ?? '?'}m source=${attendance?.source ?? 'none'}). ` +
+            `Funds are frozen pending manual review.`,
+        },
+      })
+    }
+
+    // ── 7. Revalidate pages ──────────────────────────────────────────────────
+    revalidatePath('/dashboard')
+    revalidatePath('/history')
+    revalidatePath(`/profile/${booking.mentorId}`)
+
+    // ── 8. Notifications ─────────────────────────────────────────────────────
+    const menteeName = booking.mentee.name ?? booking.mentee.email ?? 'Mentee'
+    const mentorName = booking.mentor.name ?? booking.mentor.email ?? 'Mentor'
+
+    if (verdict === 'MENTOR_NO_SHOW') {
+      await Promise.all([
+        createNotification(
+          booking.menteeId,
+          'No-Show Confirmed — Refunded',
+          `Your report was verified. ${mentorName} was absent from your session. ` +
+            `1 GivePoint has been refunded to your balance.`,
+          'POINTS',
+          '/dashboard',
+        ),
+        createNotification(
+          booking.mentorId,
+          'No-Show Penalty Applied',
+          `${menteeName} reported that you did not attend your scheduled session on ` +
+            `${new Date(booking.startTime).toLocaleDateString()}. ` +
+            `Attendance was verified. −20 Trust Score applied.`,
+          'SYSTEM',
+          '/dashboard',
+        ),
+      ])
+    } else if (verdict === 'FRAUD_DETECTED') {
+      await Promise.all([
+        createNotification(
+          booking.menteeId,
+          'Fraudulent Report Detected',
+          `Your no-show report for the session on ` +
+            `${new Date(booking.startTime).toLocaleDateString()} was found to be inaccurate. ` +
+            `Both parties were confirmed present. −30 Trust Score applied.`,
+          'SYSTEM',
+          '/dashboard',
+        ),
+        createNotification(
+          booking.mentorId,
+          'Session Dispute Resolved — +1 GivePoint',
+          `A no-show report filed against you was found to be fraudulent. ` +
+            `Your attendance was confirmed and 1 GivePoint has been credited to your balance.`,
+          'POINTS',
+          '/dashboard',
+        ),
+      ])
+    } else {
+      await Promise.all([
+        createNotification(
+          booking.menteeId,
+          'Dispute Under Review',
+          `Your no-show report for the session on ` +
+            `${new Date(booking.startTime).toLocaleDateString()} could not be automatically resolved. ` +
+            `Funds are frozen and an admin will review within 48 hours.`,
+          'SYSTEM',
+          '/dashboard',
+        ),
+        createNotification(
+          booking.mentorId,
+          'Session Dispute Filed',
+          `${menteeName} has filed a no-show dispute for your session on ` +
+            `${new Date(booking.startTime).toLocaleDateString()}. ` +
+            `Attendance data was inconclusive — an admin will review.`,
+          'SYSTEM',
+          '/dashboard',
+        ),
+      ])
+    }
+
+    // ── 9. Build user-facing result ──────────────────────────────────────────
+    const messages: Record<NoShowVerdict, string> = {
+      MENTOR_NO_SHOW:
+        'Your report has been verified. Mentor was absent — 1 GivePoint refunded and −20 Trust Score applied to the mentor.',
+      FRAUD_DETECTED:
+        'Dispute resolved: attendance records show both parties were present. Session marked complete, mentor paid. −30 Trust Score applied to your account.',
+      DISPUTED:
+        'Attendance data was inconclusive. Funds have been frozen and the case has been escalated for admin review.',
+    }
+
+    return {
+      success:          true,
+      message:          messages[verdict],
+      verdict,
+      bookingId,
+      attendanceSource: attendance?.source,
+    }
+  } catch (error) {
+    console.error('[reportNoShow] Error:', error)
+    return { success: false, message: 'Failed to process no-show report. Please try again.' }
   }
 }

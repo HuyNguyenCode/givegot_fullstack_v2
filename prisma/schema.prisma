@@ -187,7 +187,9 @@ enum BookingStatus {
   PENDING   
   CONFIRMED 
   COMPLETED 
-  CANCELLED 
+  CANCELLED
+  MISSED    // Mentor confirmed absent by attendance API — mentee refunded
+  DISPUTED  // Inconclusive attendance data — funds frozen, pending admin review
 }
 
 // 6. NextAuth Models ( NEW: Authentication)
@@ -255,6 +257,8 @@ enum TransactionType {
   CANCELLATION_COMPENSATION // +1 point to mentor (late cancellation by mentee)
   TOPUP                     // Fiat → Points (top-up via payment gateway)
   CASHOUT                   // Points → Fiat (cash-out / withdrawal request)
+  REFUND_NO_SHOW            // +1 point to mentee (mentor confirmed absent by API)
+  FRAUD_DETECTION           // +1 point to mentor (mentee's no-show report proved fraudulent)
 }
 
 enum TransactionStatus {
