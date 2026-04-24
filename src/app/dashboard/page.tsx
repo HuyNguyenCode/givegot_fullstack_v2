@@ -9,6 +9,7 @@ import { BookingWithDetails } from '@/types'
 import { RoadmapStep } from '@/lib/gemini'
 import LearningRoadmapCard from '@/components/LearningRoadmapCard'
 import MentorCalendarManager from '@/components/MentorCalendarManager'
+import MenteeScheduleCalendar from '@/components/MenteeScheduleCalendar'
 import PointHistoryChart from '@/components/insights/PointHistoryChart'
 import SkillDemandChart from '@/components/insights/SkillDemandChart'
 import MentorLeaderboard from '@/components/insights/MentorLeaderboard'
@@ -37,6 +38,9 @@ export default function DashboardPage() {
   const [skillDemand, setSkillDemand] = useState<SkillDemandEntry[]>([])
   const [popularMentors, setPopularMentors] = useState<PopularMentor[]>([])
   const [analyticsLoading, setAnalyticsLoading] = useState(true)
+
+  // Calendar tab selection: teaching (mentor) or learning (mentee)
+  const [calendarTab, setCalendarTab] = useState<'teaching' | 'learning'>('teaching')
 
   // Tracks the current time, refreshed every minute so Join Meeting button
   // appears/disappears without requiring a page reload.
@@ -440,8 +444,51 @@ export default function DashboardPage() {
         </section>
         {/* ── End Insights Center ─────────────────────────────────── */}
 
+        {/* ── Calendar Tabs: Lịch Dạy / Lịch Học ─────────────────────── */}
         <section className="mb-8">
-          <MentorCalendarManager mentorId={currentUser.id} />
+          {/* Tab header */}
+          <div className="flex items-end gap-1 mb-0 border-b border-gray-200">
+            <button
+              onClick={() => setCalendarTab('teaching')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl border border-b-0 transition-colors focus:outline-none ${
+                calendarTab === 'teaching'
+                  ? 'bg-white border-gray-200 text-purple-700 shadow-sm -mb-px'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-base">🎓</span>
+              Lịch Dạy
+              {mentoringBookings.filter(b => b.status === 'PENDING').length > 0 && (
+                <span className="ml-1 bg-purple-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {mentoringBookings.filter(b => b.status === 'PENDING').length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setCalendarTab('learning')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-t-xl border border-b-0 transition-colors focus:outline-none ${
+                calendarTab === 'learning'
+                  ? 'bg-white border-gray-200 text-orange-600 shadow-sm -mb-px'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-base">📚</span>
+              Lịch Học
+              {learningBookings.filter(b => b.status === 'CONFIRMED').length > 0 && (
+                <span className="ml-1 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {learningBookings.filter(b => b.status === 'CONFIRMED').length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Tab content */}
+          <div className={calendarTab === 'teaching' ? 'block' : 'hidden'}>
+            <MentorCalendarManager mentorId={currentUser.id} />
+          </div>
+          <div className={calendarTab === 'learning' ? 'block' : 'hidden'}>
+            <MenteeScheduleCalendar currentUserId={currentUser.id} onDataChange={loadBookings} />
+          </div>
         </section>
 
         {/* AI Learning Roadmaps Section */}

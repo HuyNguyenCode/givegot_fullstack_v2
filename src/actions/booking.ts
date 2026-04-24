@@ -92,6 +92,19 @@ export async function bookAvailableSlot(
       }
     }
 
+    // ── Time-conflict guard: mentee must not already be busy in this window ──
+    const slotForConflict = await prisma.availableSlot.findUnique({
+      where: { id: slotId },
+      select: { startTime: true, endTime: true },
+    })
+    if (slotForConflict) {
+      const { checkUserTimeConflict } = await import('@/actions/slots')
+      const conflict = await checkUserTimeConflict(
+        menteeId, slotForConflict.startTime, slotForConflict.endTime,
+      )
+      if (conflict.hasConflict) return { success: false, message: conflict.message }
+    }
+
     console.log('Attempting atomic slot booking:', { slotId, menteeId })
 
     // This ensures that concurrent transactions see consistent data

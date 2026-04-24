@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath, unstable_noStore as noStore } from 'next/cache'
+import { BookingStatus } from '@prisma/client'
 
 interface SlotInput {
   startTime: Date | string
@@ -12,6 +13,65 @@ interface SlotResult {
   success: boolean
   message: string
   createdCount?: number
+}
+
+// ── Shared Conflict Detection ─────────────────────────────────────────────────
+// Checks BOTH AvailableSlot (owned) and Booking (as mentor OR mentee) for any
+// overlap with the requested [startTime, endTime) window.
+
+export async function checkUserTimeConflict(
+  userId: string,
+  startTime: Date,
+  endTime: Date,
+  opts?: { excludeSlotId?: string },
+): Promise<{ hasConflict: boolean; message: string }> {
+  const fmt = (d: Date) =>
+    new Date(d).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+
+  // 1. Check for an owned teaching slot that overlaps
+  const slotConflict = await prisma.availableSlot.findFirst({
+    where: {
+      mentorId: userId,
+      ...(opts?.excludeSlotId ? { id: { not: opts.excludeSlotId } } : {}),
+      startTime: { lt: endTime },
+      endTime:   { gt: startTime },
+    },
+  })
+
+  if (slotConflict) {
+    return {
+      hasConflict: true,
+      message: `Bạn đã có một khung giờ dạy từ ${fmt(slotConflict.startTime)}–${fmt(slotConflict.endTime)}. Không thể tạo trùng giờ.`,
+    }
+  }
+
+  // 2. Check for an active booking (as mentor OR mentee) that overlaps
+  const bookingConflict = await prisma.booking.findFirst({
+    where: {
+      OR: [{ mentorId: userId }, { menteeId: userId }],
+      status: { notIn: [BookingStatus.CANCELLED, BookingStatus.MISSED, BookingStatus.DISPUTED] },
+      startTime: { lt: endTime },
+      endTime:   { gt: startTime },
+    },
+    include: {
+      mentor: { select: { name: true } },
+      mentee: { select: { name: true } },
+    },
+  })
+
+  if (bookingConflict) {
+    const isMentor = bookingConflict.mentorId === userId
+    const partner  = isMentor
+      ? (bookingConflict.mentee?.name ?? 'học viên')
+      : (bookingConflict.mentor?.name ?? 'giảng viên')
+    const role = isMentor ? 'dạy' : 'học'
+    return {
+      hasConflict: true,
+      message: `Bạn đã có một buổi ${role} với ${partner} vào ${fmt(startTime)}–${fmt(endTime)}. Không thể đặt lịch trùng.`,
+    }
+  }
+
+  return { hasConflict: false, message: '' }
 }
 
 export async function addMentorSlots(
@@ -57,6 +117,12 @@ export async function addMentorSlots(
 
     if (existingSlots.length > 0) {
       return { success: false, message: `You already have ${existingSlots.length} overlapping slot(s).` }
+    }
+
+    // Cross-table conflict check: any active booking for this user in the same window?
+    for (const slot of processedSlots) {
+      const conflict = await checkUserTimeConflict(mentorId, slot.startTime, slot.endTime)
+      if (conflict.hasConflict) return { success: false, message: conflict.message }
     }
 
     const result = await prisma.availableSlot.createMany({
@@ -179,6 +245,10 @@ export async function updateMentorSlot(
     if (overlapping) {
       return { success: false, message: 'This time overlaps with an existing slot.' }
     }
+
+    // Cross-table conflict check (exclude this slot so we don't self-conflict)
+    const conflict = await checkUserTimeConflict(mentorId, newStart, newEnd, { excludeSlotId: slotId })
+    if (conflict.hasConflict) return { success: false, message: conflict.message }
 
     await prisma.availableSlot.update({
       where: { id: slotId },

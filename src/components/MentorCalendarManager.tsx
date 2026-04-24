@@ -19,7 +19,9 @@ import {
   deleteMentorSlot,
   updateMentorSlot,
 } from '@/actions/slots'
-import { cancelBooking } from '@/actions/booking'
+import SessionDetailDialog, { SessionInfo } from '@/components/SessionDetailDialog'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface MentorCalendarManagerProps {
   mentorId: string
@@ -32,7 +34,9 @@ interface ExistingSlot {
   isBooked: boolean
   booking?: {
     id: string
-    status: string          // BookingStatus: PENDING | CONFIRMED | COMPLETED | CANCELLED
+    status: string
+    meetingUrl: string | null
+    note: string | null
     mentee: {
       id: string
       name: string | null
@@ -40,14 +44,6 @@ interface ExistingSlot {
       email: string
     }
   } | null
-}
-
-// Payload kept in state while the cancel dialog is open
-interface CancelTarget {
-  bookingId: string
-  menteeName: string
-  startTime: Date
-  sessionLabel: string   // pre-formatted "Mon Jun 9, 3:00 PM – 4:00 PM"
 }
 
 interface Toast {
@@ -58,103 +54,97 @@ interface Toast {
 
 let toastCounter = 0
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatTimeRange(start: Date, end: Date): string {
+  const fmt = (d: Date) =>
+    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  const day = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  return `${day}, ${fmt(start)} – ${fmt(end)}`
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function MentorCalendarManager({ mentorId }: MentorCalendarManagerProps) {
   const [existingSlots, setExistingSlots] = useState<ExistingSlot[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const [toasts, setToasts] = useState<Toast[]>([])
-  const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null)
-  const [isCancelling, setIsCancelling] = useState(false)
+  const [isLoading, setIsLoading]         = useState(false)
+  const [isSaving, setIsSaving]           = useState(false)
+  const [mounted, setMounted]             = useState(false)
+  const [toasts, setToasts]               = useState<Toast[]>([])
+
+  // SessionDetailDialog state
+  const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null)
+  const [dialogOpen, setDialogOpen]           = useState(false)
+
   const calendarRef = useRef<FullCalendar>(null)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  useEffect(() => setMounted(true), [])
 
-  const showToast = useCallback(
-    (message: string, type: Toast['type'] = 'success') => {
-      const id = ++toastCounter
-      setToasts((prev) => [...prev, { id, message, type }])
-      setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000)
-    },
-    []
-  )
+  const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
+    const id = ++toastCounter
+    setToasts(prev => [...prev, { id, message, type }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4500)
+  }, [])
 
   const loadSlots = useCallback(async () => {
     setIsLoading(true)
     const slots = await getAllMentorSlots(mentorId)
-    setExistingSlots(slots)
+    setExistingSlots(slots as ExistingSlot[])
     setIsLoading(false)
   }, [mentorId])
 
-  useEffect(() => {
-    loadSlots()
-  }, [loadSlots])
+  useEffect(() => { loadSlots() }, [loadSlots])
 
-  // ── Convert DB slots → FullCalendar EventInput ────────────────────────
-  const calendarEvents: EventInput[] = existingSlots.map((slot) => {
+  // ── Calendar event mapping ────────────────────────────────────────────────
+
+  const calendarEvents: EventInput[] = existingSlots.map(slot => {
     const isPast = new Date(slot.startTime) < new Date()
 
     if (slot.isBooked && slot.booking) {
       const { status } = slot.booking
       const menteeName = slot.booking.mentee.name ?? slot.booking.mentee.email ?? 'Booked'
 
-      let bgColor: string
-      let borderColor: string
-      let textColor = '#fff'
-      let statusIcon: string
-      let statusLabel: string
+      let bgColor: string, borderColor: string, textColor = '#fff'
+      let statusIcon: string, statusLabel: string
 
       if (status === 'CONFIRMED') {
         if (isPast) {
-          // Past confirmed = likely a missed / not-yet-reviewed session
-          bgColor     = '#fecaca' // red-200
-          borderColor = '#f87171' // red-400
-          textColor   = '#991b1b' // red-800
-          statusIcon  = '⏰'
-          statusLabel = 'Missed'
+          bgColor = '#fecaca'; borderColor = '#f87171'; textColor = '#991b1b'
+          statusIcon = '⏰'; statusLabel = 'Missed'
         } else {
-          bgColor     = '#f97316' // orange-500
-          borderColor = '#ea580c'
-          statusIcon  = '✅'
-          statusLabel = 'Confirmed'
+          bgColor = '#3b82f6'; borderColor = '#2563eb'
+          statusIcon = '📘'; statusLabel = 'Teaching'
         }
       } else if (status === 'COMPLETED') {
-        bgColor     = '#22c55e' // green-500
-        borderColor = '#16a34a'
-        statusIcon  = '🎓'
-        statusLabel = 'Completed'
+        bgColor = '#0d9488'; borderColor = '#0f766e'
+        statusIcon = '🎓'; statusLabel = 'Done'
       } else {
         // PENDING
         if (isPast) {
-          bgColor     = '#fef3c7' // amber-100 (muted, expired look)
-          borderColor = '#fbbf24' // amber-400
-          textColor   = '#78350f' // amber-900
-          statusIcon  = '⚠️'
-          statusLabel = 'Expired'
+          bgColor = '#fef3c7'; borderColor = '#fbbf24'; textColor = '#78350f'
+          statusIcon = '⚠️'; statusLabel = 'Expired'
         } else {
-          bgColor     = '#f59e0b' // amber-500
-          borderColor = '#d97706'
-          statusIcon  = '⏳'
-          statusLabel = 'Pending'
+          bgColor = '#7c3aed'; borderColor = '#6d28d9'
+          statusIcon = '⏳'; statusLabel = 'Pending'
         }
       }
 
       return {
-        id: `slot-${slot.id}`,
-        title: `${statusIcon} ${menteeName} · ${statusLabel}`,
-        start: new Date(slot.startTime),
-        end: new Date(slot.endTime),
+        id:              `slot-${slot.id}`,
+        title:           `${statusIcon} ${menteeName} · ${statusLabel}`,
+        start:           new Date(slot.startTime),
+        end:             new Date(slot.endTime),
         backgroundColor: bgColor,
         borderColor,
         textColor,
-        editable: false,
+        editable:        false,
         extendedProps: {
           type:          'booking',
           slotId:        slot.id,
           bookingId:     slot.booking.id,
           bookingStatus: status,
+          meetingUrl:    slot.booking.meetingUrl,
+          note:          slot.booking.note,
           mentee:        slot.booking.mentee,
           startTime:     slot.startTime,
           endTime:       slot.endTime,
@@ -163,251 +153,186 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
       }
     }
 
-    // ── Available slot ─────────────────────────────────────────────────
+    // Available slot
     if (isPast) {
       return {
-        id: `slot-${slot.id}`,
-        title: '✗ Past slot',
-        start: new Date(slot.startTime),
-        end: new Date(slot.endTime),
-        backgroundColor: '#e2e8f0', // slate-200
-        borderColor:     '#94a3b8', // slate-400
-        textColor:       '#475569', // slate-600
-        editable: false,
-        extendedProps: { type: 'available', slotId: slot.id, isPast: true },
+        id:              `slot-${slot.id}`,
+        title:           '✗ Past slot',
+        start:           new Date(slot.startTime),
+        end:             new Date(slot.endTime),
+        backgroundColor: '#e2e8f0',
+        borderColor:     '#94a3b8',
+        textColor:       '#475569',
+        editable:        false,
+        extendedProps:   { type: 'available', slotId: slot.id, isPast: true },
       }
     }
 
     return {
-      id: `slot-${slot.id}`,
-      title: '✓ Available',
-      start: new Date(slot.startTime),
-      end: new Date(slot.endTime),
+      id:              `slot-${slot.id}`,
+      title:           '✓ Available',
+      start:           new Date(slot.startTime),
+      end:             new Date(slot.endTime),
       backgroundColor: '#10b981',
-      borderColor: '#059669',
-      textColor: '#fff',
-      editable: true,
-      extendedProps: { type: 'available', slotId: slot.id, isPast: false },
+      borderColor:     '#059669',
+      textColor:       '#fff',
+      editable:        true,
+      extendedProps:   { type: 'available', slotId: slot.id, isPast: false },
     }
   })
 
-  // ── Drag-to-create: select a time range ───────────────────────────────
+  // ── Drag-to-create ────────────────────────────────────────────────────────
+
   const handleSelect = async (selectInfo: DateSelectArg) => {
-    // Block past-time creation
     if (selectInfo.start < new Date()) {
       selectInfo.view.calendar.unselect()
-      showToast('Cannot create slots in the past', 'error')
+      showToast('Không thể tạo khung giờ trong quá khứ', 'error')
       return
     }
-
     setIsSaving(true)
     const result = await addMentorSlots(mentorId, [
       { startTime: selectInfo.start, endTime: selectInfo.end },
     ])
     setIsSaving(false)
-
     if (result.success) {
-      showToast(`Slot created — ${formatTimeRange(selectInfo.start, selectInfo.end)}`, 'success')
+      showToast(`Đã tạo khung giờ — ${formatTimeRange(selectInfo.start, selectInfo.end)}`)
       await loadSlots()
     } else {
       showToast(result.message, 'error')
     }
-
     selectInfo.view.calendar.unselect()
   }
 
-  // ── Drag-to-move: drop an event on a new time ─────────────────────────
+  // ── Drag-to-move ──────────────────────────────────────────────────────────
+
   const handleEventDrop = async (dropInfo: EventDropArg) => {
     const { event, revert } = dropInfo
-
     if (event.extendedProps.type !== 'available') {
-      revert()
-      showToast('Booked sessions cannot be moved', 'error')
-      return
+      revert(); showToast('Buổi đã đặt không thể di chuyển', 'error'); return
     }
-
-    if (!event.start || !event.end) {
-      revert()
-      return
-    }
-
+    if (!event.start || !event.end) { revert(); return }
     if (event.start < new Date()) {
-      revert()
-      showToast('Cannot move a slot to the past', 'error')
-      return
+      revert(); showToast('Không thể di chuyển khung giờ về quá khứ', 'error'); return
     }
-
     setIsSaving(true)
-    const slotId = event.extendedProps.slotId as string
-    const result = await updateMentorSlot(slotId, mentorId, event.start, event.end)
+    const result = await updateMentorSlot(
+      event.extendedProps.slotId as string, mentorId, event.start, event.end,
+    )
     setIsSaving(false)
-
     if (result.success) {
-      showToast(`Slot moved to ${formatTimeRange(event.start, event.end)}`, 'success')
+      showToast(`Đã di chuyển khung giờ tới ${formatTimeRange(event.start, event.end)}`)
       await loadSlots()
     } else {
-      revert()
-      showToast(result.message, 'error')
+      revert(); showToast(result.message, 'error')
     }
   }
 
-  // ── Resize: stretch/shrink an event's duration ────────────────────────
+  // ── Resize ────────────────────────────────────────────────────────────────
+
   const handleEventResize = async (resizeInfo: EventResizeDoneArg) => {
     const { event, revert } = resizeInfo
-
-    if (!event.start || !event.end) {
-      revert()
-      return
-    }
-
+    if (!event.start || !event.end) { revert(); return }
     setIsSaving(true)
-    const slotId = event.extendedProps.slotId as string
-    const result = await updateMentorSlot(slotId, mentorId, event.start, event.end)
+    const result = await updateMentorSlot(
+      event.extendedProps.slotId as string, mentorId, event.start, event.end,
+    )
     setIsSaving(false)
-
     if (result.success) {
-      showToast('Slot resized', 'success')
+      showToast('Đã cập nhật độ dài khung giờ')
       await loadSlots()
     } else {
-      revert()
-      showToast(result.message, 'error')
+      revert(); showToast(result.message, 'error')
     }
   }
 
-  // ── Cancel confirmed booking ──────────────────────────────────────────
-  const handleCancelBooking = async () => {
-    if (!cancelTarget) return
-    setIsCancelling(true)
-    try {
-      const result = await cancelBooking(cancelTarget.bookingId, mentorId)
-      if (result.success) {
-        showToast(result.message, 'success')
-        setCancelTarget(null)
-        await loadSlots()
-      } else {
-        showToast(result.message, 'error')
-      }
-    } catch {
-      showToast('Failed to cancel booking. Please try again.', 'error')
-    } finally {
-      setIsCancelling(false)
-    }
-  }
+  // ── Click → open SessionDetailDialog ─────────────────────────────────────
 
-  // ── Click: show info or delete ────────────────────────────────────────
-  const handleEventClick = async (clickInfo: EventClickArg) => {
+  const handleEventClick = (clickInfo: EventClickArg) => {
     const { event } = clickInfo
-    const isPast = event.extendedProps.isPast as boolean
+    const p = event.extendedProps
+    const isPast = p.isPast as boolean
 
-    if (event.extendedProps.type === 'booking') {
-      const mentee        = event.extendedProps.mentee as NonNullable<ExistingSlot['booking']>['mentee']
-      const bookingStatus = event.extendedProps.bookingStatus as string
-      const bookingId     = event.extendedProps.bookingId as string
-      const slotStart     = new Date(event.extendedProps.startTime as Date)
-      const slotEnd       = new Date(event.extendedProps.endTime as Date)
+    if (p.type === 'available') {
+      // Past available slots are inert
+      if (isPast) return
 
-      if (bookingStatus === 'CONFIRMED') {
-        // Allow cancel even for past sessions (mentor may still want to log it)
-        setCancelTarget({
-          bookingId,
-          menteeName:   mentee?.name ?? mentee?.email ?? 'Mentee',
-          startTime:    slotStart,
-          sessionLabel: formatTimeRange(slotStart, slotEnd),
-        })
-      } else if (bookingStatus === 'PENDING') {
-        if (isPast) {
-          // Expired request — block acceptance
-          showToast('This request has expired.', 'info')
-        } else {
-          showToast(
-            `Pending request from ${mentee?.name ?? 'a mentee'} — accept or decline in your dashboard.`,
-            'info',
-          )
-        }
-      }
-      // COMPLETED slots are read-only; no action needed on click
+      setSelectedSession({
+        type:    'slot',
+        role:    'owner',
+        slotId:  p.slotId as string,
+        isPast:  false,
+        partner: { name: null, email: '', avatarUrl: null },
+        startTime:    event.start!,
+        endTime:      event.end!,
+        sessionLabel: formatTimeRange(event.start!, event.end!),
+      })
+      setDialogOpen(true)
       return
     }
 
-    if (event.extendedProps.type === 'available') {
-      // Past available slots are inert — clicking them does nothing
-      if (isPast) return
-
-      const slotId = event.extendedProps.slotId as string
-      const start  = event.start!
-      const end    = event.end!
-      if (window.confirm(`Delete available slot?\n${formatTimeRange(start, end)}`)) {
-        setIsSaving(true)
-        const result = await deleteMentorSlot(slotId, mentorId)
-        setIsSaving(false)
-        if (result.success) {
-          showToast('Slot deleted', 'success')
-          await loadSlots()
-        } else {
-          showToast(result.message, 'error')
-        }
-      }
-    }
+    // Booking event
+    const mentee = p.mentee as ExistingSlot['booking'] & { name?: string | null; email: string; avatarUrl?: string | null }
+    setSelectedSession({
+      type:          'booking',
+      role:          'mentor',
+      bookingId:     p.bookingId as string,
+      bookingStatus: p.bookingStatus as string,
+      meetingUrl:    p.meetingUrl as string | null,
+      note:          p.note as string | null,
+      isPast,
+      partner: {
+        name:      mentee?.name ?? null,
+        email:     mentee?.email ?? '',
+        avatarUrl: mentee?.avatarUrl ?? null,
+      },
+      startTime:    new Date(p.startTime as Date),
+      endTime:      new Date(p.endTime as Date),
+      sessionLabel: formatTimeRange(new Date(p.startTime as Date), new Date(p.endTime as Date)),
+    })
+    setDialogOpen(true)
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────
-  const formatTimeRange = (start: Date, end: Date) => {
-    const fmt = (d: Date) =>
-      d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-    const day = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-    return `${day}, ${fmt(start)} – ${fmt(end)}`
-  }
+  // ── Calendar nav helpers ──────────────────────────────────────────────────
 
-  const getCalendarApi = (): CalendarApi | null => {
-    return calendarRef.current?.getApi() ?? null
-  }
-
+  const getCalendarApi = (): CalendarApi | null => calendarRef.current?.getApi() ?? null
   const handleTodayClick = () => getCalendarApi()?.today()
-  const handlePrevClick = () => getCalendarApi()?.prev()
-  const handleNextClick = () => getCalendarApi()?.next()
+  const handlePrevClick  = () => getCalendarApi()?.prev()
+  const handleNextClick  = () => getCalendarApi()?.next()
 
   const toastStyles: Record<Toast['type'], string> = {
-    success: 'bg-emerald-600 text-white',
-    error: 'bg-red-600 text-white',
-    info: 'bg-blue-600 text-white',
+    success: 'bg-emerald-600', error: 'bg-red-600', info: 'bg-blue-600',
   }
-
   const toastIcons: Record<Toast['type'], string> = {
-    success: '✓',
-    error: '✕',
-    info: 'ℹ',
+    success: '✓', error: '✕', info: 'ℹ',
   }
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-br from-purple-600 to-blue-600 p-2.5 rounded-xl shadow-sm">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Manage Available Slots</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Drag to create · Drag to move · Resize to adjust duration</p>
+            <h2 className="text-lg font-bold text-gray-900">Quản lý lịch dạy</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Kéo để tạo · Kéo để di chuyển · Kéo cạnh để thay đổi thời lượng</p>
           </div>
         </div>
-
         <button
-          onClick={() => { loadSlots() }}
+          onClick={() => loadSlots()}
           disabled={isLoading}
           className="flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-700 font-semibold transition disabled:opacity-50"
         >
-          <svg
-            className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <svg className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {isLoading ? 'Loading…' : 'Refresh'}
+          {isLoading ? 'Đang tải…' : 'Làm mới'}
         </button>
       </div>
 
@@ -415,47 +340,31 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
       <div className="mx-6 mt-4 bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 flex items-start gap-3">
         <span className="text-purple-500 text-lg leading-none mt-0.5">💡</span>
         <div className="text-sm text-purple-800 space-y-0.5">
-          <p><strong>Click &amp; drag</strong> an empty area to create a new available slot.</p>
-          <p><strong>Drag</strong> a green slot to reschedule it. <strong>Resize</strong> its bottom edge to adjust duration.</p>
-          <p><strong>Click</strong> a green slot to delete it. Orange (booked) slots are locked.</p>
-          <p><strong>Click</strong> a orange slot to cancel it. Orange (booked) slots are locked.</p>
+          <p><strong>Kéo &amp; thả</strong> vùng trống để tạo khung giờ mới.</p>
+          <p><strong>Kéo</strong> khung giờ xanh để dời lịch. <strong>Kéo cạnh dưới</strong> để thay đổi thời lượng.</p>
+          <p><strong>Nhấn</strong> vào bất kỳ sự kiện nào để xem chi tiết và thực hiện hành động.</p>
         </div>
       </div>
 
       {/* ── Legend ─────────────────────────────────────────────────────── */}
       <div className="px-6 pt-3 pb-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-emerald-500" />
-          Available
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-amber-500" />
-          Pending request
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-orange-500" />
-          Confirmed (click to cancel)
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-green-500" />
-          Completed
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-slate-300" />
-          Past slot
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded" style={{ backgroundColor: '#fef3c7', border: '1px solid #fbbf24' }} />
-          Expired request
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded" style={{ backgroundColor: '#fecaca', border: '1px solid #f87171' }} />
-          Missed session
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-purple-200 border-2 border-dashed border-purple-400" />
-          New (being created)
-        </div>
+        {[
+          { color: '#10b981', label: 'Khung giờ trống' },
+          { color: '#7c3aed', label: 'Chờ xác nhận' },
+          { color: '#3b82f6', label: 'Đang dạy' },
+          { color: '#0d9488', label: 'Hoàn thành' },
+          { color: '#e2e8f0', border: '#94a3b8', label: 'Đã qua' },
+          { color: '#fef3c7', border: '#fbbf24', label: 'Yêu cầu hết hạn' },
+          { color: '#fecaca', border: '#f87171', label: 'Buổi bị bỏ lỡ' },
+        ].map(({ color, border, label }) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <div
+              className="w-3 h-3 rounded shrink-0"
+              style={{ backgroundColor: color, border: border ? `1px solid ${border}` : undefined }}
+            />
+            {label}
+          </div>
+        ))}
       </div>
 
       {/* ── Saving Overlay ──────────────────────────────────────────────── */}
@@ -467,27 +376,18 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              <span className="text-sm font-semibold text-purple-700">Saving…</span>
+              <span className="text-sm font-semibold text-purple-700">Đang lưu…</span>
             </div>
           </div>
         )}
 
-        {/* ── FullCalendar ─────────────────────────────────────────────── */}
         {mounted && (
           <FullCalendar
             ref={calendarRef}
             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'timeGridWeek,timeGridDay',
-            }}
-            buttonText={{
-              today: 'Today',
-              week: 'Week',
-              day: 'Day',
-            }}
+            headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' }}
+            buttonText={{ today: 'Hôm nay', week: 'Tuần', day: 'Ngày' }}
             height="auto"
             contentHeight={620}
             slotMinTime="07:00:00"
@@ -504,52 +404,31 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
             eventResizableFromStart={false}
             selectOverlap={false}
             eventOverlap={false}
-            businessHours={{
-              daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
-              startTime: '07:00',
-              endTime: '22:00',
-            }}
-            selectAllow={(selectInfo) => selectInfo.start >= new Date()}
-            slotLabelFormat={{
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true,
-            }}
-            dayHeaderFormat={{
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              omitCommas: true,
-            }}
+            businessHours={{ daysOfWeek: [0, 1, 2, 3, 4, 5, 6], startTime: '07:00', endTime: '22:00' }}
+            selectAllow={info => info.start >= new Date()}
+            slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: true }}
+            dayHeaderFormat={{ weekday: 'short', month: 'short', day: 'numeric', omitCommas: true }}
             events={calendarEvents}
             select={handleSelect}
             eventDrop={handleEventDrop}
             eventResize={handleEventResize}
             eventClick={handleEventClick}
-            eventDidMount={(info) => {
+            eventDidMount={info => {
               const props  = info.event.extendedProps
               const isPast = props.isPast as boolean
 
               if (props.type === 'booking' && props.mentee) {
-                let action: string
-                if (props.bookingStatus === 'CONFIRMED') {
-                  action = isPast ? 'Missed session — click to cancel/log' : 'Click to cancel session'
-                } else if (props.bookingStatus === 'COMPLETED') {
-                  action = 'Session completed'
-                } else {
-                  action = isPast ? 'Request expired' : 'Pending — accept or decline from dashboard'
-                }
-                info.el.setAttribute(
-                  'title',
-                  `${props.mentee.name ?? props.mentee.email} · ${action}`,
-                )
+                const action =
+                  props.bookingStatus === 'CONFIRMED' ? (isPast ? 'Buổi bị bỏ lỡ · nhấn để xem' : 'Nhấn để hủy / chat') :
+                  props.bookingStatus === 'COMPLETED' ? 'Hoàn thành' :
+                  isPast ? 'Yêu cầu hết hạn' : 'Nhấn để chấp nhận / từ chối'
+                info.el.setAttribute('title', `${(props.mentee as { name?: string | null }).name ?? 'Học viên'} · ${action}`)
               } else if (isPast) {
-                // Past available: visually disable pointer
                 info.el.style.pointerEvents = 'none'
                 info.el.style.cursor = 'default'
-                info.el.setAttribute('title', 'Past slot — no action available')
+                info.el.setAttribute('title', 'Khung giờ đã qua — không có hành động')
               } else {
-                info.el.setAttribute('title', 'Click to delete · Drag to move · Resize to adjust')
+                info.el.setAttribute('title', 'Nhấn để xóa · Kéo để di chuyển · Kéo cạnh để thay đổi thời lượng')
               }
             }}
           />
@@ -558,10 +437,9 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
 
       {/* ── Toast Notifications ─────────────────────────────────────────── */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold animate-slide-in pointer-events-auto ${toastStyles[toast.type]}`}
+        {toasts.map(toast => (
+          <div key={toast.id}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white pointer-events-auto ${toastStyles[toast.type]}`}
           >
             <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
               {toastIcons[toast.type]}
@@ -571,132 +449,17 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
         ))}
       </div>
 
-      {/* ── Cancel Confirmation Modal ────────────────────────────────────── */}
-      {cancelTarget && (
-        <CancelBookingModal
-          target={cancelTarget}
-          isCancelling={isCancelling}
-          onConfirm={handleCancelBooking}
-          onDismiss={() => setCancelTarget(null)}
-        />
-      )}
-    </div>
-  )
-}
-
-// ── Cancel Booking Modal ──────────────────────────────────────────────────────
-
-const CANCEL_THRESHOLD_HOURS = 12
-
-interface CancelBookingModalProps {
-  target: CancelTarget
-  isCancelling: boolean
-  onConfirm: () => void
-  onDismiss: () => void
-}
-
-function CancelBookingModal({ target, isCancelling, onConfirm, onDismiss }: CancelBookingModalProps) {
-  const hoursUntil = (target.startTime.getTime() - Date.now()) / (1000 * 60 * 60)
-  const isLate     = hoursUntil < CANCEL_THRESHOLD_HOURS
-  const penalty    = isLate ? 20 : 5
-
-  const timingLabel  = isLate
-    ? `Less than ${CANCEL_THRESHOLD_HOURS} hours until session`
-    : `More than ${CANCEL_THRESHOLD_HOURS} hours until session`
-
-  const refundNote = 'The mentee will be fully refunded 1 GivePoint.'
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onDismiss}
+      {/* ── Session Detail Dialog ────────────────────────────────────────── */}
+      <SessionDetailDialog
+        open={dialogOpen}
+        session={selectedSession}
+        currentUserId={mentorId}
+        onClose={() => setDialogOpen(false)}
+        onMutate={async () => {
+          showToast('Cập nhật thành công!')
+          await loadSlots()
+        }}
       />
-
-      {/* Dialog */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fade-in overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-red-500 to-orange-500 p-5 text-white">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl leading-none mt-0.5">⚠️</span>
-            <div>
-              <h2 className="text-base font-bold">Cancel Confirmed Session?</h2>
-              <p className="text-red-100 text-sm mt-0.5">This action cannot be undone.</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-4">
-          {/* Session summary */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500 font-medium">Mentee</span>
-              <span className="font-semibold text-gray-800">{target.menteeName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 font-medium">Session</span>
-              <span className="font-semibold text-gray-800 text-right max-w-[200px]">
-                {target.sessionLabel}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 font-medium">Timing</span>
-              <span className={`font-semibold ${isLate ? 'text-red-600' : 'text-amber-600'}`}>
-                {timingLabel}
-              </span>
-            </div>
-          </div>
-
-          {/* Penalty banner */}
-          <div className={`rounded-xl p-4 border ${
-            isLate
-              ? 'bg-red-50 border-red-200'
-              : 'bg-amber-50 border-amber-200'
-          }`}>
-            <p className={`text-sm font-bold mb-1 ${isLate ? 'text-red-700' : 'text-amber-700'}`}>
-              Trust Score penalty: −{penalty} points
-              {isLate && ' (severe — late cancellation)'}
-            </p>
-            <p className={`text-xs leading-relaxed ${isLate ? 'text-red-600' : 'text-amber-600'}`}>
-              {isLate
-                ? `Cancelling with less than ${CANCEL_THRESHOLD_HOURS} hours notice carries a −20 Trust Score penalty because it disrupts the mentee's schedule.`
-                : `Cancelling with more than ${CANCEL_THRESHOLD_HOURS} hours notice carries a −5 Trust Score penalty. Try to give more notice when possible.`}
-            </p>
-          </div>
-
-          {/* Refund note */}
-          <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">
-            <span className="text-base">✅</span>
-            {refundNote}
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-1">
-            <button
-              onClick={onDismiss}
-              disabled={isCancelling}
-              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              Keep Session
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={isCancelling}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 rounded-xl text-sm font-bold text-white hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
-            >
-              {isCancelling ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Cancelling…
-                </span>
-              ) : (
-                `Cancel Session (−${penalty} pts)`
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
