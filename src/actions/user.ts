@@ -169,6 +169,25 @@ async function ensureSkillExists(skillName: string): Promise<string> {
         status: 'PENDING', // NEW: All custom skills require admin approval
       },
     })
+
+    // Auto-embed: generate and persist the vector immediately so the new skill
+    // is searchable as soon as an admin approves it (no manual backfill needed).
+    try {
+      console.log(`Auto-generating embedding for new skill: "${trimmedName}"`)
+      const embedding = await generateSkillEmbedding([trimmedName])
+      if (embedding.length > 0) {
+        const vectorString = `[${embedding.join(',')}]`
+        await prisma.$executeRaw`
+          UPDATE "Skill"
+          SET embedding = ${vectorString}::vector
+          WHERE id = ${skill.id}
+        `
+        console.log(`Embedding saved for new skill "${trimmedName}"`)
+      }
+    } catch (embeddingError) {
+      // Non-fatal: skill is still created; embedding can be backfilled later.
+      console.error(`Failed to auto-generate embedding for "${trimmedName}":`, embeddingError)
+    }
   }
 
   return skill.id

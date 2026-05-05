@@ -82,7 +82,36 @@ export async function getAutoMatchedMentors(currentUserId: string) {
    console.log(' Using GRANULAR skill-level embedding comparison...')
     
    const ilikePatterns = userLearningGoalNames.map(name => `%${name}%`)
-   
+
+  // --- START DEBUG BLOCK ---
+  // 1. Count APPROVED WANT skills (with embeddings) for the current user
+  const debugWantCount = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*) as count
+    FROM "UserSkill" us
+    INNER JOIN "Skill" s ON s.id = us."skillId"
+    WHERE us."userId" = ${currentUserId}
+      AND us.type = 'WANT'
+      AND s.embedding IS NOT NULL
+      AND s.status = 'APPROVED'
+  `
+  console.log('[DEBUG] APPROVED WANT skills with embeddings for current user:', Number(debugWantCount[0].count))
+
+  // 2. Count Mentors with at least one APPROVED GIVE skill with embeddings
+  const debugGiveCount = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(DISTINCT u.id) as count
+    FROM "User" u
+    INNER JOIN "UserSkill" us_give ON us_give."userId" = u.id AND us_give.type = 'GIVE'
+    INNER JOIN "Skill" s_give ON s_give.id = us_give."skillId"
+      AND s_give.status = 'APPROVED'
+      AND s_give.embedding IS NOT NULL
+    WHERE u.id != ${currentUserId}
+  `
+  console.log('[DEBUG] Mentors with APPROVED GIVE skills with embeddings:', Number(debugGiveCount[0].count))
+
+  // 3. Log the raw IDs of the fetched userLearningSkills
+  console.log('[DEBUG] userLearningSkills IDs:', userLearningSkills.map(us => ({ userSkillId: us.id, skillId: us.skillId, skillName: us.skill.name, skillStatus: (us.skill as any).status })))
+  // --- END DEBUG BLOCK ---
+
    const rawMentors = await prisma.$queryRaw<GranularMatchResult[]>`
      SELECT 
        u.id,
