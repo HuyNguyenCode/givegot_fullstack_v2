@@ -112,6 +112,20 @@ export default function SessionDetailDialog({
     && now <= new Date(s.endTime).getTime()
   const isWithin48h      = s.isPast
     && now <= new Date(s.endTime).getTime() + 48 * 60 * 60 * 1000
+  /** Mentee: CONFIRMED session ended but still inside post-session actions window */
+  const menteeGraceConfirmed =
+    s.type === 'booking' &&
+    s.role === 'mentee' &&
+    s.bookingStatus === 'CONFIRMED' &&
+    s.isPast &&
+    isWithin48h
+  /** Mentor: CONFIRMED ended; mentee may still complete review within 48h */
+  const mentorGraceConfirmed =
+    s.type === 'booking' &&
+    s.role === 'mentor' &&
+    s.bookingStatus === 'CONFIRMED' &&
+    s.isPast &&
+    isWithin48h
 
   // ── Action helpers ──────────────────────────────────────────────────────────
 
@@ -178,9 +192,19 @@ export default function SessionDetailDialog({
                   {ROLE_LABEL[s.role]}
                 </span>
                 {s.isPast && (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/20">
-                    Đã qua
-                  </span>
+                  menteeGraceConfirmed ? (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-sm">
+                      Chờ đánh giá
+                    </span>
+                  ) : mentorGraceConfirmed ? (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-sm">
+                      Chờ Mentee đánh giá
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/20">
+                      Đã qua
+                    </span>
+                  )
                 )}
               </div>
               {/* Partner info */}
@@ -309,11 +333,22 @@ export default function SessionDetailDialog({
                 <Info icon="⚠️">Yêu cầu đặt lịch này đã hết hạn — buổi học đã qua giờ bắt đầu.</Info>
               )}
 
-              {/* Past CONFIRMED → view history */}
+              {/* Past CONFIRMED → grace window (nhắn mentee) vs sau 48h */}
               {s.isPast && s.bookingStatus === 'CONFIRMED' && (
                 <>
-                  <Info icon="⏰">Buổi đã xác nhận nhưng đã qua. Kiểm tra lịch sử chat.</Info>
-                  {s.bookingId && <ChatLink bookingId={s.bookingId} />}
+                  {isWithin48h ? (
+                    <>
+                      <Info icon="⭐">
+                        Buổi học đã kết thúc. Học viên có thể đánh giá trong vòng 48 giờ — nhắn tin để nhắc nhở nếu cần.
+                      </Info>
+                      {s.bookingId && <ChatLink bookingId={s.bookingId} />}
+                    </>
+                  ) : (
+                    <>
+                      <Info icon="⏰">Buổi đã xác nhận nhưng đã qua. Kiểm tra lịch sử chat.</Info>
+                      {s.bookingId && <ChatLink bookingId={s.bookingId} />}
+                    </>
+                  )}
                 </>
               )}
 
@@ -368,7 +403,7 @@ export default function SessionDetailDialog({
                 </>
               )}
 
-              {/* Past CONFIRMED — Report No-Show (within 48 h) */}
+              {/* Past CONFIRMED — Review + Report No-Show (within 48 h, mentee) */}
               {s.isPast && s.bookingStatus === 'CONFIRMED' && (
                 <div className="space-y-2">
                   {isWithin48h ? (
@@ -376,13 +411,36 @@ export default function SessionDetailDialog({
                       <Info icon="⚠️">
                         Gia sư không đến? Bạn có thể báo cáo trong vòng 48 giờ sau buổi học.
                       </Info>
-                      <DangerButton
-                        onClick={handleReportNoShow}
-                        loading={isLoading}
-                        className="!bg-red-600 hover:!bg-red-700 text-white"
-                      >
-                        🚨 Báo cáo vắng mặt
-                      </DangerButton>
+                      {!showReview ? (
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <PrimaryButton
+                            color="orange"
+                            onClick={() => setShowReview(true)}
+                            className="flex-1"
+                          >
+                            Đánh giá &amp; Hoàn thành
+                          </PrimaryButton>
+                          <DangerButton
+                            onClick={handleReportNoShow}
+                            loading={isLoading}
+                            className="flex-1 !bg-red-600 hover:!bg-red-700 text-white"
+                          >
+                            🚨 Báo cáo vắng mặt
+                          </DangerButton>
+                        </div>
+                      ) : (
+                        <ReviewForm
+                          rating={reviewRating}
+                          hover={hoverRating}
+                          comment={reviewComment}
+                          submitting={isSubmitting}
+                          onRating={setReviewRating}
+                          onHover={setHoverRating}
+                          onComment={setReviewComment}
+                          onSubmit={handleSubmitReview}
+                          onCancel={() => setShowReview(false)}
+                        />
+                      )}
                     </>
                   ) : (
                     <Info icon="🔒">Thời hạn 48 giờ để báo cáo đã hết.</Info>

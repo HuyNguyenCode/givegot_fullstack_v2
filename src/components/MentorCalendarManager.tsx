@@ -13,6 +13,7 @@ import type {
   CalendarApi,
 } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
+import { differenceInHours } from 'date-fns'
 import {
   addMentorSlots,
   getAllMentorSlots,
@@ -98,19 +99,31 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
   // ── Calendar event mapping ────────────────────────────────────────────────
 
   const calendarEvents: EventInput[] = existingSlots.map(slot => {
-    const isPast = new Date(slot.startTime) < new Date()
+    const now = new Date()
+    const isPast = new Date(slot.startTime) < now
 
     if (slot.isBooked && slot.booking) {
       const { status } = slot.booking
       const menteeName = slot.booking.mentee.name ?? slot.booking.mentee.email ?? 'Booked'
+      const end = new Date(slot.endTime)
+      const sessionEnded = end < now
+      const awaitingMenteeReview =
+        status === 'CONFIRMED' &&
+        sessionEnded &&
+        differenceInHours(now, end) <= 48
 
       let bgColor: string, borderColor: string, textColor = '#fff'
       let statusIcon: string, statusLabel: string
 
       if (status === 'CONFIRMED') {
-        if (isPast) {
-          bgColor = '#fecaca'; borderColor = '#f87171'; textColor = '#991b1b'
-          statusIcon = '⏰'; statusLabel = 'Missed'
+        if (sessionEnded) {
+          if (awaitingMenteeReview) {
+            bgColor = '#fef3c7'; borderColor = '#fbbf24'; textColor = '#78350f'
+            statusIcon = '⭐'; statusLabel = 'Chờ Mentee đánh giá'
+          } else {
+            bgColor = '#fecaca'; borderColor = '#f87171'; textColor = '#991b1b'
+            statusIcon = '⏰'; statusLabel = 'Missed'
+          }
         } else {
           bgColor = '#3b82f6'; borderColor = '#2563eb'
           statusIcon = '📘'; statusLabel = 'Teaching'
@@ -148,7 +161,8 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
           mentee:        slot.booking.mentee,
           startTime:     slot.startTime,
           endTime:       slot.endTime,
-          isPast,
+          isPast:        sessionEnded,
+          awaitingMenteeReview,
         },
       }
     }
@@ -352,6 +366,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
           { color: '#10b981', label: 'Khung giờ trống' },
           { color: '#7c3aed', label: 'Chờ xác nhận' },
           { color: '#3b82f6', label: 'Đang dạy' },
+          { color: '#fef3c7', border: '#fbbf24', label: 'Chờ Mentee đánh giá' },
           { color: '#0d9488', label: 'Hoàn thành' },
           { color: '#e2e8f0', border: '#94a3b8', label: 'Đã qua' },
           { color: '#fef3c7', border: '#fbbf24', label: 'Yêu cầu hết hạn' },
@@ -418,10 +433,19 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
               const isPast = props.isPast as boolean
 
               if (props.type === 'booking' && props.mentee) {
+                const awaiting = props.awaitingMenteeReview as boolean | undefined
                 const action =
-                  props.bookingStatus === 'CONFIRMED' ? (isPast ? 'Buổi bị bỏ lỡ · nhấn để xem' : 'Nhấn để hủy / chat') :
-                  props.bookingStatus === 'COMPLETED' ? 'Hoàn thành' :
-                  isPast ? 'Yêu cầu hết hạn' : 'Nhấn để chấp nhận / từ chối'
+                  props.bookingStatus === 'CONFIRMED'
+                    ? (isPast
+                        ? (awaiting
+                            ? 'Chờ học viên đánh giá · nhấn để nhắn tin'
+                            : 'Buổi bị bỏ lỡ · nhấn để xem')
+                        : 'Nhấn để hủy / chat')
+                    : props.bookingStatus === 'COMPLETED'
+                      ? 'Hoàn thành'
+                      : isPast
+                        ? 'Yêu cầu hết hạn'
+                        : 'Nhấn để chấp nhận / từ chối'
                 info.el.setAttribute('title', `${(props.mentee as { name?: string | null }).name ?? 'Học viên'} · ${action}`)
               } else if (isPast) {
                 info.el.style.pointerEvents = 'none'

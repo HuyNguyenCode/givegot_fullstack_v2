@@ -11,6 +11,7 @@ import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import type { EventInput, EventClickArg } from '@fullcalendar/core'
+import { differenceInHours } from 'date-fns'
 import { getMyBookings } from '@/actions/booking'
 import { BookingWithDetails } from '@/types'
 import SessionDetailDialog, { SessionInfo } from '@/components/SessionDetailDialog'
@@ -40,8 +41,21 @@ interface EventStyle {
   label: string
 }
 
-function resolveStyle(status: string, isPast: boolean): EventStyle {
-  if (isPast) {
+function resolveStyle(
+  status: string,
+  sessionEnded: boolean,
+  awaitingReview: boolean,
+): EventStyle {
+  if (awaitingReview) {
+    return {
+      bgColor: '#fef3c7',
+      borderColor: '#fbbf24',
+      textColor: '#78350f',
+      icon: '⭐',
+      label: 'Chờ đánh giá',
+    }
+  }
+  if (sessionEnded) {
     return {
       bgColor: '#e2e8f0', borderColor: '#94a3b8', textColor: '#475569',
       icon: '⏰', label: 'Đã qua',
@@ -105,8 +119,14 @@ export default function MenteeScheduleCalendar({
   // ── Build FullCalendar events ────────────────────────────────────────────
 
   const calendarEvents: EventInput[] = bookings.map(b => {
-    const isPast = new Date(b.startTime) < now
-    const style  = resolveStyle(b.status, isPast)
+    const end = new Date(b.endTime)
+    const sessionEnded = end < now
+    const awaitingReview =
+      b.status === 'CONFIRMED' &&
+      sessionEnded &&
+      differenceInHours(now, end) <= 48
+    const style = resolveStyle(b.status, sessionEnded, awaitingReview)
+    const isPast = sessionEnded
     const name   = b.mentor.name ?? b.mentor.email ?? 'Gia sư'
     return {
       id:              `learning-${b.id}`,
@@ -205,6 +225,7 @@ export default function MenteeScheduleCalendar({
         {[
           { color: '#f59e0b', label: 'Chờ xác nhận' },
           { color: '#f97316', label: 'Đã xác nhận' },
+          { color: '#fef3c7', border: '#fbbf24', label: 'Chờ đánh giá' },
           { color: '#22c55e', label: 'Hoàn thành' },
           { color: '#94a3b8', label: 'Đã hủy' },
           { color: '#e2e8f0', border: '#94a3b8', label: 'Đã qua' },
