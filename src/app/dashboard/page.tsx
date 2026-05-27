@@ -214,6 +214,8 @@ export default function DashboardPage() {
       [BookingStatus.CONFIRMED]: 'bg-blue-100 text-blue-800',
       [BookingStatus.COMPLETED]: 'bg-green-100 text-green-800',
       [BookingStatus.CANCELLED]: 'bg-red-100 text-red-800',
+      [BookingStatus.MISSED]: 'bg-gray-500 text-white', 
+      [BookingStatus.DISPUTED]: 'bg-orange-100 text-orange-800',
     }
     return styles[status] || 'bg-gray-100 text-gray-800'
   }
@@ -444,7 +446,7 @@ export default function DashboardPage() {
         </section>
         {/* ── End Insights Center ─────────────────────────────────── */}
 
-        {/* ── Calendar Tabs: Lịch Dạy / Lịch Học ─────────────────────── */}
+        {/* ── Calendar Tabs: Teaching calendar / Study calendar ─────────────────────── */}
         <section className="mb-8">
           {/* Tab header */}
           <div className="flex items-end gap-1 mb-0 border-b border-gray-200">
@@ -457,7 +459,7 @@ export default function DashboardPage() {
               }`}
             >
               <span className="text-base">🎓</span>
-              Lịch Dạy
+              Teaching calendar
               {mentoringBookings.filter(b => b.status === 'PENDING').length > 0 && (
                 <span className="ml-1 bg-purple-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                   {mentoringBookings.filter(b => b.status === 'PENDING').length}
@@ -473,7 +475,7 @@ export default function DashboardPage() {
               }`}
             >
               <span className="text-base">📚</span>
-              Lịch Học
+              Study calendar
               {learningBookings.filter(b => b.status === 'CONFIRMED').length > 0 && (
                 <span className="ml-1 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                   {learningBookings.filter(b => b.status === 'CONFIRMED').length}

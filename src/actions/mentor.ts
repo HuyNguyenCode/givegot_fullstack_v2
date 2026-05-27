@@ -324,6 +324,8 @@ export async function getAutoMatchedMentors(currentUserId: string) {
           avatarUrl: mentor.avatarUrl,
           bio: mentor.bio,
           givePoints: mentor.givePoints,
+          trustScore: mentor.trustScore, 
+          similarity: matchScore > 0 ? 1 : 0,
           createdAt: mentor.createdAt,
           updatedAt: mentor.updatedAt,
           teachingSkills,

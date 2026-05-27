@@ -812,7 +812,6 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
             data: { givePoints: { increment: 1 } },
           })
           await tx.transactionLog.create({
-            // @ts-expect-error CANCELLATION_COMPENSATION is valid in DB; run `npm run db:generate` after restarting dev server
             data: { userId: booking.mentorId, amount: 1, type: 'CANCELLATION_COMPENSATION', bookingId },
           })
           await tx.user.update({
@@ -1228,7 +1227,6 @@ export async function reportNoShow(
           data: {
             userId:    booking.menteeId,
             amount:    1,
-            // @ts-expect-error REFUND_NO_SHOW added to schema; run `npm run db:generate` after `prisma db push`
             type:      'REFUND_NO_SHOW',
             bookingId,
           },
@@ -1265,7 +1263,6 @@ export async function reportNoShow(
           data: {
             userId:    booking.mentorId,
             amount:    1,
-            // @ts-expect-error FRAUD_DETECTION added to schema; run `npm run db:generate` after `prisma db push`
             type:      'FRAUD_DETECTION',
             bookingId,
           },

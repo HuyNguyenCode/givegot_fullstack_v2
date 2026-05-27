@@ -136,7 +136,7 @@ export default function SessionDetailDialog({
       if (r.success) { setFeedback({ ok: true, msg: r.message }); onMutate(); onClose() }
       else             setFeedback({ ok: false, msg: r.message })
     } catch {
-      setFeedback({ ok: false, msg: 'Đã xảy ra lỗi. Vui lòng thử lại.' })
+      setFeedback({ ok: false, msg: 'Something went wrong. Please try again.' })
     } finally {
       setIsLoading(false)
     }
@@ -144,19 +144,19 @@ export default function SessionDetailDialog({
 
   const handleAccept      = ()  => run(() => acceptBooking(s.bookingId!, currentUserId))
   const handleDecline     = ()  => {
-    if (!window.confirm('Từ chối buổi học này? Học viên sẽ được hoàn điểm.')) return
+    if (!window.confirm('Decline this session? The mentee will be refunded points.')) return
     run(() => declineBooking(s.bookingId!, currentUserId))
   }
   const handleCancel      = ()  => {
-    if (!window.confirm('Hủy buổi học này? Điểm Trust Score có thể bị trừ.')) return
+    if (!window.confirm('Cancel this session? Your Trust Score may be reduced.')) return
     run(() => cancelBooking(s.bookingId!, currentUserId))
   }
   const handleReportNoShow = () => {
-    if (!window.confirm('Báo cáo vắng mặt? Hệ thống sẽ xác minh qua Google Meet API.')) return
+    if (!window.confirm('Report no-show? The system will verify via the Google Meet API.')) return
     run(() => reportNoShow(s.bookingId!, currentUserId))
   }
   const handleDeleteSlot  = ()  => {
-    if (!window.confirm(`Xóa khung giờ này?\n${s.sessionLabel}`)) return
+    if (!window.confirm(`Delete this time slot?\n${s.sessionLabel}`)) return
     run(() => deleteMentorSlot(s.slotId!, currentUserId))
   }
   const handleSubmitReview = async () => {
@@ -194,15 +194,15 @@ export default function SessionDetailDialog({
                 {s.isPast && (
                   menteeGraceConfirmed ? (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-sm">
-                      Chờ đánh giá
+                      Awaiting Review 
                     </span>
                   ) : mentorGraceConfirmed ? (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-sm">
-                      Chờ Mentee đánh giá
+                      Awaiting for Mentee Review 
                     </span>
                   ) : (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/20">
-                      Đã qua
+                      Past slot
                     </span>
                   )
                 )}
@@ -244,10 +244,10 @@ export default function SessionDetailDialog({
 
           {/* Session meta */}
           <div className="bg-gray-50 rounded-xl p-3.5 space-y-2 text-sm">
-            <MetaRow label="Thời gian" value={s.sessionLabel} />
+            <MetaRow label="Time" value={s.sessionLabel} />
             {s.type === 'booking' && s.bookingStatus && (
               <div className="flex items-center justify-between">
-                <span className="text-gray-500">Trạng thái</span>
+                <span className="text-gray-500">Status</span>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[s.bookingStatus] ?? 'bg-gray-100 text-gray-600'}`}>
                   {s.bookingStatus}
                 </span>
@@ -281,17 +281,17 @@ export default function SessionDetailDialog({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              Vào buổi học ngay
+              Join session now
             </a>
           )}
 
           {/* ── Role: owner (available slot) ─────────────────────────────── */}
           {s.type === 'slot' && s.role === 'owner' && (
             s.isPast ? (
-              <Info icon="⏰">Khung giờ này đã qua — không có hành động nào khả dụng.</Info>
+              <Info icon="⏰">This is a past slot - no actions are available.</Info>
             ) : (
               <DangerButton onClick={handleDeleteSlot} loading={isLoading}>
-                Xóa khung giờ
+                Delete slot
               </DangerButton>
             )
           )}
@@ -308,10 +308,10 @@ export default function SessionDetailDialog({
                     loading={isLoading}
                     className="flex-1"
                   >
-                    Chấp nhận
+                    Accept
                   </PrimaryButton>
                   <DangerButton onClick={handleDecline} loading={isLoading} className="flex-1">
-                    Từ chối
+                    Decline
                   </DangerButton>
                 </div>
               )}
@@ -323,29 +323,29 @@ export default function SessionDetailDialog({
                     <ChatLink bookingId={s.bookingId} className="flex-1" />
                   )}
                   <DangerButton onClick={handleCancel} loading={isLoading} className="flex-1">
-                    Hủy buổi
+                    Cancel session
                   </DangerButton>
                 </div>
               )}
 
               {/* Past PENDING → expired */}
               {s.isPast && s.bookingStatus === 'PENDING' && (
-                <Info icon="⚠️">Yêu cầu đặt lịch này đã hết hạn — buổi học đã qua giờ bắt đầu.</Info>
+                <Info icon="⚠️">This booking request has expired - the session start time has passed.</Info>
               )}
 
-              {/* Past CONFIRMED → grace window (nhắn mentee) vs sau 48h */}
+              {/* Past CONFIRMED → grace window (message mentee) vs after 48h */}
               {s.isPast && s.bookingStatus === 'CONFIRMED' && (
                 <>
                   {isWithin48h ? (
                     <>
                       <Info icon="⭐">
-                        Buổi học đã kết thúc. Học viên có thể đánh giá trong vòng 48 giờ — nhắn tin để nhắc nhở nếu cần.
+                        The session has ended. The mentee can still submit a review within 48 hours - message them if needed.
                       </Info>
                       {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                     </>
                   ) : (
                     <>
-                      <Info icon="⏰">Buổi đã xác nhận nhưng đã qua. Kiểm tra lịch sử chat.</Info>
+                      <Info icon="⏰">This confirmed session is now in the past. Check chat history.</Info>
                       {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                     </>
                   )}
@@ -354,12 +354,12 @@ export default function SessionDetailDialog({
 
               {/* COMPLETED / MISSED */}
               {(s.bookingStatus === 'COMPLETED' || s.bookingStatus === 'MISSED') && s.bookingId && (
-                <ChatLink bookingId={s.bookingId} label="🎓 Xem lịch sử chat" />
+                <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
               )}
 
               {/* DISPUTED */}
               {s.bookingStatus === 'DISPUTED' && (
-                <Info icon="⚖️">Buổi học đang được Admin xem xét. Điểm đang bị giữ lại.</Info>
+                <Info icon="⚖️">This session is being reviewed by admin. Points are currently on hold.</Info>
               )}
             </div>
           )}
@@ -370,7 +370,7 @@ export default function SessionDetailDialog({
               {/* Future PENDING → Cancel */}
               {!s.isPast && s.bookingStatus === 'PENDING' && (
                 <DangerButton onClick={handleCancel} loading={isLoading}>
-                  Hủy đặt lịch
+                  Cancel booking
                 </DangerButton>
               )}
 
@@ -379,7 +379,7 @@ export default function SessionDetailDialog({
                 <>
                   {!showReview ? (
                     <PrimaryButton color="orange" onClick={() => setShowReview(true)} className="w-full">
-                      Nộp đánh giá &amp; Hoàn thành
+                      Submit review &amp; complete
                     </PrimaryButton>
                   ) : (
                     <ReviewForm
@@ -397,7 +397,7 @@ export default function SessionDetailDialog({
                   <div className="flex gap-2">
                     {s.bookingId && <ChatLink bookingId={s.bookingId} className="flex-1" />}
                     <DangerButton onClick={handleCancel} loading={isLoading} className="flex-1">
-                      Hủy buổi
+                      Cancel session
                     </DangerButton>
                   </div>
                 </>
@@ -409,7 +409,7 @@ export default function SessionDetailDialog({
                   {isWithin48h ? (
                     <>
                       <Info icon="⚠️">
-                        Gia sư không đến? Bạn có thể báo cáo trong vòng 48 giờ sau buổi học.
+                        Mentor did not show up? You can report it within 48 hours after the session.
                       </Info>
                       {!showReview ? (
                         <div className="flex flex-col sm:flex-row gap-2">
@@ -418,14 +418,14 @@ export default function SessionDetailDialog({
                             onClick={() => setShowReview(true)}
                             className="flex-1"
                           >
-                            Đánh giá &amp; Hoàn thành
+                            Review &amp; complete
                           </PrimaryButton>
                           <DangerButton
                             onClick={handleReportNoShow}
                             loading={isLoading}
                             className="flex-1 !bg-red-600 hover:!bg-red-700 text-white"
                           >
-                            🚨 Báo cáo vắng mặt
+                            🚨 Report no-show
                           </DangerButton>
                         </div>
                       ) : (
@@ -443,7 +443,7 @@ export default function SessionDetailDialog({
                       )}
                     </>
                   ) : (
-                    <Info icon="🔒">Thời hạn 48 giờ để báo cáo đã hết.</Info>
+                    <Info icon="🔒">The 48-hour reporting window has ended.</Info>
                   )}
                   {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                 </div>
@@ -451,20 +451,20 @@ export default function SessionDetailDialog({
 
               {/* COMPLETED / MISSED */}
               {(s.bookingStatus === 'COMPLETED' || s.bookingStatus === 'MISSED') && s.bookingId && (
-                <ChatLink bookingId={s.bookingId} label="🎓 Xem lịch sử chat" />
+                <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
               )}
 
               {/* DISPUTED */}
               {s.bookingStatus === 'DISPUTED' && (
                 <>
-                  <Info icon="⚖️">Tranh chấp đang được Admin xem xét. Điểm đang bị giữ.</Info>
+                  <Info icon="⚖️">This dispute is under admin review. Points are currently held.</Info>
                   {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                 </>
               )}
 
               {/* Past PENDING */}
               {s.isPast && s.bookingStatus === 'PENDING' && (
-                <Info icon="⚠️">Yêu cầu đặt lịch đã hết hạn — gia sư không phản hồi.</Info>
+                <Info icon="⚠️">This booking request expired - the mentor did not respond.</Info>
               )}
             </div>
           )}
@@ -474,7 +474,7 @@ export default function SessionDetailDialog({
             onClick={onClose}
             className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition font-medium"
           >
-            Đóng
+            Close
           </button>
         </div>
       </div>
@@ -555,7 +555,7 @@ function DangerButton({
 
 function ChatLink({
   bookingId,
-  label = '💬 Nhắn tin',
+  label = '💬 Message',
   className = 'w-full',
 }: {
   bookingId: string
@@ -582,7 +582,7 @@ function ReviewForm({
 }) {
   return (
     <div className="border border-orange-200 rounded-xl p-4 space-y-3 bg-orange-50">
-      <p className="text-xs font-bold text-orange-900">Đánh giá buổi học</p>
+      <p className="text-xs font-bold text-orange-900">Session review</p>
       <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map(star => (
           <button
@@ -600,7 +600,7 @@ function ReviewForm({
         rows={2}
         value={comment}
         onChange={e => onComment(e.target.value)}
-        placeholder="Chia sẻ trải nghiệm của bạn (tùy chọn)…"
+        placeholder="Share your experience (optional)..."
         className="w-full text-xs px-3 py-2 border border-orange-200 rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-orange-400 bg-white"
         maxLength={300}
       />
@@ -609,14 +609,14 @@ function ReviewForm({
           onClick={onCancel}
           className="flex-1 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
         >
-          Hủy
+          Cancel
         </button>
         <button
           onClick={onSubmit}
           disabled={submitting || rating === 0}
           className="flex-1 py-1.5 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 transition"
         >
-          {submitting ? 'Đang gửi…' : 'Gửi & Hoàn thành (1 điểm → gia sư)'}
+          {submitting ? 'Submitting…' : 'Submit & complete (1 point to mentor)'}
         </button>
       </div>
     </div>

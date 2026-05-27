@@ -502,7 +502,7 @@ transition-all duration-300
 | "Question 1/5" | "Câu hỏi 1/5" |
 | "Need 4/5 correct" | "Cần 4/5 câu đúng" |
 | "Next Question" | "Câu tiếp theo" |
-| "Complete" | "Hoàn thành" |
+| "Complete" | "Done" |
 | "Congratulations!" | "Xin chúc mừng!" |
 | "Failed" | "Chưa đạt yêu cầu" |
 | "Quiz Cancelled" | "Bài kiểm tra bị hủy" |
