@@ -557,8 +557,10 @@ export default function DashboardPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {mentoringBookings.map((booking) => (
+              <>
+                <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-4">
+                    {mentoringBookings.slice(0, 10).map((booking) => (
                   <div
                     key={booking.id}
                     className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-600"
@@ -682,8 +684,13 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </div>
+                <a href="#" className="text-sm text-blue-500 hover:underline mt-4 inline-block">
+                  View all sessions &rarr;
+                </a>
+              </>
             )}
           </section>
 
@@ -709,8 +716,10 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
-                {learningBookings.map((booking) => (
+              <>
+                <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-4">
+                    {learningBookings.slice(0, 10).map((booking) => (
                   <div
                     key={booking.id}
                     className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-600"
@@ -842,8 +851,13 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </div>
+                <a href="#" className="text-sm text-blue-500 hover:underline mt-4 inline-block">
+                  View all sessions &rarr;
+                </a>
+              </>
             )}
           </section>
         </div>
