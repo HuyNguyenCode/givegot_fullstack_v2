@@ -199,3 +199,9 @@ body {
     font-size: 0.95rem;
   }
 }
+
+
+/* Fix Tailwind conflict with FullCalendar */
+/* --- BẢO VỆ FULLCALENDAR KHỎI TAILWIND V4 --- */
+
+/* 1. Trả lại đường kẻ lưới cho bảng */

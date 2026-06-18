@@ -5,6 +5,34 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
+// ==========================================
+// 🛠️ TẠO CUSTOM ADAPTER ĐỂ ÉP GHI LOG
+// ==========================================
+const customAdapter = PrismaAdapter(prisma);
+const originalCreateUser = customAdapter.createUser;
+
+customAdapter.createUser = async (profile) => {
+  // 1. Gọi hàm gốc để tạo User vào DB trước
+  const user = await originalCreateUser!(profile);
+
+  // 2. Ép hệ thống ghi log ngay lập tức, block tiến trình cho đến khi ghi xong
+  try {
+    await prisma.transactionLog.create({
+      data: {
+        userId: user.id,
+        amount: 3,
+        type: 'INITIAL_BONUS', // ⚠️ Lưu ý: Sửa lại chữ này cho khớp với Enum trong schema.prisma của bạn nhé
+        status: 'SUCCESS',
+      },
+    });
+    console.log(`✅ [GiveGot Ledger] Đã nạp 3 điểm khởi nghiệp cho: ${user.email}`);
+  } catch (error) {
+    console.error(`❌ [GiveGot Ledger] Lỗi ghi log điểm (Hãy check lại Schema):`, error);
+  }
+
+  return user;
+};
+
 // 1. Tạo mảng Providers cơ bản (Dành cho Production)
 const providers = [
   GoogleProvider({
@@ -87,7 +115,8 @@ if (process.env.NODE_ENV !== 'production') {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   // PrismaAdapter enables auto-registration: new Google users are saved to User + Account tables
-  adapter: PrismaAdapter(prisma),
+  adapter: customAdapter,
+
   session: {
     strategy: 'jwt',
   },
@@ -95,6 +124,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: '/auth/signin',
   },
   providers: providers,
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

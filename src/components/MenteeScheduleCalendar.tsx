@@ -15,7 +15,6 @@ import { differenceInHours } from 'date-fns'
 import { getMyBookings } from '@/actions/booking'
 import { BookingWithDetails } from '@/types'
 import SessionDetailDialog, { SessionInfo } from '@/components/SessionDetailDialog'
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface MenteeScheduleCalendarProps {
@@ -284,7 +283,7 @@ export default function MenteeScheduleCalendar({
       </div>
 
       {/* Calendar or empty state */}
-      <div className="px-6 pb-6 pt-3">
+      <div className="px-6 pb-6 pt-3 w-full overflow-x-auto custom-scrollbar">
         {!hasAny && !isLoading ? (
           <div className="text-center py-16 text-gray-400">
             <div className="text-4xl mb-3">📚</div>
