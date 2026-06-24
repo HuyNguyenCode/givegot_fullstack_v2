@@ -94,7 +94,7 @@ function resolveEventStyle(
     if (status === 'DISPUTED')  return { ...slate, icon: '⚖️',  label: 'Disputed'   }
     if (status === 'CANCELLED') return { ...slate, icon: '✕',   label: 'Cancelled'  }
     // CONFIRMED past → "Missed / not-yet-reviewed"
-    return { ...slate, icon: '⏰', label: 'Missed' }
+    return { ...slate, icon: '🎓', label: 'Completed' }
   }
 
   // ── Priority 2: Future by role ────────────────────────────────────────────
@@ -431,7 +431,7 @@ export default function UnifiedDashboardCalendar({
   // Derived timing flags for the currently clicked event
   const ce = clickedEvent
   const isNearSession = ce
-    ? Date.now() >= new Date(ce.startTime).getTime() - 15 * 60 * 1000 &&
+    ? Date.now() >= new Date(ce.startTime).getTime() - 10 * 60 * 1000 &&
       Date.now() <= new Date(ce.endTime).getTime()
     : false
   const isWithin48hGrace = ce?.isPast

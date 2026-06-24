@@ -121,8 +121,9 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
             bgColor = '#fef3c7'; borderColor = '#fbbf24'; textColor = '#78350f'
             statusIcon = '⭐'; statusLabel = 'Awaiting for Mentee Review '
           } else {
-            bgColor = '#fecaca'; borderColor = '#f87171'; textColor = '#991b1b'
-            statusIcon = '⏰'; statusLabel = 'Missed'
+            // Quá 48h không có khiếu nại -> Chuyển màu xanh Teal và label Done
+            bgColor = '#0d9488'; borderColor = '#0f766e'; textColor = '#fff'
+            statusIcon = '🎓'; statusLabel = 'Done'
           }
         } else {
           bgColor = '#3b82f6'; borderColor = '#2563eb'

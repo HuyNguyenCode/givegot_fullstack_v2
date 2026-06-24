@@ -59,12 +59,11 @@ export async function GET(req: NextRequest) {
             userId: booking.mentorId,
             amount: pointsToEarn,
             type: "BOOKING_COMPLETED", 
-  
-            // bạn có thể mở comment dòng dưới đây:
-            // bookingId: booking.id 
+            bookingId: booking.id 
           },
         })
       })
+      processedIds.push(booking.id)
       processedCount++
     }
 

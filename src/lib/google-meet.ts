@@ -251,14 +251,14 @@ function buildMockAttendance(meetUrl: string): AttendanceRecord {
     // Scenario A: Mentor no-show
     return { mentorMinutes: 2, menteeMinutes: 52, source: 'mock' }
   }
-  // if (override === 'C') {
-  //   // Scenario C: Inconclusive
-  //   return { mentorMinutes: 11, menteeMinutes: 9, source: 'mock' }
-  // }
-  // if (override === 'B') {
-  //   // Scenario B: Both attended (fraud detection)
-  //   return { mentorMinutes: 55, menteeMinutes: 50, source: 'mock' }
-  // }
+  if (override === 'C') {
+    // Scenario C: Inconclusive
+    return { mentorMinutes: 11, menteeMinutes: 9, source: 'mock' }
+  }
+  if (override === 'B') {
+    // Scenario B: Both attended (fraud detection)
+    return { mentorMinutes: 55, menteeMinutes: 50, source: 'mock' }
+  }
 
   // Deterministic fallback based on URL hash
   const h = deterministicHash(meetUrl)
