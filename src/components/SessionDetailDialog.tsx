@@ -108,7 +108,8 @@ export default function SessionDetailDialog({
   // Derived timing flags
   const now              = Date.now()
   const isNearSession    = !s.isPast
-    && now >= new Date(s.startTime).getTime() - 10 * 60 * 1000
+    && s.bookingStatus === 'CONFIRMED'
+    && now >= new Date(s.startTime).getTime() - 15 * 60 * 1000
     && now <= new Date(s.endTime).getTime()
   const isWithin48h      = s.isPast
     && now <= new Date(s.endTime).getTime() + 48 * 60 * 60 * 1000

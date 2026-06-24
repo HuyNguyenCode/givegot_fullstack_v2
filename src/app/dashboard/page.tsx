@@ -237,7 +237,7 @@ export default function DashboardPage() {
   const isNearSession = (startTime: Date, endTime: Date): boolean => {
     const start = new Date(startTime)
     const end = new Date(endTime)
-    const tenMinBefore = new Date(start.getTime() - 10 * 60 * 1000)
+    const tenMinBefore = new Date(start.getTime() - 15 * 60 * 1000)
     return currentTime >= tenMinBefore && currentTime <= end
   }
 

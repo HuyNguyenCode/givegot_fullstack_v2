@@ -374,28 +374,54 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
     }
 
     // Fetch both participants in parallel — needed for Meet link and notification
+    // const [mentor, mentee] = await Promise.all([
+    //   prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } }),
+    //   prisma.user.findUnique({ where: { id: booking.menteeId }, select: { name: true, email: true } }),
+    // ])
+
+    // // Attempt Google Meet creation. Non-fatal: booking proceeds even if this fails.
+    // let meetingUrl: string | null = null
+    // if (mentor?.email && mentee?.email) {
+    //   meetingUrl = await createGoogleMeetLink(
+    //     booking.startTime,
+    //     booking.endTime,
+    //     mentee.email,
+    //     mentor.email
+    //   )
+    // }
+    // Fetch both participants in parallel
     const [mentor, mentee] = await Promise.all([
       prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } }),
       prisma.user.findUnique({ where: { id: booking.menteeId }, select: { name: true, email: true } }),
     ])
 
-    // Attempt Google Meet creation. Non-fatal: booking proceeds even if this fails.
+    // 👇 MÁY PHÁT HIỆN NÓI DỐI 👇
+    console.log("=========================================")
+    console.log("🕵️ KIỂM TRA ĐIỀU KIỆN TẠO GOOGLE MEET")
+    console.log("Mentor:", mentor)
+    console.log("Mentee:", mentee)
+    console.log("=========================================")
+
+    // Attempt Google Meet creation.
     let meetingUrl: string | null = null
+    
     if (mentor?.email && mentee?.email) {
+      console.log("✅ Cả 2 đều có email! Bắt đầu gọi Google API...");
       meetingUrl = await createGoogleMeetLink(
         booking.startTime,
         booking.endTime,
         mentee.email,
         mentor.email
       )
+      console.log("✅ Kết quả Google trả về:", meetingUrl);
+    } else {
+      console.log("❌ LỖI RỒI: Một trong 2 người KHÔNG CÓ EMAIL, hệ thống tự động HỦY BỎ việc tạo link!");
     }
 
     // Persist CONFIRMED status and Meet URL atomically
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await prisma.booking.update({
       where: { id: bookingId },
-      // meetingUrl is valid after `prisma db push`; cast needed until `prisma generate` re-runs
-      data: { status: BookingStatus.CONFIRMED, meetingUrl } as any,
+      data: { status: BookingStatus.CONFIRMED, meetingUrl },
     })
 
     revalidatePath('/')
