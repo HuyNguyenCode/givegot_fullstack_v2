@@ -631,7 +631,7 @@ export async function completeSessionWithReview(
     // We detect this by counting AFTER the new review was committed.
     const totalReviews = await prisma.review.count({ where: { authorId: menteeId } })
 
-    if (totalReviews === 4) {
+    if (totalReviews > 0 && totalReviews % 3 === 0 && comment && comment.length >= 100) {
       const menteeData = await prisma.user.findUnique({
         where: { id: menteeId },
         select: { trustScore: true },
