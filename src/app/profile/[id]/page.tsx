@@ -41,6 +41,13 @@ export default async function PublicProfilePage({
 }) {
   const { id } = await params
 
+
+  const resolvedParams = await params
+  const rawId = resolvedParams.id
+  
+  // Đảm bảo ID không bị dính ký tự mã hóa URL
+  const cleanId = decodeURIComponent(rawId)
+
   // ── 1. Fetch profile subject ───────────────────────────────────────────────
   const profileUser = await prisma.user.findUnique({
     where: { id },
@@ -56,7 +63,12 @@ export default async function PublicProfilePage({
     },
   })
 
-  if (!profileUser) notFound()
+  // if (!profileUser) notFound()
+  if (!profileUser) {
+    console.error(`[Profile Page Error] User not found for ID: "${cleanId}" (Raw: "${rawId}")`)
+    notFound()
+  }
+
 
   // ── 2. Current session & ownership ────────────────────────────────────────
   const session = await auth()

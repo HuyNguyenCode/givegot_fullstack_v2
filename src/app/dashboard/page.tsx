@@ -53,15 +53,19 @@ export default function DashboardPage() {
 
   const loadBookings = async () => {
     if (!currentUser) return
-    
     setIsLoading(true)
-    await refreshUser()
-    const bookings = await getMyBookings(currentUser.id)
+    
+    // refreshUser không nhất thiết phải block việc lấy dữ liệu
+    refreshUser(); 
+  
+    // Chạy 2 truy vấn database CÙNG LÚC
+    const [bookings, rawLearningGoals] = await Promise.all([
+      getMyBookings(currentUser.id),
+      getUserLearningGoals(currentUser.id)
+    ]);
+  
     setMentoringBookings(bookings.asMentor)
     setLearningBookings(bookings.asMentee)
-    
-    // Load learning goals with roadmaps for the roadmap cards
-    const rawLearningGoals = await getUserLearningGoals(currentUser.id)
     setLearningSkillsWithRoadmap(rawLearningGoals)
     
     setIsLoading(false)
