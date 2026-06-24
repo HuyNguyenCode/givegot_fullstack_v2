@@ -279,11 +279,11 @@ function ChatContent() {
   }, [selectedConvId])
 
   // ── Cleanup Pusher connection on unmount ───────────────────────────────────
-  useEffect(() => {
-    return () => {
-      getPusherClient()?.disconnect()
-    }
-  }, [])
+  // useEffect(() => {
+  //   return () => {
+  //     getPusherClient()?.disconnect()
+  //   }
+  // }, [])
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
