@@ -6,7 +6,7 @@
  * the shared SessionDetailDialog with mentee-appropriate actions.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -136,7 +136,28 @@ export default function MenteeScheduleCalendar({
   const [dialogOpen, setDialogOpen]   = useState(false)
   const [toasts, setToasts]           = useState<Toast[]>([])
 
+    // ── Khai báo Refs để xử lý mâu thuẫn ẩn/hiện của Tab ─────────────────────
+  const calendarRef = useRef<FullCalendar>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => setMounted(true), [])
+
+
+    // ── ResizeObserver: Mắt thần giám sát kích thước ──────────────────────────
+    useEffect(() => {
+      if (!containerRef.current) return
+  
+      const observer = new ResizeObserver(() => {
+        // Khi tab chuyển từ ẩn (kích thước = 0) sang hiện (có kích thước)
+        // Ép FullCalendar căn chỉnh lại grid và vẽ lại ngay lập tức
+        setTimeout(() => {
+          calendarRef.current?.getApi()?.updateSize()
+        }, 50)
+      })
+  
+      observer.observe(containerRef.current)
+      return () => observer.disconnect()
+    }, [])
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
     const id = ++_tc
@@ -232,7 +253,7 @@ export default function MenteeScheduleCalendar({
   const hasAny = bookings.length > 0
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div ref={containerRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
       {/* Header */}
       <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
@@ -293,6 +314,7 @@ export default function MenteeScheduleCalendar({
         ) : (
           mounted && (
             <FullCalendar
+              ref={calendarRef} // Gắn calendarRef vào để điều khiển thư viện  
               plugins={[timeGridPlugin, dayGridPlugin]}
               initialView="timeGridWeek"
               headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay,dayGridMonth' }}
