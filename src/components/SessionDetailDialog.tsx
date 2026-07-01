@@ -377,6 +377,16 @@ export default function SessionDetailDialog({
 
               {/* Future CONFIRMED → Review / Cancel / Chat */}
               {!s.isPast && s.bookingStatus === 'CONFIRMED' && (
+                <div className="flex gap-2">
+                  {s.bookingId && <ChatLink bookingId={s.bookingId} className="flex-1" />}
+                  <DangerButton onClick={handleCancel} loading={isLoading} className="flex-1">
+                    Cancel session
+                  </DangerButton>
+                </div>
+              )}
+
+
+              {/* {!s.isPast && s.bookingStatus === 'CONFIRMED' && (
                 <>
                   {!showReview ? (
                     <PrimaryButton color="orange" onClick={() => setShowReview(true)} className="w-full">
@@ -402,7 +412,7 @@ export default function SessionDetailDialog({
                     </DangerButton>
                   </div>
                 </>
-              )}
+              )} */}
 
               {/* Past CONFIRMED — Review + Report No-Show (within 48 h, mentee) */}
               {s.isPast && s.bookingStatus === 'CONFIRMED' && (

@@ -565,6 +565,17 @@ export async function completeSessionWithReview(
         message: `Cannot complete booking with status: ${booking.status}. Booking must be confirmed first.`,
       }
     }
+    
+    // ---- THÊM ĐOẠN CHẶN THỜI GIAN NÀY VÀO ĐÂY ----
+    // Bắt buộc thời gian hiện tại phải lớn hơn hoặc bằng thời gian kết thúc của session
+    if (new Date() < new Date(booking.endTime)) {
+      return { 
+        success: false, 
+        message: 'Cannot complete a session that has not ended yet.' 
+      }
+    }
+    // ---------------------------------------------
+
     if (rating < 1 || rating > 5) {
       return { success: false, message: 'Rating must be between 1 and 5' }
     }
