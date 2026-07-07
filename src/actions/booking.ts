@@ -281,8 +281,10 @@ export async function createBooking(
 
     console.log('Creating booking:', { mentorId, menteeId, startTime, endTime, note })
 
-    const mentee = await prisma.user.findUnique({ where: { id: menteeId } })
-    const mentor = await prisma.user.findUnique({ where: { id: mentorId } })
+    const [mentee, mentor] = await Promise.all([
+      prisma.user.findUnique({ where: { id: menteeId }, select: { id: true, givePoints: true } }),
+      prisma.user.findUnique({ where: { id: mentorId }, select: { id: true } }),
+    ])
 
     if (!mentee || !mentor) {
       return { success: false, message: 'User not found' }
@@ -458,7 +460,6 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
   try {
     const booking = await prisma.booking.findUnique({ 
       where: { id: bookingId },
-      include: { slot: true }
     })
 
     if (!booking) {
@@ -552,7 +553,6 @@ export async function completeSessionWithReview(
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { mentor: true, mentee: true },
     })
 
     if (!booking) return { success: false, message: 'Booking not found' }
