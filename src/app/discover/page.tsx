@@ -698,6 +698,7 @@ import { Badge } from '@/lib/badges'
 import { ShieldCheck, Zap, Star } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useDebounce } from '@/hooks/useDebounce'; // Đường dẫn import tới file hook vừa tạo
 
 const BADGE_ICON_MAP = {
   ShieldCheck,
@@ -823,7 +824,8 @@ function DiscoverContent() {
   const [userGoals, setUserGoals] = useState<string[]>([])
   
   const [searchQuery, setSearchQuery] = useState(urlSearchQuery) 
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(urlSearchQuery)
+  // const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(urlSearchQuery)
+  const debouncedSearchQuery = useDebounce(searchQuery, 800) // Dùng hook thay vì useState
   const [isLoading, setIsLoading] = useState(true)
 
   const isFetchingRef = useRef(false) // Ổ khóa chống spam gọi trùng API
@@ -860,37 +862,61 @@ function DiscoverContent() {
   // }, [searchQuery, router, router, searchParams])
 
   // Debounce search input bọc thép chống Race Condition
+  // const initialRender = useRef(true)
+  // useEffect(() => {
+  //   let isComponentAlive = true // 1. Cờ sinh mệnh: Đánh dấu trang Discover còn sống
+
+  //   const timer = setTimeout(() => {
+  //     // 2. NẾU ĐÃ BẤM CHUYỂN TRANG (Component chết) -> TỪ CHỐI THỰC THI LỆNH ĐIỀU HƯỚNG!
+  //     if (!isComponentAlive) return 
+
+  //     setDebouncedSearchQuery(searchQuery)
+      
+  //     if (initialRender.current) {
+  //       initialRender.current = false
+  //       return
+  //     }
+
+  //     const currentUrlSearch = searchParams.get('search') || ''
+  //     if (searchQuery !== currentUrlSearch) {
+  //       if (searchQuery.trim()) {
+  //         router.replace(`/discover?search=${encodeURIComponent(searchQuery.trim())}`, { scroll: false })
+  //       } else {
+  //         router.replace('/discover', { scroll: false })
+  //       }
+  //     }
+  //   }, 400)
+
+  //   // 3. HÀM TỰ HỦY: Ngay khi user bấm nút rời trang, lập tức hạ cờ sinh mệnh và đập vỡ đồng hồ!
+  //   return () => {
+  //     isComponentAlive = false 
+  //     clearTimeout(timer)
+  //   }
+  // }, [searchQuery, searchParams, router])
+
+  // Cập nhật URL mỗi khi debouncedSearchQuery thay đổi (sau 400ms ngừng gõ)
   const initialRender = useRef(true)
   useEffect(() => {
-    let isComponentAlive = true // 1. Cờ sinh mệnh: Đánh dấu trang Discover còn sống
+    // Bỏ qua lần render đầu tiên
+    if (initialRender.current) {
+      initialRender.current = false;
+      return;
+    }
 
-    const timer = setTimeout(() => {
-      // 2. NẾU ĐÃ BẤM CHUYỂN TRANG (Component chết) -> TỪ CHỐI THỰC THI LỆNH ĐIỀU HƯỚNG!
-      if (!isComponentAlive) return 
-
-      setDebouncedSearchQuery(searchQuery)
+    // Đảm bảo chỉ cập nhật URL khi đang ở đúng trang discover
+    if (pathname === '/discover') {
+      const currentUrlSearch = searchParams.get('search') || '';
       
-      if (initialRender.current) {
-        initialRender.current = false
-        return
-      }
-
-      const currentUrlSearch = searchParams.get('search') || ''
-      if (searchQuery !== currentUrlSearch) {
-        if (searchQuery.trim()) {
-          router.replace(`/discover?search=${encodeURIComponent(searchQuery.trim())}`, { scroll: false })
+      // Chỉ thay đổi URL nếu từ khóa thực sự khác với URL hiện tại
+      if (debouncedSearchQuery.trim() !== currentUrlSearch) {
+        if (debouncedSearchQuery.trim()) {
+          router.replace(`/discover?search=${encodeURIComponent(debouncedSearchQuery.trim())}`, { scroll: false })
         } else {
           router.replace('/discover', { scroll: false })
         }
       }
-    }, 400)
-
-    // 3. HÀM TỰ HỦY: Ngay khi user bấm nút rời trang, lập tức hạ cờ sinh mệnh và đập vỡ đồng hồ!
-    return () => {
-      isComponentAlive = false 
-      clearTimeout(timer)
     }
-  }, [searchQuery, searchParams, router])
+  }, [debouncedSearchQuery, pathname, searchParams, router])
   
   // Sync URL search param to local state
   useEffect(() => {
@@ -976,7 +1002,7 @@ function DiscoverContent() {
     }
   }, [currentUser, debouncedSearchQuery])
 
-  if (userLoading || isLoading) {
+  if (userLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -1186,7 +1212,12 @@ function DiscoverContent() {
           </div>
         </div>
 
-        {displayedBestMatches.length === 0 && displayedOtherMentors.length === 0 ? (
+        {isLoading ?(
+          <div className="py-20 text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Đang tìm kiếm Mentor...</p>
+          </div>
+        ) : displayedBestMatches.length === 0 && displayedOtherMentors.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <div className="text-6xl mb-4">🔍</div>
             <h2 className="text-xl font-semibold text-gray-800 mb-2">
