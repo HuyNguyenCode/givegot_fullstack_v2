@@ -1,4 +1,4 @@
-import { PrismaClient, SkillType, BookingStatus } from '@prisma/client'
+import { PrismaClient, SkillType, BookingStatus, SkillCategory } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -17,49 +17,57 @@ async function main() {
   // 1. Create Skills (Categorized)
   console.log('Creating categorized skills...')
   const skills = await Promise.all([
-    // Development
-    prisma.skill.create({ data: { name: 'ReactJS', slug: 'reactjs', category: 'Development' } }),
-    prisma.skill.create({ data: { name: 'NodeJS', slug: 'nodejs', category: 'Development' } }),
-    prisma.skill.create({ data: { name: 'Python', slug: 'python', category: 'Development' } }),
-    prisma.skill.create({ data: { name: 'TypeScript', slug: 'typescript', category: 'Development' } }),
-    prisma.skill.create({ data: { name: 'JavaScript', slug: 'javascript', category: 'Development' } }),
-    prisma.skill.create({ data: { name: 'Next.js', slug: 'nextjs', category: 'Development' } }),
-    prisma.skill.create({ data: { name: 'Vue.js', slug: 'vuejs', category: 'Development' } }),
-    prisma.skill.create({ data: { name: 'Angular', slug: 'angular', category: 'Development' } }),
-    
+    // Development (was: Development, Data Science, DevOps & Cloud)
+    prisma.skill.create({ data: { name: 'ReactJS', slug: 'reactjs', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'NodeJS', slug: 'nodejs', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Python', slug: 'python', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'TypeScript', slug: 'typescript', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'JavaScript', slug: 'javascript', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Next.js', slug: 'nextjs', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Vue.js', slug: 'vuejs', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Angular', slug: 'angular', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Machine Learning', slug: 'machine-learning', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Data Analysis', slug: 'data-analysis', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'SQL', slug: 'sql', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Pandas', slug: 'pandas', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'TensorFlow', slug: 'tensorflow', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Docker', slug: 'docker', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'AWS', slug: 'aws', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'Kubernetes', slug: 'kubernetes', category: SkillCategory.DEVELOPMENT } }),
+    prisma.skill.create({ data: { name: 'CI/CD', slug: 'cicd', category: SkillCategory.DEVELOPMENT } }),
+
     // Design
-    prisma.skill.create({ data: { name: 'UI/UX Design', slug: 'ui-ux-design', category: 'Design' } }),
-    prisma.skill.create({ data: { name: 'Figma', slug: 'figma', category: 'Design' } }),
-    prisma.skill.create({ data: { name: 'Adobe XD', slug: 'adobe-xd', category: 'Design' } }),
-    prisma.skill.create({ data: { name: 'Graphic Design', slug: 'graphic-design', category: 'Design' } }),
-    prisma.skill.create({ data: { name: 'Web Design', slug: 'web-design', category: 'Design' } }),
-    
-    // Data Science
-    prisma.skill.create({ data: { name: 'Machine Learning', slug: 'machine-learning', category: 'Data Science' } }),
-    prisma.skill.create({ data: { name: 'Data Analysis', slug: 'data-analysis', category: 'Data Science' } }),
-    prisma.skill.create({ data: { name: 'SQL', slug: 'sql', category: 'Data Science' } }),
-    prisma.skill.create({ data: { name: 'Pandas', slug: 'pandas', category: 'Data Science' } }),
-    prisma.skill.create({ data: { name: 'TensorFlow', slug: 'tensorflow', category: 'Data Science' } }),
-    
+    prisma.skill.create({ data: { name: 'UI/UX Design', slug: 'ui-ux-design', category: SkillCategory.DESIGN } }),
+    prisma.skill.create({ data: { name: 'Figma', slug: 'figma', category: SkillCategory.DESIGN } }),
+    prisma.skill.create({ data: { name: 'Adobe XD', slug: 'adobe-xd', category: SkillCategory.DESIGN } }),
+    prisma.skill.create({ data: { name: 'Graphic Design', slug: 'graphic-design', category: SkillCategory.DESIGN } }),
+    prisma.skill.create({ data: { name: 'Web Design', slug: 'web-design', category: SkillCategory.DESIGN } }),
+
     // Business
-    prisma.skill.create({ data: { name: 'Marketing', slug: 'marketing', category: 'Business' } }),
-    prisma.skill.create({ data: { name: 'Digital Marketing', slug: 'digital-marketing', category: 'Business' } }),
-    prisma.skill.create({ data: { name: 'SEO', slug: 'seo', category: 'Business' } }),
-    prisma.skill.create({ data: { name: 'Content Writing', slug: 'content-writing', category: 'Business' } }),
-    prisma.skill.create({ data: { name: 'Product Management', slug: 'product-management', category: 'Business' } }),
-    
-    // Languages
-    prisma.skill.create({ data: { name: 'IELTS', slug: 'ielts', category: 'Languages' } }),
-    prisma.skill.create({ data: { name: 'English Speaking', slug: 'english-speaking', category: 'Languages' } }),
-    prisma.skill.create({ data: { name: 'Business English', slug: 'business-english', category: 'Languages' } }),
-    prisma.skill.create({ data: { name: 'Japanese', slug: 'japanese', category: 'Languages' } }),
-    prisma.skill.create({ data: { name: 'Spanish', slug: 'spanish', category: 'Languages' } }),
-    
-    // DevOps & Cloud
-    prisma.skill.create({ data: { name: 'Docker', slug: 'docker', category: 'DevOps & Cloud' } }),
-    prisma.skill.create({ data: { name: 'AWS', slug: 'aws', category: 'DevOps & Cloud' } }),
-    prisma.skill.create({ data: { name: 'Kubernetes', slug: 'kubernetes', category: 'DevOps & Cloud' } }),
-    prisma.skill.create({ data: { name: 'CI/CD', slug: 'cicd', category: 'DevOps & Cloud' } }),
+    prisma.skill.create({ data: { name: 'Marketing', slug: 'marketing', category: SkillCategory.BUSINESS } }),
+    prisma.skill.create({ data: { name: 'Digital Marketing', slug: 'digital-marketing', category: SkillCategory.BUSINESS } }),
+    prisma.skill.create({ data: { name: 'SEO', slug: 'seo', category: SkillCategory.BUSINESS } }),
+    prisma.skill.create({ data: { name: 'Content Writing', slug: 'content-writing', category: SkillCategory.BUSINESS } }),
+    prisma.skill.create({ data: { name: 'Product Management', slug: 'product-management', category: SkillCategory.BUSINESS } }),
+
+    // Language
+    prisma.skill.create({ data: { name: 'IELTS', slug: 'ielts', category: SkillCategory.LANGUAGE } }),
+    prisma.skill.create({ data: { name: 'English Speaking', slug: 'english-speaking', category: SkillCategory.LANGUAGE } }),
+    prisma.skill.create({ data: { name: 'Business English', slug: 'business-english', category: SkillCategory.LANGUAGE } }),
+    prisma.skill.create({ data: { name: 'Japanese', slug: 'japanese', category: SkillCategory.LANGUAGE } }),
+    prisma.skill.create({ data: { name: 'Spanish', slug: 'spanish', category: SkillCategory.LANGUAGE } }),
+
+    // Academic (NEW: high school subjects)
+    prisma.skill.create({ data: { name: 'Algebra', slug: 'algebra', category: SkillCategory.ACADEMIC } }),
+    prisma.skill.create({ data: { name: 'Calculus', slug: 'calculus', category: SkillCategory.ACADEMIC } }),
+    prisma.skill.create({ data: { name: 'Physics', slug: 'physics', category: SkillCategory.ACADEMIC } }),
+    prisma.skill.create({ data: { name: 'Chemistry', slug: 'chemistry', category: SkillCategory.ACADEMIC } }),
+    prisma.skill.create({ data: { name: 'Biology', slug: 'biology', category: SkillCategory.ACADEMIC } }),
+    prisma.skill.create({ data: { name: 'World History', slug: 'world-history', category: SkillCategory.ACADEMIC } }),
+
+    // Health
+    prisma.skill.create({ data: { name: 'Yoga', slug: 'yoga', category: SkillCategory.HEALTH } }),
+    prisma.skill.create({ data: { name: 'Nutrition', slug: 'nutrition', category: SkillCategory.HEALTH } }),
   ])
   console.log(`Created ${skills.length} categorized skills`)
 

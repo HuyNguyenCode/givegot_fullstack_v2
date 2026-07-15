@@ -15,12 +15,19 @@ import QuizModal from '@/components/QuizModal'
 import TrustReputationCard from '@/components/TrustReputationCard'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { SkillCategory } from '@prisma/client'
+import {
+  SKILL_CATEGORY_ORDER,
+  SKILL_CATEGORY_LABELS,
+  SKILL_CATEGORY_BADGE_CLASSES,
+  groupSkillsByCategory,
+} from '@/lib/skill-category'
 
 interface Skill {
   id: string
   name: string
   slug: string
-  category: string
+  category: SkillCategory
 }
 
 export default function ProfilePage() {
@@ -46,12 +53,14 @@ export default function ProfilePage() {
   const [teachingInput, setTeachingInput] = useState('')
   const [teachingDropdownOpen, setTeachingDropdownOpen] = useState(false)
   const [teachingFocusedIndex, setTeachingFocusedIndex] = useState(-1)
+  const [teachingCategoryFilter, setTeachingCategoryFilter] = useState<'all' | SkillCategory>('all')
   const teachingInputRef = useRef<HTMLInputElement>(null)
   
   // Learning input state
   const [learningInput, setLearningInput] = useState('')
   const [learningDropdownOpen, setLearningDropdownOpen] = useState(false)
   const [learningFocusedIndex, setLearningFocusedIndex] = useState(-1)
+  const [learningCategoryFilter, setLearningCategoryFilter] = useState<'all' | SkillCategory>('all')
   const learningInputRef = useRef<HTMLInputElement>(null)
 
   const [isLoading, setIsLoading] = useState(true)
@@ -151,21 +160,31 @@ export default function ProfilePage() {
     }
   }
 
-  // Filter teaching skills based on input
+  // Filter teaching skills based on input + category pill filter
   const getFilteredTeachingSkills = () => {
-    if (!teachingInput.trim()) return availableSkills
+    const byCategory =
+      teachingCategoryFilter === 'all'
+        ? availableSkills
+        : availableSkills.filter(skill => skill.category === teachingCategoryFilter)
+
+    if (!teachingInput.trim()) return byCategory
     const searchTerm = teachingInput.toLowerCase()
-    return availableSkills.filter(skill => 
+    return byCategory.filter(skill =>
       skill.name.toLowerCase().includes(searchTerm) &&
       !selectedTeachingSkills.includes(skill.name)
     )
   }
 
-  // Filter learning skills based on input
+  // Filter learning skills based on input + category pill filter
   const getFilteredLearningSkills = () => {
-    if (!learningInput.trim()) return availableSkills
+    const byCategory =
+      learningCategoryFilter === 'all'
+        ? availableSkills
+        : availableSkills.filter(skill => skill.category === learningCategoryFilter)
+
+    if (!learningInput.trim()) return byCategory
     const searchTerm = learningInput.toLowerCase()
-    return availableSkills.filter(skill => 
+    return byCategory.filter(skill =>
       skill.name.toLowerCase().includes(searchTerm) &&
       !selectedLearningGoals.includes(skill.name)
     )
@@ -223,9 +242,10 @@ export default function ProfilePage() {
     setSelectedLearningGoals(selectedLearningGoals.filter(s => s !== skillName))
   }
 
-  // Handle teaching keyboard navigation
+  // Handle teaching keyboard navigation (index refers to the grouped/flattened
+  // display order, i.e. same order the dropdown renders skills in)
   const handleTeachingKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const filtered = getFilteredTeachingSkills()
+    const filtered = groupSkillsByCategory(getFilteredTeachingSkills()).flatMap(g => g.skills)
     
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -252,9 +272,10 @@ export default function ProfilePage() {
     }
   }
 
-  // Handle learning keyboard navigation
+  // Handle learning keyboard navigation (index refers to the grouped/flattened
+  // display order, i.e. same order the dropdown renders skills in)
   const handleLearningKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const filtered = getFilteredLearningSkills()
+    const filtered = groupSkillsByCategory(getFilteredLearningSkills()).flatMap(g => g.skills)
     
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -337,6 +358,10 @@ export default function ProfilePage() {
 
   const filteredTeachingSkills = getFilteredTeachingSkills()
   const filteredLearningSkills = getFilteredLearningSkills()
+  const groupedTeachingSkills = groupSkillsByCategory(filteredTeachingSkills)
+  const groupedLearningSkills = groupSkillsByCategory(filteredLearningSkills)
+  const flatOrderedTeachingSkills = groupedTeachingSkills.flatMap(g => g.skills)
+  const flatOrderedLearningSkills = groupedLearningSkills.flatMap(g => g.skills)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
@@ -466,6 +491,35 @@ export default function ProfilePage() {
               </div>
 
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200">
+                {/* Category Pill Filter */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setTeachingCategoryFilter('all')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                      teachingCategoryFilter === 'all'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-green-50'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {SKILL_CATEGORY_ORDER.map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setTeachingCategoryFilter(cat)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                        teachingCategoryFilter === cat
+                          ? 'bg-green-600 text-white'
+                          : `${SKILL_CATEGORY_BADGE_CLASSES[cat]} hover:opacity-80`
+                      }`}
+                    >
+                      {SKILL_CATEGORY_LABELS[cat]}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Selected Skills as Chips */}
                 {selectedTeachingSkills.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -558,21 +612,28 @@ export default function ProfilePage() {
                         </button>
                       )}
 
-                      {/* Existing skills */}
-                      {filteredTeachingSkills.slice(0, 10).map((skill, index) => (
-                        <button
-                          key={skill.id}
-                          type="button"
-                          onClick={() => addTeachingSkill(skill.name)}
-                          className={`w-full px-4 py-2.5 text-left hover:bg-green-50 flex items-center justify-between transition ${
-                            index === teachingFocusedIndex ? 'bg-green-100' : ''
-                          }`}
-                        >
-                          <span className="font-medium text-gray-800">{skill.name}</span>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                            {skill.category}
-                          </span>
-                        </button>
+                      {/* Existing skills, grouped by category with sticky headers */}
+                      {groupedTeachingSkills.map(group => (
+                        <div key={group.category}>
+                          <div className="sticky top-0 z-10 bg-green-50 border-b border-green-100 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-green-700">
+                            {group.label}
+                          </div>
+                          {group.skills.map(skill => {
+                            const index = flatOrderedTeachingSkills.indexOf(skill)
+                            return (
+                              <button
+                                key={skill.id}
+                                type="button"
+                                onClick={() => addTeachingSkill(skill.name)}
+                                className={`w-full px-4 py-2.5 text-left hover:bg-green-50 flex items-center justify-between transition ${
+                                  index === teachingFocusedIndex ? 'bg-green-100' : ''
+                                }`}
+                              >
+                                <span className="font-medium text-gray-800">{skill.name}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
                       ))}
 
                       {filteredTeachingSkills.length === 0 && !teachingInput.trim() && (
@@ -615,6 +676,35 @@ export default function ProfilePage() {
               </div>
 
               <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
+                {/* Category Pill Filter */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setLearningCategoryFilter('all')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                      learningCategoryFilter === 'all'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-blue-50'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {SKILL_CATEGORY_ORDER.map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setLearningCategoryFilter(cat)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                        learningCategoryFilter === cat
+                          ? 'bg-blue-600 text-white'
+                          : `${SKILL_CATEGORY_BADGE_CLASSES[cat]} hover:opacity-80`
+                      }`}
+                    >
+                      {SKILL_CATEGORY_LABELS[cat]}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Selected Goals as Chips */}
                 {selectedLearningGoals.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -679,21 +769,28 @@ export default function ProfilePage() {
                         </button>
                       )}
 
-                      {/* Existing skills */}
-                      {filteredLearningSkills.slice(0, 10).map((skill, index) => (
-                        <button
-                          key={skill.id}
-                          type="button"
-                          onClick={() => addLearningGoal(skill.name)}
-                          className={`w-full px-4 py-2.5 text-left hover:bg-blue-50 flex items-center justify-between transition ${
-                            index === learningFocusedIndex ? 'bg-blue-100' : ''
-                          }`}
-                        >
-                          <span className="font-medium text-gray-800">{skill.name}</span>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                            {skill.category}
-                          </span>
-                        </button>
+                      {/* Existing skills, grouped by category with sticky headers */}
+                      {groupedLearningSkills.map(group => (
+                        <div key={group.category}>
+                          <div className="sticky top-0 z-10 bg-blue-50 border-b border-blue-100 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-blue-700">
+                            {group.label}
+                          </div>
+                          {group.skills.map(skill => {
+                            const index = flatOrderedLearningSkills.indexOf(skill)
+                            return (
+                              <button
+                                key={skill.id}
+                                type="button"
+                                onClick={() => addLearningGoal(skill.name)}
+                                className={`w-full px-4 py-2.5 text-left hover:bg-blue-50 flex items-center justify-between transition ${
+                                  index === learningFocusedIndex ? 'bg-blue-100' : ''
+                                }`}
+                              >
+                                <span className="font-medium text-gray-800">{skill.name}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
                       ))}
 
                       {filteredLearningSkills.length === 0 && !learningInput.trim() && (

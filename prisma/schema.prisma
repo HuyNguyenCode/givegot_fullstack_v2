@@ -80,15 +80,15 @@ enum UserRole {
 
 // 2. Bảng Skill (UPDATED: Admin approval shadow)
 model Skill {
-  id        String      @id @default(uuid())
-  name      String      @unique 
-  slug      String      @unique 
-  category  String      @default("Other")
+  id        String        @id @default(uuid())
+  name      String        @unique 
+  slug      String        @unique 
+  category  SkillCategory @default(OTHER) // NEW: was String, now a fixed enum (see migration below)
   embedding Unsupported("vector(768)")? // NEW: Granular skill-level embedding
-  status    SkillStatus @default(PENDING) // NEW: Admin approval shadow - all new skills require review
+  status    SkillStatus   @default(PENDING) // NEW: Admin approval shadow - all new skills require review
   
-  createdAt DateTime    @default(now())
-  updatedAt DateTime?   @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime?     @updatedAt
   
   users     UserSkill[]
 }
@@ -98,6 +98,18 @@ enum SkillStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// NEW: Skill Category Enum (ACADEMIC covers high-school subjects).
+// Data migration for existing free-text values lives in prisma/migrate-skill-category.ts
+enum SkillCategory {
+  DEVELOPMENT
+  DESIGN
+  BUSINESS
+  LANGUAGE
+  HEALTH
+  ACADEMIC
+  OTHER
 }
 
 enum SkillType {

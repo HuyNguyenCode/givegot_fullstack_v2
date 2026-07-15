@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { UserRole, ReportStatus, SkillStatus } from '@prisma/client'
+import { UserRole, ReportStatus, SkillStatus, SkillCategory } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 
@@ -403,7 +403,7 @@ export async function getAllSkills() {
 
 export async function createSkill(data: {
   name: string
-  category: string
+  category: SkillCategory
   status?: SkillStatus
 }) {
   try {
@@ -451,7 +451,7 @@ export async function createSkill(data: {
 
 export async function updateSkill(skillId: string, data: {
   name?: string
-  category?: string
+  category?: SkillCategory
   status?: SkillStatus
 }) {
   try {

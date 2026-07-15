@@ -12,6 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:backfill-embeddings": "tsx prisma/backfill-embeddings.ts",
     "db:backfill-transactions": "tsx prisma/backfill-transactions.ts",
+    "db:migrate-skill-category": "tsx prisma/migrate-skill-category.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { User } from '@/types'
-import { SkillType } from '@prisma/client'
+import { SkillType, SkillCategory } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { generateSkillEmbedding } from '@/lib/gemini'
 import { Prisma } from '@prisma/client'
@@ -100,10 +100,13 @@ export async function getUserTeachingSkills(userId: string): Promise<Array<{ id:
   }
 }
 
+// Returns the flat list of skills, pre-sorted by category then name so
+// consumers can group them client-side just by walking the array in order
+// (see `groupSkillsByCategory` in src/lib/skill-category.ts for a ready-made helper).
 export async function getAllAvailableSkills() {
   try {
     const skills = await prisma.skill.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
       select: { id: true, name: true, slug: true, category: true, status: true },
     })
     return skills
@@ -169,7 +172,7 @@ async function ensureSkillExists(skillName: string): Promise<string> {
       data: {
         name: trimmedName,
         slug: finalSlug,
-        category: 'Other',
+        category: SkillCategory.OTHER,
         status: 'PENDING', // NEW: All custom skills require admin approval
       },
     })

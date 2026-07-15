@@ -1,4 +1,4 @@
-import { PrismaClient, SkillType } from '@prisma/client'
+import { PrismaClient, SkillType, SkillCategory } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -7,16 +7,16 @@ const firstNames = ["Huy", "Nam", "An", "Bình", "Châu", "Duy", "Hải", "Linh"
 const lastNames = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ"]
 
 const sampleSkills = [
-  { name: "Lập trình React", slug: "lap-trinh-react", category: "IT" },
-  { name: "Thiết kế UI/UX", slug: "thiet-ke-ui-ux", category: "Design" },
-  { name: "Tiếng Anh Giao Tiếp", slug: "tieng-anh-giao-tiep", category: "Language" },
-  { name: "IELTS 7.0", slug: "ielts-7-0", category: "Language" },
-  { name: "Nấu Ăn Cơ Bản", slug: "nau-an-co-ban", category: "Lifestyle" },
-  { name: "Yoga", slug: "yoga", category: "Health" },
-  { name: "Đệm đàn Guitar", slug: "dem-dan-guitar", category: "Music" },
-  { name: "Quản lý Tài chính", slug: "quan-ly-tai-chinh", category: "Business" },
-  { name: "Chạy bộ Marathon", slug: "chay-bo", category: "Health" },
-  { name: "Digital Marketing", slug: "digital-marketing", category: "Business" }
+  { name: "Lập trình React", slug: "lap-trinh-react", category: SkillCategory.DEVELOPMENT },
+  { name: "Thiết kế UI/UX", slug: "thiet-ke-ui-ux", category: SkillCategory.DESIGN },
+  { name: "Tiếng Anh Giao Tiếp", slug: "tieng-anh-giao-tiep", category: SkillCategory.LANGUAGE },
+  { name: "IELTS 7.0", slug: "ielts-7-0", category: SkillCategory.LANGUAGE },
+  { name: "Nấu Ăn Cơ Bản", slug: "nau-an-co-ban", category: SkillCategory.OTHER },
+  { name: "Yoga", slug: "yoga", category: SkillCategory.HEALTH },
+  { name: "Đệm đàn Guitar", slug: "dem-dan-guitar", category: SkillCategory.OTHER },
+  { name: "Quản lý Tài chính", slug: "quan-ly-tai-chinh", category: SkillCategory.BUSINESS },
+  { name: "Chạy bộ Marathon", slug: "chay-bo", category: SkillCategory.HEALTH },
+  { name: "Digital Marketing", slug: "digital-marketing", category: SkillCategory.BUSINESS }
 ]
 
 // Hàm tiện ích: Bốc ngẫu nhiên N phần tử trong một mảng
