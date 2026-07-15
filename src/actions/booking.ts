@@ -610,7 +610,10 @@ export async function completeSessionWithReview(
           comment: comment ?? null,
           isHidden: !shouldReveal,
         },
+        
       })
+      //Debugging
+      console.log("🔥 ĐANG CHẠY HÀM CŨ: completeSessionWithReview");
 
       // 2. Mark booking COMPLETED
       await tx.booking.update({
@@ -716,6 +719,92 @@ export async function completeSessionWithReview(
   } catch (error) {
     console.error('Error completing session with review:', error)
     return { success: false, message: 'Failed to complete session. Please try again.' }
+  }
+}
+
+// ── Two-way Blind Review support ─────────────────────────────────────────────
+//
+// `completeSessionWithReview` above couples review-creation with marking the
+// booking COMPLETED + paying the mentor. The Blind Review flow (see
+// `src/actions/blind-review.ts`) creates reviews independently of booking
+// completion, so this standalone action reproduces just the
+// completion/payment side effects, called once the mentee has submitted
+// their review — mirroring the legacy behavior without touching the
+// existing `Review` model or `completeSessionWithReview`.
+export async function completeBooking(bookingId: string, menteeId: string): Promise<BookingResult> {
+  console.log("💎 [DEBUG] completeBooking đã được gọi cho bookingId:", bookingId);
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
+    if (!booking) return { success: false, message: 'Booking not found' }
+
+    // Idempotent: if it's already completed (e.g. re-invoked), treat as success
+    // rather than erroring — avoids double-paying the mentor.
+    if (booking.status === BookingStatus.COMPLETED) {
+      return { success: true, message: 'Booking already completed', bookingId }
+    }
+
+    if (booking.menteeId !== menteeId) {
+      return { success: false, message: 'Unauthorized: You are not the mentee for this session' }
+    }
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      return {
+        success: false,
+        message: `Cannot complete booking with status: ${booking.status}. Booking must be confirmed first.`,
+      }
+    }
+    if (new Date() < new Date(booking.endTime)) {
+      return { success: false, message: 'Cannot complete a session that has not ended yet.' }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: BookingStatus.COMPLETED },
+      })
+
+      await tx.user.update({
+        where: { id: booking.mentorId },
+        data: { givePoints: { increment: 1 } },
+      })
+
+      await tx.transactionLog.create({
+        data: {
+          userId: booking.mentorId,
+          amount: 1,
+          type: 'BOOKING_COMPLETED',
+          bookingId,
+        },
+      })
+    })
+
+    try {
+      await calculateAndUpdateTrustScore(booking.mentorId)
+    } catch (trustErr) {
+      console.error('Trust score recalculation failed (non-fatal):', trustErr)
+    }
+
+    revalidatePath('/')
+    revalidatePath('/dashboard')
+    revalidatePath('/discover')
+    revalidatePath('/history')
+    revalidatePath(`/profile/${booking.mentorId}`)
+
+    await createNotification(
+      booking.mentorId,
+      'Session Completed — +1 GivePoint!',
+      'Your session was marked as complete. +1 GivePoint added to your balance.',
+      'POINTS',
+      '/history'
+    )
+
+    return {
+      success: true,
+      message: 'Session marked as completed. 1 GivePoint transferred to mentor.',
+      bookingId,
+    }
+  } catch (error) {
+    console.error('Error completing booking:', error)
+    return { success: false, message: 'Failed to complete booking. Please try again.' }
   }
 }
 

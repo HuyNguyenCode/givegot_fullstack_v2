@@ -163,6 +163,10 @@ model Booking {
   review        Review?
   transactions  TransactionLog[] //  NEW: Audit trail
   conversation  Conversation?    //  Messaging: one conversation per booking
+
+  // Two-way Blind Review (Twin Table Strategy — kept separate from `Review` to avoid breaking changes)
+  mentorReview     MentorReview?
+  isReviewRevealed Boolean       @default(false) // true once BOTH Review (mentee) and MentorReview (mentor) exist
 }
 
 // 5. Bảng Review
@@ -181,6 +185,19 @@ model Review {
   author     User     @relation("ReviewAuthor", fields: [authorId], references: [id])
   
   createdAt  DateTime @default(now())
+}
+
+// 5b. Bảng MentorReview (NEW: Two-way Blind Review — mentor's review of the mentee)
+// Kept as its own table (twin of `Review`) instead of modifying the existing `Review`
+// model, so all existing Review-based logic/types remain untouched.
+model MentorReview {
+  id        String   @id @default(uuid())
+  bookingId String   @unique
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  booking   Booking  @relation(fields: [bookingId], references: [id])
 }
 
 enum BookingStatus {

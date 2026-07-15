@@ -15,9 +15,9 @@ import {
   declineBooking,
   cancelBooking,
   reportNoShow,
-  completeSessionWithReview,
 } from '@/actions/booking'
 import { deleteMentorSlot } from '@/actions/slots'
+import BlindReviewSection from '@/components/reviews/BlindReviewSection'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -85,20 +85,11 @@ export default function SessionDetailDialog({
   onMutate,
 }: SessionDetailDialogProps) {
   const [isLoading, setIsLoading]               = useState(false)
-  const [showReview, setShowReview]             = useState(false)
-  const [reviewRating, setReviewRating]         = useState(0)
-  const [hoverRating, setHoverRating]           = useState(0)
-  const [reviewComment, setReviewComment]       = useState('')
-  const [isSubmitting, setIsSubmitting]         = useState(false)
   const [feedback, setFeedback]                 = useState<{ ok: boolean; msg: string } | null>(null)
 
   // Reset internal state whenever a new session is shown
   useEffect(() => {
     if (open) {
-      setShowReview(false)
-      setReviewRating(0)
-      setHoverRating(0)
-      setReviewComment('')
       setFeedback(null)
     }
   }, [open, s?.bookingId, s?.slotId])
@@ -159,19 +150,6 @@ export default function SessionDetailDialog({
   const handleDeleteSlot  = ()  => {
     if (!window.confirm(`Delete this time slot?\n${s.sessionLabel}`)) return
     run(() => deleteMentorSlot(s.slotId!, currentUserId))
-  }
-  const handleSubmitReview = async () => {
-    if (reviewRating === 0) return
-    setIsSubmitting(true); setFeedback(null)
-    try {
-      const r = await completeSessionWithReview(
-        s.bookingId!, currentUserId, reviewRating, reviewComment.trim() || undefined,
-      )
-      if (r.success) { setFeedback({ ok: true, msg: r.message }); onMutate(); onClose() }
-      else             setFeedback({ ok: false, msg: r.message })
-    } finally {
-      setIsSubmitting(false)
-    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -342,6 +320,12 @@ export default function SessionDetailDialog({
                       <Info icon="⭐">
                         The session has ended. The mentee can still submit a review within 48 hours - message them if needed.
                       </Info>
+                      {s.bookingId && (
+                        <BlindReviewSection
+                          booking={{ id: s.bookingId }}
+                          currentUserId={currentUserId}
+                        />
+                      )}
                       {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                     </>
                   ) : (
@@ -353,8 +337,21 @@ export default function SessionDetailDialog({
                 </>
               )}
 
-              {/* COMPLETED / MISSED */}
-              {(s.bookingStatus === 'COMPLETED' || s.bookingStatus === 'MISSED') && s.bookingId && (
+              {/* COMPLETED — blind review may still be pending/revealed even
+                  though the booking itself is no longer CONFIRMED (the
+                  mentee's review submission is what flips this status). */}
+              {s.bookingStatus === 'COMPLETED' && s.bookingId && (
+                <div className="space-y-2">
+                  <BlindReviewSection
+                    booking={{ id: s.bookingId }}
+                    currentUserId={currentUserId}
+                  />
+                  <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
+                </div>
+              )}
+
+              {/* MISSED */}
+              {s.bookingStatus === 'MISSED' && s.bookingId && (
                 <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
               )}
 
@@ -422,36 +419,23 @@ export default function SessionDetailDialog({
                       <Info icon="⚠️">
                         Mentor did not show up? You can report it within 48 hours after the session.
                       </Info>
-                      {!showReview ? (
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <PrimaryButton
-                            color="orange"
-                            onClick={() => setShowReview(true)}
-                            className="flex-1"
-                          >
-                            Review &amp; complete
-                          </PrimaryButton>
-                          <DangerButton
-                            onClick={handleReportNoShow}
-                            loading={isLoading}
-                            className="flex-1 !bg-red-600 hover:!bg-red-700 text-white"
-                          >
-                            🚨 Report no-show
-                          </DangerButton>
+                      <div className="flex flex-col sm:flex-row gap-2" style={{ display: "flex", flexDirection: "column" }}>
+                        <div className="flex-1">
+                          {s.bookingId && (
+                            <BlindReviewSection
+                              booking={{ id: s.bookingId }}
+                              currentUserId={currentUserId}
+                            />
+                          )}
                         </div>
-                      ) : (
-                        <ReviewForm
-                          rating={reviewRating}
-                          hover={hoverRating}
-                          comment={reviewComment}
-                          submitting={isSubmitting}
-                          onRating={setReviewRating}
-                          onHover={setHoverRating}
-                          onComment={setReviewComment}
-                          onSubmit={handleSubmitReview}
-                          onCancel={() => setShowReview(false)}
-                        />
-                      )}
+                        <DangerButton
+                          onClick={handleReportNoShow}
+                          loading={isLoading}
+                          className="flex-1 !bg-red-600 hover:!bg-red-700 text-white"
+                        >
+                          🚨 Report no-show
+                        </DangerButton>
+                      </div>
                     </>
                   ) : (
                     <Info icon="🔒">The 48-hour reporting window has ended.</Info>
@@ -460,8 +444,21 @@ export default function SessionDetailDialog({
                 </div>
               )}
 
-              {/* COMPLETED / MISSED */}
-              {(s.bookingStatus === 'COMPLETED' || s.bookingStatus === 'MISSED') && s.bookingId && (
+              {/* COMPLETED — blind review may still be pending/revealed even
+                  though the booking itself is no longer CONFIRMED (the
+                  mentee's own review submission is what flips this status). */}
+              {s.bookingStatus === 'COMPLETED' && s.bookingId && (
+                <div className="space-y-2">
+                  <BlindReviewSection
+                    booking={{ id: s.bookingId }}
+                    currentUserId={currentUserId}
+                  />
+                  <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
+                </div>
+              )}
+
+              {/* MISSED */}
+              {s.bookingStatus === 'MISSED' && s.bookingId && (
                 <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
               )}
 
@@ -504,7 +501,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Info({ icon, children }: { icon: string; children: React.ReactNode }) {
+export function Info({ icon, children }: { icon: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-700">
       <span className="shrink-0 text-base">{icon}</span>
@@ -513,7 +510,7 @@ function Info({ icon, children }: { icon: string; children: React.ReactNode }) {
   )
 }
 
-function PrimaryButton({
+export function PrimaryButton({
   children,
   color,
   onClick,
@@ -583,17 +580,25 @@ function ChatLink({
   )
 }
 
-function ReviewForm({
+/**
+ * Exported (not just used internally) so it can be reused by
+ * `BlindReviewSection` for both the mentee and mentor blind-review forms —
+ * same star-rating + comment UI, just with different title/submit copy.
+ */
+export function ReviewForm({
   rating, hover, comment, submitting,
   onRating, onHover, onComment, onSubmit, onCancel,
+  title = 'Session review',
+  submitLabel = 'Submit & complete (1 point to mentor)',
 }: {
   rating: number; hover: number; comment: string; submitting: boolean
   onRating: (n: number) => void; onHover: (n: number) => void
   onComment: (s: string) => void; onSubmit: () => void; onCancel: () => void
+  title?: string; submitLabel?: string
 }) {
   return (
     <div className="border border-orange-200 rounded-xl p-4 space-y-3 bg-orange-50">
-      <p className="text-xs font-bold text-orange-900">Session review</p>
+      <p className="text-xs font-bold text-orange-900">{title}</p>
       <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map(star => (
           <button
@@ -627,7 +632,7 @@ function ReviewForm({
           disabled={submitting || rating === 0}
           className="flex-1 py-1.5 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 transition"
         >
-          {submitting ? 'Submitting…' : 'Submit & complete (1 point to mentor)'}
+          {submitting ? 'Submitting…' : submitLabel}
         </button>
       </div>
     </div>

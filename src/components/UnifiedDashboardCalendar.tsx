@@ -18,7 +18,6 @@ import {
   declineBooking,
   cancelBooking,
   reportNoShow,
-  completeSessionWithReview,
 } from '@/actions/booking'
 import {
   getAllMentorSlots,
@@ -28,6 +27,7 @@ import {
 } from '@/actions/slots'
 import { BookingWithDetails } from '@/types'
 import Link from 'next/link'
+import BlindReviewSection from '@/components/reviews/BlindReviewSection'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -162,13 +162,6 @@ export default function UnifiedDashboardCalendar({
   // UI
   const [clickedEvent, setClickedEvent] = useState<ClickedEvent | null>(null)
   const [toasts, setToasts]             = useState<Toast[]>([])
-
-  // Inline review form (shown inside detail panel for mentee CONFIRMED)
-  const [showReviewForm, setShowReviewForm]         = useState(false)
-  const [reviewRating, setReviewRating]             = useState(0)
-  const [hoverRating, setHoverRating]               = useState(0)
-  const [reviewComment, setReviewComment]           = useState('')
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
 
   useEffect(() => setMounted(true), [])
 
@@ -341,8 +334,6 @@ export default function UnifiedDashboardCalendar({
 
   const handleEventClick = (info: EventClickArg) => {
     const p = info.event.extendedProps
-    // Reset review form whenever a new event is selected
-    setShowReviewForm(false); setReviewRating(0); setHoverRating(0); setReviewComment('')
 
     if (p.eType === 'available') {
       setClickedEvent({
@@ -412,20 +403,6 @@ export default function UnifiedDashboardCalendar({
     if (!clickedEvent?.bookingId) return
     if (!window.confirm('Report as no-show? Attendance will be verified via Google Meet API.')) return
     withAction(() => reportNoShow(clickedEvent.bookingId!, currentUserId))
-  }
-
-  const handleSubmitReview = async () => {
-    if (!clickedEvent?.bookingId || reviewRating === 0) return
-    setIsSubmittingReview(true)
-    const r = await completeSessionWithReview(
-      clickedEvent.bookingId, currentUserId, reviewRating, reviewComment.trim() || undefined,
-    )
-    setIsSubmittingReview(false)
-    if (r.success) {
-      showToast(r.message); closePanel(); await loadData(); onDataChange?.()
-    } else {
-      showToast(r.message, 'error')
-    }
   }
 
   // Derived timing flags for the currently clicked event
@@ -603,20 +580,10 @@ export default function UnifiedDashboardCalendar({
       {clickedEvent && (
         <EventDetailPanel
           event={clickedEvent}
+          currentUserId={currentUserId}
           isActionLoading={isActionLoading}
           isNearSession={isNearSession}
           isWithin48hGrace={isWithin48hGrace}
-          // Review form state
-          showReviewForm={showReviewForm}
-          reviewRating={reviewRating}
-          hoverRating={hoverRating}
-          reviewComment={reviewComment}
-          isSubmittingReview={isSubmittingReview}
-          onShowReviewForm={() => setShowReviewForm(true)}
-          onSetReviewRating={setReviewRating}
-          onSetHoverRating={setHoverRating}
-          onSetReviewComment={setReviewComment}
-          onSubmitReview={handleSubmitReview}
           // Actions
           onClose={closePanel}
           onDeleteSlot={handleDeleteSlot}
@@ -662,19 +629,10 @@ function LegendDot({
 
 interface EventDetailPanelProps {
   event: ClickedEvent
+  currentUserId: string
   isActionLoading: boolean
   isNearSession: boolean
   isWithin48hGrace: boolean
-  showReviewForm: boolean
-  reviewRating: number
-  hoverRating: number
-  reviewComment: string
-  isSubmittingReview: boolean
-  onShowReviewForm: () => void
-  onSetReviewRating: (n: number) => void
-  onSetHoverRating: (n: number) => void
-  onSetReviewComment: (s: string) => void
-  onSubmitReview: () => void
   onClose: () => void
   onDeleteSlot: () => void
   onAccept: () => void
@@ -685,19 +643,10 @@ interface EventDetailPanelProps {
 
 function EventDetailPanel({
   event: ev,
+  currentUserId,
   isActionLoading,
   isNearSession,
   isWithin48hGrace,
-  showReviewForm,
-  reviewRating,
-  hoverRating,
-  reviewComment,
-  isSubmittingReview,
-  onShowReviewForm,
-  onSetReviewRating,
-  onSetHoverRating,
-  onSetReviewComment,
-  onSubmitReview,
   onClose,
   onDeleteSlot,
   onAccept,
@@ -911,41 +860,11 @@ function EventDetailPanel({
                       Join Meeting
                     </a>
                   )}
-                  {!showReviewForm ? (
-                    <button onClick={onShowReviewForm}
-                      className="w-full py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition">
-                      Submit Review &amp; Complete
-                    </button>
-                  ) : (
-                    /* Inline star rating form */
-                    <div className="border border-orange-200 rounded-xl p-4 space-y-3 bg-orange-50">
-                      <p className="text-xs font-semibold text-orange-800">Rate your session</p>
-                      <div className="flex gap-1.5">
-                        {[1,2,3,4,5].map(star => (
-                          <button key={star} type="button"
-                            onClick={() => onSetReviewRating(star)}
-                            onMouseEnter={() => onSetHoverRating(star)}
-                            onMouseLeave={() => onSetHoverRating(0)}
-                            className="text-2xl leading-none transition-transform hover:scale-110">
-                            {star <= (hoverRating || reviewRating) ? '⭐' : '☆'}
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        rows={2}
-                        value={reviewComment}
-                        onChange={e => onSetReviewComment(e.target.value)}
-                        placeholder="Optional feedback…"
-                        className="w-full text-xs px-3 py-2 border border-orange-200 rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-orange-400"
-                        maxLength={300}
-                      />
-                      <button
-                        onClick={onSubmitReview}
-                        disabled={isSubmittingReview || reviewRating === 0}
-                        className="w-full py-2 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition disabled:opacity-50">
-                        {isSubmittingReview ? 'Submitting…' : 'Submit & Complete (1 pt to mentor)'}
-                      </button>
-                    </div>
+                  {ev.bookingId && (
+                    <BlindReviewSection
+                      booking={{ id: ev.bookingId }}
+                      currentUserId={currentUserId}
+                    />
                   )}
                   <div className="flex gap-2">
                     {ev.bookingId && (
@@ -989,8 +908,24 @@ function EventDetailPanel({
                 </div>
               )}
 
-              {/* COMPLETED / MISSED → history */}
-              {(ev.bookingStatus === 'COMPLETED' || ev.bookingStatus === 'MISSED') && ev.bookingId && (
+              {/* COMPLETED — blind review may still be pending/revealed even
+                  though the booking is no longer CONFIRMED (submitting the
+                  mentee's own review is what flips this status). */}
+              {ev.bookingStatus === 'COMPLETED' && ev.bookingId && (
+                <div className="space-y-2">
+                  <BlindReviewSection
+                    booking={{ id: ev.bookingId }}
+                    currentUserId={currentUserId}
+                  />
+                  <Link href={`/chat?bookingId=${ev.bookingId}`}
+                    className="block w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition text-center">
+                    🎓 View Chat History
+                  </Link>
+                </div>
+              )}
+
+              {/* MISSED → history */}
+              {ev.bookingStatus === 'MISSED' && ev.bookingId && (
                 <Link href={`/chat?bookingId=${ev.bookingId}`}
                   className="block w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition text-center">
                   🎓 View Chat History

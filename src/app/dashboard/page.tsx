@@ -2,7 +2,7 @@
 
 import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState } from 'react'
-import { getMyBookings, acceptBooking, declineBooking, cancelBooking, completeSessionWithReview } from '@/actions/booking'
+import { getMyBookings, acceptBooking, declineBooking, cancelBooking } from '@/actions/booking'
 import { getUserLearningGoals } from '@/actions/user'
 import { getPointHistory, getTopRequestedSkills, getPopularMentors, PointHistoryEntry, SkillDemandEntry, PopularMentor } from '@/actions/analytics'
 import { BookingWithDetails } from '@/types'
@@ -17,6 +17,7 @@ import Image from 'next/image'
 import { BookingStatus } from '@prisma/client'
 import Link from 'next/link'
 import CancelBookingDialog from '@/components/CancelBookingDialog'
+import BlindReviewSection from '@/components/reviews/BlindReviewSection'
 
 export default function DashboardPage() {
   const { currentUser, refreshUser, isLoading: userLoading } = useUser()
@@ -25,13 +26,6 @@ export default function DashboardPage() {
   const [learningSkillsWithRoadmap, setLearningSkillsWithRoadmap] = useState<Array<{ id: string; name: string; roadmap: RoadmapStep[] | null }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
-  const [selectedBooking, setSelectedBooking] = useState<BookingWithDetails | null>(null)
-  const [rating, setRating] = useState(0)
-  const [hoverRating, setHoverRating] = useState(0)
-  const [comment, setComment] = useState('')
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
 
   // Analytics state
   const [pointHistory, setPointHistory] = useState<PointHistoryEntry[]>([])
@@ -105,44 +99,6 @@ export default function DashboardPage() {
     }
     
     setActionLoading(null)
-  }
-
-  const handleComplete = (booking: BookingWithDetails) => {
-    setSelectedBooking(booking)
-    setRating(0)
-    setHoverRating(0)
-    setComment('')
-    setIsReviewModalOpen(true)
-  }
-
-  const handleSubmitReview = async () => {
-    if (!currentUser || !selectedBooking) return
-    
-    if (rating === 0) {
-      alert(' Please select a rating before submitting')
-      return
-    }
-
-    setIsSubmittingReview(true)
-    
-    const result = await completeSessionWithReview(
-      selectedBooking.id,
-      currentUser.id,
-      rating,
-      comment.trim() || undefined
-    )
-    
-    if (result.success) {
-      alert(` ${result.message}`)
-      setIsReviewModalOpen(false)
-      setSelectedBooking(null)
-      await refreshUser()
-      await loadBookings()
-    } else {
-      alert(` ${result.message}`)
-    }
-    
-    setIsSubmittingReview(false)
   }
 
   const handleDecline = async (bookingId: string) => {
@@ -803,13 +759,12 @@ export default function DashboardPage() {
                               Join Meeting
                             </a>
                           )}
-                          <button
-                            onClick={() => handleComplete(booking)}
-                            disabled={actionLoading === booking.id}
-                            className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:bg-gray-300"
-                          >
-                            {actionLoading === booking.id ? 'Processing...' : 'Submit Review & Complete'}
-                          </button>
+                          <div className="flex-1">
+                            <BlindReviewSection
+                              booking={{ id: booking.id }}
+                              currentUserId={currentUser.id}
+                            />
+                          </div>
                           <Link
                             href={`/chat?bookingId=${booking.id}`}
                             className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition text-sm shadow-sm"
@@ -830,10 +785,18 @@ export default function DashboardPage() {
                       )}
                       {booking.status === BookingStatus.COMPLETED && (
                         <>
-                          <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                            <p className="text-sm text-green-800">
-                              ✅ Session completed! 1 GivePoint transferred.
-                            </p>
+                          <div className="w-full space-y-2">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                              <p className="text-sm text-green-800">
+                                ✅ Session completed! 1 GivePoint transferred.
+                              </p>
+                            </div>
+                            {/* Blind review may still be pending/revealed even
+                                though the booking is no longer CONFIRMED */}
+                            <BlindReviewSection
+                              booking={{ id: booking.id }}
+                              currentUserId={currentUser.id}
+                            />
                           </div>
                           <Link
                             href={`/chat?bookingId=${booking.id}`}
@@ -866,151 +829,6 @@ export default function DashboardPage() {
           </section>
         </div>
       </main>
-
-      {isReviewModalOpen && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 rounded-t-xl">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white">Submit Review</h3>
-                <button
-                  onClick={() => setIsReviewModalOpen(false)}
-                  className="text-white hover:text-gray-200 transition"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                <Image
-                  src={selectedBooking.mentor.avatarUrl || '/default-avatar.png'}
-                  alt={selectedBooking.mentor.name || 'Mentor'}
-                  width={64}
-                  height={64}
-                  className="rounded-full ring-2 ring-purple-200"
-                />
-                <div>
-                  <p className="text-sm text-gray-600">Your session with</p>
-                  <p className="font-bold text-lg text-gray-900">{selectedBooking.mentor.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(selectedBooking.startTime).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">
-                  How would you rate this session? *
-                </label>
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      className="transition-transform hover:scale-110"
-                    >
-                      <svg
-                        className={`w-10 h-10 ${
-                          star <= (hoverRating || rating)
-                            ? 'text-yellow-400 fill-current'
-                            : 'text-gray-300'
-                        } transition-colors`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                        />
-                      </svg>
-                    </button>
-                  ))}
-                </div>
-                {rating > 0 && (
-                  <p className="text-sm text-purple-600 font-medium mt-2">
-                    {rating === 5 && '⭐ Outstanding!'}
-                    {rating === 4 && '⭐ Great session!'}
-                    {rating === 3 && '⭐ Good session'}
-                    {rating === 2 && '⭐ Could be better'}
-                    {rating === 1 && '⭐ Needs improvement'}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="comment" className="block text-sm font-semibold text-gray-900 mb-2">
-                  Share your experience (optional)
-                </label>
-                <textarea
-                  id="comment"
-                  rows={4}
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="What did you learn? How was the mentor? Any feedback..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none"
-                  maxLength={500}
-                />
-                <p className="text-xs text-gray-500 mt-1 text-right">
-                  {comment.length}/500 characters
-                </p>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-blue-900">What happens next?</p>
-                    <p className="text-sm text-blue-800 mt-1">
-                      Submitting this review will mark the session as complete and transfer 1 GivePoint to your mentor.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsReviewModalOpen(false)}
-                  disabled={isSubmittingReview}
-                  className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition disabled:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitReview}
-                  disabled={isSubmittingReview || rating === 0}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md"
-                >
-                  {isSubmittingReview ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Submitting...
-                    </span>
-                  ) : (
-                    'Submit & Complete'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
