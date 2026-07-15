@@ -3,13 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { User } from '@/types'
 import { getAllUsers, getUserById } from '@/actions/user'
+import { useSession, signIn, signOut } from 'next-auth/react' // 1. Import NextAuth hooks
 
 interface UserContextType {
   currentUser: User | null
   allUsers: User[]
-  switchUser: (userId: string) => void
+  switchUser: (userId: string) => Promise<void>
   refreshUser: () => Promise<void>
-  signOutDev: () => void
+  signOutDev: () => Promise<void>
   isLoading: boolean
   isDevMode: boolean
 }
@@ -17,104 +18,101 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+  // 2. Lấy trạng thái đăng nhập THẬT từ NextAuth
+  const { data: session, status } = useSession() 
+  
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isDevMode, setIsDevMode] = useState(false)
+  
+  // Dùng biến môi trường mặc định của Node để phân biệt Dev/Prod an toàn nhất
+  const isDevMode = process.env.NODE_ENV !== 'production'
 
+  // HIỆU ỨNG 1: Tải danh sách tất cả User (Chỉ dùng cho Dev Mode để hiện Dropdown)
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Check if DevBar is enabled
-        const devBarEnabled = process.env.NEXT_PUBLIC_SHOW_DEV_BAR === 'true'
-        setIsDevMode(devBarEnabled)
-
-        const users = await getAllUsers()
-        setAllUsers(users)
-        
-        // DevBar Mode: Use localStorage override
-        if (devBarEnabled) {
-          const savedUserId = localStorage.getItem('mockUserId')
-          
-          if (savedUserId) {
-            const user = await getUserById(savedUserId)
-            if (user) {
-              setCurrentUser(user)
-            } else if (users.length > 0) {
-              setCurrentUser(users[0])
-              localStorage.setItem('mockUserId', users[0].id)
-            }
-          } else if (users.length > 0) {
-            setCurrentUser(users[0])
-            localStorage.setItem('mockUserId', users[0].id)
-          }
-        } else {
-          // Production Mode: Use NextAuth session
-          // In production, the session will be fetched from NextAuth
-          // For now, we'll fetch from server action that reads the session
-          const response = await fetch('/api/auth/session')
-          const session = await response.json()
-          
-          if (session?.user?.email) {
-            // Find user by email from NextAuth session
-            const user = users.find(u => u.email === session.user.email)
-            if (user) {
-              setCurrentUser(user)
-            }
-          }
+    const fetchDropdownUsers = async () => {
+      if (isDevMode) {
+        try {
+          const users = await getAllUsers()
+          setAllUsers(users)
+        } catch (error) {
+          console.error('Lỗi khi tải danh sách user:', error)
         }
-      } catch (error) {
-        console.error('Error initializing auth:', error)
-      } finally {
-        setIsLoading(false)
       }
     }
+    fetchDropdownUsers()
+  }, [isDevMode])
 
-    initializeAuth()
-  }, [])
+  // HIỆU ỨNG 2: Đồng bộ currentUser mỗi khi Session của NextAuth thay đổi
+  useEffect(() => {
+    const syncUserWithSession = async () => {
+      if (status === 'loading') return // Đang kiểm tra token thì đợi
+
+      if (session?.user?.id) {
+        try {
+          // Lấy data mới nhất của user từ DB dựa vào ID trong token
+          const user = await getUserById(session.user.id)
+          setCurrentUser(user || null)
+        } catch (error) {
+          console.error('Lỗi đồng bộ user:', error)
+        }
+      } else {
+        // Không có session (chưa đăng nhập hoặc đã đăng xuất)
+        setCurrentUser(null)
+      }
+      setIsLoading(false)
+    }
+
+    syncUserWithSession()
+  }, [session, status])
 
   const refreshUser = async () => {
-    if (!currentUser) return
-    
+    if (!currentUser?.id) return
     try {
       const user = await getUserById(currentUser.id)
-      if (user) {
-        setCurrentUser(user)
-      }
+      if (user) setCurrentUser(user)
     } catch (error) {
-      console.error('Error refreshing user:', error)
+      console.error('Lỗi làm mới user:', error)
     }
   }
 
+  // 3. HÀM ĐỔI USER BẰNG "CỬA HẬU"
   const switchUser = async (userId: string) => {
-    // DevBar override: Switch user in dev mode
-    if (!isDevMode) {
-      console.warn('User switching is only available in dev mode')
-      return
-    }
+    if (!isDevMode) return
 
     setIsLoading(true)
     try {
-      const user = await getUserById(userId)
-      if (user) {
-        setCurrentUser(user)
-        localStorage.setItem('mockUserId', userId)
-      }
+      // Gọi "ông bảo vệ dự bị" tên là impersonate
+      await signIn('impersonate', {
+        userId: userId,
+        redirect: true,
+        callbackUrl: window.location.pathname // Chuyển đổi xong thì ở yên tại trang hiện tại
+      })
     } catch (error) {
-      console.error('Error switching user:', error)
-    } finally {
+      console.error('Lỗi chuyển user:', error)
       setIsLoading(false)
     }
   }
 
-  const signOutDev = () => {
+  // 4. HÀM ĐĂNG XUẤT ĐÚNG CHUẨN NEXTAUTH
+  const signOutDev = async () => {
     if (!isDevMode) return
-    localStorage.removeItem('mockUserId')
-    setCurrentUser(null)
+    await signOut({ redirect: true, callbackUrl: '/' })
   }
 
   return (
-    <UserContext.Provider value={{ currentUser, allUsers, switchUser, refreshUser, signOutDev, isLoading, isDevMode }}>
+    <UserContext.Provider 
+      value={{ 
+        currentUser, 
+        allUsers, 
+        switchUser, 
+        refreshUser, 
+        signOutDev, 
+        // Đang load nếu context tự load hoặc NextAuth đang check session
+        isLoading: isLoading || status === 'loading', 
+        isDevMode 
+      }}
+    >
       {children}
     </UserContext.Provider>
   )
@@ -123,7 +121,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 export function useUser() {
   const context = useContext(UserContext)
   if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider')
+    throw new Error('useUser phải được bọc bên trong UserProvider')
   }
   return context
 }

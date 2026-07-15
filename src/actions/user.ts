@@ -57,15 +57,17 @@ export async function getUserLearningGoals(userId: string): Promise<Array<{ id: 
         userId,
         type: SkillType.WANT,
       },
-      include: {
-        skill: true,
+      select: {
+        id: true,
+        roadmap: true,
+        skill: { select: { name: true } },
       },
     })
 
     return userSkills.map(us => ({
-      id: us.id, // UserSkill ID (needed for roadmap)
+      id: us.id,
       name: us.skill.name,
-      roadmap: us.roadmap, 
+      roadmap: us.roadmap,
     }))
   } catch (error) {
     console.error('Error fetching learning goals:', error)
@@ -80,8 +82,9 @@ export async function getUserTeachingSkills(userId: string): Promise<Array<{ id:
         userId,
         type: SkillType.GIVE,
       },
-      include: {
-        skill: true,
+      select: {
+        isVerified: true,
+        skill: { select: { id: true, name: true, slug: true } },
       },
     })
     
@@ -101,6 +104,7 @@ export async function getAllAvailableSkills() {
   try {
     const skills = await prisma.skill.findMany({
       orderBy: { name: 'asc' },
+      select: { id: true, name: true, slug: true, category: true, status: true },
     })
     return skills
   } catch (error) {

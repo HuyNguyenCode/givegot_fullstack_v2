@@ -1,12 +1,795 @@
+// 'use client'
+
+// import { useUser } from '@/contexts/UserContext'
+// import { useEffect, useState, Suspense } from 'react'
+// import { useSearchParams, useRouter } from 'next/navigation'
+// import { getAutoMatchedMentors, searchMentorsSemantically } from '@/actions/mentor'
+// import { getMentorRating } from '@/actions/booking'
+// import { getUserTrustDashboard } from '@/actions/analytics'
+// import { Badge } from '@/lib/badges'
+// import { ShieldCheck, Zap, Star } from 'lucide-react'
+// import Image from 'next/image'
+// import Link from 'next/link'
+
+// const BADGE_ICON_MAP = {
+//   ShieldCheck,
+//   Zap,
+//   Star,
+// } as const
+
+// const SYSTEM_BADGE_PRIORITY = ['trusted_expert', 'high_trust', 'rising_star'] as const
+
+// type SystemBadgeId = (typeof SYSTEM_BADGE_PRIORITY)[number]
+
+// function getHighestPrioritySystemBadge(
+//   badges: Badge[],
+//   trustScore: number,
+// ): { id: SystemBadgeId; badge: Badge } | null {
+//   for (const id of SYSTEM_BADGE_PRIORITY) {
+//     if (id === 'high_trust') {
+//       if (trustScore >= 85) {
+//         return {
+//           id: 'high_trust',
+//           badge: {
+//             id: 'high_trust',
+//             name: 'High Trust',
+//             icon: 'ShieldCheck',
+//             description: 'Trust Score of 85 or higher',
+//             color: {
+//               bg: 'bg-emerald-50',
+//               text: 'text-emerald-800',
+//               ring: 'ring-emerald-400',
+//               iconColor: 'text-emerald-600',
+//             },
+//           },
+//         }
+//       }
+//       continue
+//     }
+
+//     const earned = badges.find((badge) => badge.id === id)
+//     if (earned) {
+//       return { id, badge: earned }
+//     }
+//   }
+
+//   return null
+// }
+
+// function hasQuickResponderBadge(badges: Badge[]): boolean {
+//   return badges.some((badge) => badge.id === 'quick_responder')
+// }
+
+// function MentorBadgeChip({ badge }: { badge: Badge }) {
+//   const Icon = BADGE_ICON_MAP[badge.icon]
+
+//   return (
+//     <div
+//       title={badge.description}
+//       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ring-1 flex-shrink-0 ${badge.color.bg} ${badge.color.text} ${badge.color.ring} cursor-default select-none`}
+//     >
+//       <Icon className={`w-3.5 h-3.5 ${badge.color.iconColor}`} />
+//       {badge.name}
+//     </div>
+//   )
+// }
+
+// interface MentorMatch {
+//   id: string
+//   email: string
+//   name: string | null
+//   avatarUrl: string | null
+//   bio: string | null
+//   givePoints: number
+//   trustScore: number
+//   teachingSkills: Array<{
+//     id: string
+//     name: string
+//     slug: string
+//     isVerified: boolean
+//   }>
+//   matchedSkills: string[]
+//   matchScore: number
+//   rating?: {
+//     average: number
+//     count: number
+//   }
+// }
+
+// let cachedDiscoverData: any = null;
+// function DiscoverContent() {
+//   const { currentUser, isLoading: userLoading } = useUser()
+//   const searchParams = useSearchParams()
+//   const router = useRouter()
+//   const urlSearchQuery = searchParams.get('search') || ''
+  
+//   const [bestMatches, setBestMatches] = useState<MentorMatch[]>([])
+//   const [otherMentors, setOtherMentors] = useState<MentorMatch[]>([])
+//   const [userGoals, setUserGoals] = useState<string[]>([])
+  
+//   // FIX 1: Khởi tạo state ngay bằng URL param để tránh load rỗng ban đầu
+//   const [searchQuery, setSearchQuery] = useState(urlSearchQuery) 
+//   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(urlSearchQuery)
+//   const [isLoading, setIsLoading] = useState(true)
+
+//   // Debounce search input (400ms delay)
+//   useEffect(() => {
+//     const timer = setTimeout(() => {
+//       setDebouncedSearchQuery(searchQuery)
+      
+//       // Update URL without full page reload
+//       if (searchQuery.trim()) {
+//         router.replace(`/discover?search=${encodeURIComponent(searchQuery.trim())}`, { scroll: false })
+//       } else {
+//         router.replace('/discover', { scroll: false })
+//       }
+//     }, 400)
+
+//     return () => clearTimeout(timer)
+//   }, [searchQuery, router])
+
+//   // Sync URL search param to local state (only on initial load or external URL changes)
+//   useEffect(() => {
+//     if (urlSearchQuery && urlSearchQuery !== searchQuery) {
+//       setSearchQuery(urlSearchQuery)
+//     }
+//   }, [urlSearchQuery])
+
+//   // FIX 2: Dùng cờ isCancelled để chặn Race Condition
+//   useEffect(() => {
+//     let isCancelled = false 
+    
+//     async function loadMentors() {
+
+//       if (cachedDiscoverData) {
+//         setBestMatches(cachedDiscoverData.bestMatches);
+//         setOtherMentors(cachedDiscoverData.otherMentors);
+//         setUserGoals(cachedDiscoverData.userGoals);
+//         // Tắt loading nếu có
+//         return; 
+//       }
+
+//       if (!currentUser) return
+      
+//       setIsLoading(true)
+
+//       // Check if there's a search query (from URL or manual input)
+//       if (debouncedSearchQuery.trim()) {
+//         console.log(`🔍 Performing semantic search for: "${debouncedSearchQuery}"`)
+        
+//         try {
+//           // Use AI semantic search
+//           const searchResult = await searchMentorsSemantically(debouncedSearchQuery, currentUser.id)
+          
+//           // Add ratings to search results
+//           const mentorsWithRatings = await Promise.all(
+//             searchResult.mentors.map(async (mentor) => {
+//               const rating = await getMentorRating(mentor.id)
+//               return { ...mentor, rating }
+//             })
+//           )
+          
+//           if (!isCancelled) {
+//             setBestMatches(mentorsWithRatings)
+//             setOtherMentors([])
+//             setUserGoals([]) // Not applicable for search
+//             console.log(`Semantic search found ${mentorsWithRatings.length} relevant mentors`)
+//           }
+//         } catch (error) {
+//           console.error('Semantic search failed:', error)
+//           if (!isCancelled) {
+//             setBestMatches([])
+//             setOtherMentors([])
+//           }
+//         }
+//       } else {
+//         // No search query - use default AI matching based on user profile
+//         console.log('Loading default AI-matched mentors')
+        
+//         try {
+//           const result = await getAutoMatchedMentors(currentUser.id)
+          
+//           const bestMatchesWithRatings = await Promise.all(
+//             result.bestMatches.map(async (mentor) => {
+//               const rating = await getMentorRating(mentor.id)
+//               return { ...mentor, rating }
+//             })
+//           )
+          
+//           const otherMentorsWithRatings = await Promise.all(
+//             result.otherMentors.map(async (mentor) => {
+//               const rating = await getMentorRating(mentor.id)
+//               return { ...mentor, rating }
+//             })
+//           )
+          
+//           if (!isCancelled) {
+//             setBestMatches(bestMatchesWithRatings)
+//             setOtherMentors(otherMentorsWithRatings)
+//             setUserGoals(result.userLearningGoals)
+//           }
+
+
+//           cachedDiscoverData = {
+//             bestMatches: bestMatchesWithRatings,
+//             otherMentors: otherMentorsWithRatings,
+//             userGoals: result.userLearningGoals,
+//           };
+  
+//           setBestMatches(bestMatchesWithRatings);
+//           setOtherMentors(otherMentorsWithRatings);
+//           setUserGoals(result.userLearningGoals);
+
+//         } catch (error) {
+//           console.error('Auto match failed:', error)
+//           if (!isCancelled) {
+//             setBestMatches([])
+//             setOtherMentors([])
+//           }
+//         }
+//       }
+      
+//       if (!isCancelled) {
+//         setIsLoading(false)
+//       }
+//     }
+
+//     loadMentors()
+
+//     return () => {
+//       isCancelled = true
+//     }
+//   }, [currentUser, debouncedSearchQuery])
+
+//   if (userLoading || isLoading) {
+//     return (
+//       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+//         <div className="text-center">
+//           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+//           <p className="text-gray-600">Finding your perfect mentors...</p>
+//         </div>
+//       </div>
+//     )
+//   }
+
+//   // DevMode: show fallback when no user selected. Production: middleware redirects before we get here.
+//   if (!currentUser) {
+//     return (
+//       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+//         <div className="bg-white p-8 rounded-lg shadow-md">
+//           <h2 className="text-xl font-bold text-red-600">Authentication Required</h2>
+//           <p className="text-gray-600 mt-2">Please select a user from the switcher above.</p>
+//         </div>
+//       </div>
+//     )
+//   }
+
+//   // Check if we're in search mode
+//   const isSearching = searchQuery.trim().length > 0
+//   const displayedBestMatches = bestMatches
+//   const displayedOtherMentors = otherMentors
+
+//   const renderMentorCard = (mentor: MentorMatch, isMatch: boolean = false) => (
+//     <div
+//       key={mentor.id}
+//       className={`bg-white rounded-lg shadow-md hover:shadow-xl transition-all p-6 border-2 ${
+//         isMatch ? 'border-green-400 bg-gradient-to-br from-white to-green-50' : 'border-gray-200'
+//       }`}
+//     >
+//       <div className="flex flex-wrap items-center gap-2 mb-3">
+//         {/* {isMatch && mentor.matchScore > 0 && (
+//           <div className="flex items-center gap-2 bg-green-100 px-3 py-1.5 rounded-lg">
+//             <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+//               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+//             </svg>
+//             <span className="text-sm font-bold text-green-800">
+//               {Math.round(mentor.matchScore * 100)}% AI Match
+//             </span>
+//           </div>
+//         )} */}
+//         {/* Trust score chip — always visible so users can compare at a glance */}
+//         <div
+//           title="Trust Score is calculated from session completion rate, ratings, response time, and reliability."
+//           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-default ${
+//             mentor.trustScore >= 85
+//               ? 'bg-emerald-50 border-emerald-200'
+//               : mentor.trustScore >= 50
+//               ? 'bg-amber-50 border-amber-200'
+//               : 'bg-red-50 border-red-200'
+//           }`}
+//         >
+//           <svg
+//             className={`w-3.5 h-3.5 flex-shrink-0 ${
+//               mentor.trustScore >= 85
+//                 ? 'text-emerald-600'
+//                 : mentor.trustScore >= 50
+//                 ? 'text-amber-600'
+//                 : 'text-red-500'
+//             }`}
+//             fill="none"
+//             stroke="currentColor"
+//             viewBox="0 0 24 24"
+//           >
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+//           </svg>
+//           <span
+//             className={`text-xs font-semibold ${
+//               mentor.trustScore >= 85
+//                 ? 'text-emerald-700'
+//                 : mentor.trustScore >= 50
+//                 ? 'text-amber-700'
+//                 : 'text-red-600'
+//             }`}
+//           >
+//             {mentor.trustScore >= 85 ? 'High Trust · ' : 'Trust: '}
+//             <span className="font-bold">{mentor.trustScore}</span>
+//             <span className="font-normal opacity-70">/100</span>
+//           </span>
+//         </div>
+//       </div>
+
+//       <div className="flex items-start gap-4 mb-4">
+//         <Link href={`/profile/${mentor.id}`} className="flex-shrink-0 group">
+//           {mentor.avatarUrl && (
+//             <Image
+//               src={mentor.avatarUrl}
+//               alt={mentor.name || 'Mentor'}
+//               width={64}
+//               height={64}
+//               className="rounded-full ring-2 ring-purple-200 group-hover:ring-purple-400 transition-all group-hover:scale-105"
+//             />
+//           )}
+//         </Link>
+//         <div className="flex-1 min-w-0">
+//           <Link href={`/profile/${mentor.id}`} className="group">
+//             <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
+//               {mentor.name || 'Anonymous Mentor'}
+//             </h3>
+//           </Link>
+//           <p className="text-sm text-gray-500">{mentor.email}</p>
+//           {mentor.rating && mentor.rating.count > 0 && (
+//             <Link href={`/profile/${mentor.id}`} className="inline-block group">
+//               <div className="flex items-center gap-2 mt-1 group-hover:opacity-80 transition-opacity">
+//                 <div className="flex items-center gap-1">
+//                   <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
+//                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+//                   </svg>
+//                   <span className="text-sm font-semibold text-gray-900">
+//                     {mentor.rating.average.toFixed(1)}
+//                   </span>
+//                 </div>
+//                 <span className="text-xs text-gray-500">
+//                   ({mentor.rating.count} review{mentor.rating.count !== 1 ? 's' : ''})
+//                 </span>
+//               </div>
+//             </Link>
+//           )}
+//           {mentor.rating && mentor.rating.count === 0 && (
+//             <p className="text-xs text-gray-400 mt-1">No reviews yet</p>
+//           )}
+//         </div>
+//       </div>
+
+//       {mentor.bio && (
+//         <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+//           {mentor.bio}
+//         </p>
+//       )}
+
+//       <div className="mb-4">
+//         <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase">
+//           Teaching Skills:
+//         </h4>
+//         <div className="flex flex-wrap gap-2">
+//           {mentor.teachingSkills.map((skill) => {
+//             const isMatched = mentor.matchedSkills.includes(skill.name)
+//             return (
+//               <span
+//                 key={skill.id}
+//                 className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full ${
+//                   isMatched
+//                     ? 'bg-green-500 text-white ring-2 ring-green-300 shadow-sm'
+//                     : skill.isVerified
+//                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white ring-2 ring-purple-300 shadow-sm'
+//                     : 'bg-purple-100 text-purple-700'
+//                 }`}
+//               >
+//                 {skill.isVerified && (
+//                   <svg 
+//                   className="w-3.5 h-3.5 text-yellow-300" 
+//                   fill="currentColor" 
+//                   viewBox="0 0 20 20"
+//                 >
+//                   <title>AI Verified Skill</title>
+//                   <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+//                 </svg>
+//                 )}
+//                 {skill.name}
+//                 {isMatched && ' ✓'}
+//               </span>
+//             )
+//           })}
+//         </div>
+//       </div>
+
+//       <div className="space-y-2">
+//         <Link
+//           href={`/profile/${mentor.id}`}
+//           className={`block w-full text-white text-center py-2.5 rounded-lg font-medium transition ${
+//             isMatch
+//               ? 'bg-green-600 hover:bg-green-700 shadow-md'
+//               : 'bg-purple-600 hover:bg-purple-700'
+//           }`}
+//         >
+//           📅 View Available Slots
+//         </Link>
+//         <Link
+//           href={`/profile/${mentor.id}#reviews`}
+//           className="block text-center text-sm text-purple-600 hover:text-purple-700 font-medium transition"
+//         >
+//           View Full Profile & Reviews →
+//         </Link>
+//       </div>
+//     </div>
+//   )
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+//       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+//         <div className="mb-8">
+//           <div className="flex items-center gap-3 mb-3">
+//             <div className="bg-purple-600 p-2 rounded-lg">
+//               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+//               </svg>
+//             </div>
+//             <h1 className="text-3xl font-bold text-gray-900">Smart Mentor Discovery</h1>
+//           </div>
+//           <p className="text-gray-600 ml-14">
+//             {isSearching
+//               ? `Showing results for "${searchQuery}"`
+//               : 'AI-powered matching based on your learning goals'}
+//           </p>
+          
+//           {/* Search Input */}
+//           <form onSubmit={(e) => e.preventDefault()} className="mt-4 ml-14 max-w-md">
+//             <div className="relative">
+//               <input
+//                 type="text"
+//                 value={searchQuery}
+//                 onChange={(e) => setSearchQuery(e.target.value)}
+//                 placeholder="Search by skill (e.g., ReactJS, Python)..."
+//                 className="w-full px-4 py-2 pl-10 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition"
+//               />
+//               <svg
+//                 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+//                 fill="none"
+//                 stroke="currentColor"
+//                 viewBox="0 0 24 24"
+//               >
+//                 <path
+//                   strokeLinecap="round"
+//                   strokeLinejoin="round"
+//                   strokeWidth={2}
+//                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+//                 />
+//               </svg>
+//               {searchQuery && (
+//                 <button
+//                   onClick={() => setSearchQuery('')}
+//                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+//                 >
+//                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+//                     <path
+//                       fillRule="evenodd"
+//                       d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+//                       clipRule="evenodd"
+//                     />
+//                   </svg>
+//                 </button>
+//               )}
+//             </div>
+//           </form>
+          
+//           <div className="mt-4 flex flex-wrap items-center gap-3">
+//             <div className="inline-flex items-center gap-2 bg-purple-100 px-4 py-2 rounded-lg">
+//               <svg
+//                 className="w-5 h-5 text-purple-600"
+//                 fill="none"
+//                 stroke="currentColor"
+//                 viewBox="0 0 24 24"
+//               >
+//                 <path
+//                   strokeLinecap="round"
+//                   strokeLinejoin="round"
+//                   strokeWidth={2}
+//                   d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+//                 />
+//               </svg>
+//               <span className="text-sm font-semibold text-purple-900">
+//                 Your Balance: {currentUser.givePoints} GivePoints
+//               </span>
+//             </div>
+
+//             {userGoals.length > 0 && (
+//               <div className="inline-flex items-center gap-2 bg-blue-100 px-4 py-2 rounded-lg">
+//                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+//                 </svg>
+//                 <span className="text-sm font-medium text-blue-900">
+//                   Learning: {userGoals.join(', ')}
+//                 </span>
+//               </div>
+//             )}
+//           </div>
+//         </div>
+
+//         {displayedBestMatches.length === 0 && displayedOtherMentors.length === 0 ? (
+//           <div className="bg-white rounded-lg shadow-md p-8 text-center">
+//             <div className="text-6xl mb-4">🔍</div>
+//             <h2 className="text-xl font-semibold text-gray-800 mb-2">
+//               {isSearching ? `No mentors found for "${searchQuery}"` : 'No Mentors Available'}
+//             </h2>
+//             <p className="text-gray-600">
+//               {isSearching
+//                 ? 'Try searching for a different skill or browse all mentors'
+//                 : 'There are no mentors available at the moment. Check back later!'}
+//             </p>
+//             {isSearching && (
+//               <button
+//                 onClick={() => setSearchQuery('')}
+//                 className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition"
+//               >
+//                 Clear Search
+//               </button>
+//             )}
+//           </div>
+//         ) : (
+//           <div className="space-y-12">
+//             {isSearching ? (
+//               <section>
+//                 <div className="mb-6 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 shadow-lg">
+//                   <div className="flex items-center gap-3 mb-2">
+//                     <div className="bg-white/20 p-2 rounded-lg">
+//                       <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+//                       </svg>
+//                     </div>
+//                     <div>
+//                       <h2 className="text-2xl font-bold text-white">
+//                         🔍 Search Results for "{searchQuery}"
+//                       </h2>
+//                       <p className="text-purple-100 text-sm">
+//                         Mentors teaching skills matching your search
+//                       </p>
+//                     </div>
+//                   </div>
+//                   <div className="flex items-center gap-2 mt-3">
+//                     <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
+//                       {displayedBestMatches.length} {displayedBestMatches.length === 1 ? 'Mentor' : 'Mentors'} Found
+//                     </span>
+//                     <button
+//                       onClick={() => setSearchQuery('')}
+//                       className="text-white/80 hover:text-white text-sm underline transition"
+//                     >
+//                       Clear Search
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+//                   {displayedBestMatches.map((mentor) => renderMentorCard(mentor, false))}
+//                 </div>
+//               </section>
+//             ) : (
+//               <>
+//                 {displayedBestMatches.length > 0 && (
+//                   <section>
+//                     <div className="mb-6 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 shadow-lg">
+//                       <div className="flex items-center gap-3 mb-2">
+//                         <div className="bg-white/20 p-2 rounded-lg">
+//                           <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+//                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+//                           </svg>
+//                         </div>
+//                         <div>
+//                           <h2 className="text-2xl font-bold text-white">
+//                             ✨ Best Matches for You
+//                           </h2>
+//                           <p className="text-green-100 text-sm">
+//                             These mentors teach skills you want to learn
+//                           </p>
+//                           <div className="flex items-center gap-1.5 mt-1.5">
+//                             <span className="inline-flex items-center gap-1 bg-white/15 text-white/90 text-xs font-medium px-2.5 py-0.5 rounded-full ring-1 ring-white/20">
+//                               <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+//                               </svg>
+//                               Ranked by Skill Match &times; Trust Score
+//                             </span>
+//                           </div>
+//                         </div>
+//                       </div>
+//                       <div className="flex items-center gap-2 mt-3">
+//                         <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
+//                           {displayedBestMatches.length} Perfect {displayedBestMatches.length === 1 ? 'Match' : 'Matches'}
+//                         </span>
+//                         <span className="text-green-100 text-sm">
+//                           Priority recommendations
+//                         </span>
+//                       </div>
+//                     </div>
+
+//                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+//                       {displayedBestMatches.map((mentor) => renderMentorCard(mentor, true))}
+//                     </div>
+//                   </section>
+//                 )}
+
+//                 {displayedOtherMentors.length > 0 && (
+//                   <section>
+//                     <div className="mb-6">
+//                       <div className="flex items-center gap-3 mb-2">
+//                         <div className="bg-gray-100 p-2 rounded-lg">
+//                           <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+//                           </svg>
+//                         </div>
+//                         <div>
+//                           <h2 className="text-2xl font-bold text-gray-900">
+//                             Explore Other Mentors
+//                           </h2>
+//                           <p className="text-gray-600 text-sm">
+//                             Discover mentors teaching different skills
+//                           </p>
+//                         </div>
+//                       </div>
+//                     </div>
+
+//                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+//                       {displayedOtherMentors.map((mentor) => renderMentorCard(mentor, false))}
+//                     </div>
+//                   </section>
+//                 )}
+//               </>
+//             )}
+//           </div>
+//         )}
+
+//         {bestMatches.length === 0 && otherMentors.length === 0 && userGoals.length === 0 && (
+//           <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-dashed border-blue-300 rounded-xl p-8 text-center">
+//             <div className="text-6xl mb-4">🎯</div>
+//             <h3 className="text-xl font-semibold text-gray-800 mb-2">
+//               Set Your Learning Goals
+//             </h3>
+//             <p className="text-gray-600 mb-4">
+//               Define what skills you want to learn to get personalized mentor recommendations!
+//             </p>
+//             <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
+//               Add Learning Goals
+//             </button>
+//           </div>
+//         )}
+//       </main>
+//     </div>
+//   )
+// }
+
+// export default function DiscoverPage() {
+//   return (
+//     <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading mentors...</div>}>
+//       <DiscoverContent />
+//     </Suspense>
+//   )
+// }
 'use client'
 
+/**
+ * MenteeScheduleCalendar — read-only FullCalendar showing only the sessions
+ * where the current user is the MENTEE (learning view). Clicking an event opens
+ * the shared SessionDetailDialog with mentee-appropriate actions.
+ */
+
 import { useUser } from '@/contexts/UserContext'
-import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense, useRef } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { getAutoMatchedMentors, searchMentorsSemantically } from '@/actions/mentor'
 import { getMentorRating } from '@/actions/booking'
+import { Badge } from '@/lib/badges'
+import { ShieldCheck, Zap, Star } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+
+const BADGE_ICON_MAP = {
+  ShieldCheck,
+  Zap,
+  Star,
+} as const
+
+const SYSTEM_BADGE_PRIORITY = ['trusted_expert', 'high_trust', 'rising_star'] as const
+
+type SystemBadgeId = (typeof SYSTEM_BADGE_PRIORITY)[number]
+
+function getHighestPrioritySystemBadge(
+  badges: Badge[],
+  trustScore: number,
+): { id: SystemBadgeId; badge: Badge } | null {
+  for (const id of SYSTEM_BADGE_PRIORITY) {
+    if (id === 'high_trust') {
+      if (trustScore >= 85) {
+        return {
+          id: 'high_trust',
+          badge: {
+            id: 'high_trust',
+            name: 'High Trust',
+            icon: 'ShieldCheck',
+            description: 'Trust Score of 85 or higher',
+            color: {
+              bg: 'bg-emerald-50',
+              text: 'text-emerald-800',
+              ring: 'ring-emerald-400',
+              iconColor: 'text-emerald-600',
+            },
+          },
+        }
+      }
+      continue
+    }
+
+    const earned = badges.find((badge) => badge.id === id)
+    if (earned) {
+      return { id, badge: earned }
+    }
+  }
+
+  return null
+}
+
+function hasQuickResponderBadge(badges: Badge[]): boolean {
+  return badges.some((badge) => badge.id === 'quick_responder')
+}
+
+// 👇 COMPONENT CON CHẠY ĐỘC LẬP: Tự đi lấy rating, không làm nghẽn trang chính
+function MentorRatingSection({ mentorId }: { mentorId: string }) {
+  const [rating, setRating] = useState<{ average: number; count: number } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+    getMentorRating(mentorId)
+      .then((res) => {
+        if (isMounted) {
+          setRating(res)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLoading(false)
+      })
+    return () => { isMounted = false }
+  }, [mentorId])
+
+  if (loading) return <div className="h-4 w-24 bg-gray-100 animate-pulse rounded mt-1"></div>
+
+  if (!rating || rating.count === 0) {
+    return <p className="text-xs text-gray-400 mt-1">No reviews yet</p>
+  }
+
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <div className="flex items-center gap-1">
+        <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+        <span className="text-sm font-semibold text-gray-900">
+          {rating.average.toFixed(1)}
+        </span>
+      </div>
+      <span className="text-xs text-gray-500">
+        ({rating.count} review{rating.count !== 1 ? 's' : ''})
+      </span>
+    </div>
+  )
+}
 
 interface MentorMatch {
   id: string
@@ -24,11 +807,10 @@ interface MentorMatch {
   }>
   matchedSkills: string[]
   matchScore: number
-  rating?: {
-    average: number
-    count: number
-  }
 }
+
+// Bộ nhớ nháp toàn cục lưu data Discover
+let cachedDiscoverData: any = null
 
 function DiscoverContent() {
   const { currentUser, isLoading: userLoading } = useUser()
@@ -40,64 +822,112 @@ function DiscoverContent() {
   const [otherMentors, setOtherMentors] = useState<MentorMatch[]>([])
   const [userGoals, setUserGoals] = useState<string[]>([])
   
-  // FIX 1: Khởi tạo state ngay bằng URL param để tránh load rỗng ban đầu
   const [searchQuery, setSearchQuery] = useState(urlSearchQuery) 
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(urlSearchQuery)
   const [isLoading, setIsLoading] = useState(true)
 
+  const isFetchingRef = useRef(false) // Ổ khóa chống spam gọi trùng API
+
+  const pathname = usePathname()
+  
+  const isFirstRender = useRef(true)
   // Debounce search input (400ms delay)
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     setDebouncedSearchQuery(searchQuery)
+      
+  //     // if (searchQuery.trim()) {
+  //     //   router.replace(`/discover?search=${encodeURIComponent(searchQuery.trim())}`, { scroll: false })
+  //     // } else {
+  //     //   router.replace('/discover', { scroll: false })
+  //     // }
+  //     // BẢO VỆ CHỐNG REDIRECT: Chỉ chạy lệnh nếu vẫn đang đứng ở trang Discover
+  //     if (pathname === '/discover') {
+  //       const currentUrlSearch = searchParams.get('search') || ''
+        
+  //       // Chỉ ra lệnh Replace URL nếu ô search THỰC SỰ bị thay đổi
+  //       if (searchQuery.trim() !== currentUrlSearch) {
+  //         if (searchQuery.trim()) {
+  //           router.replace(`/discover?search=${encodeURIComponent(searchQuery.trim())}`, { scroll: false })
+  //         } else if (currentUrlSearch) {
+  //           router.replace('/discover', { scroll: false })
+  //         }
+  //       }
+  //     }
+  //   }, 400)
+
+  //   return () => clearTimeout(timer)
+  // }, [searchQuery, router, router, searchParams])
+
+  // Debounce search input bọc thép chống Race Condition
+  const initialRender = useRef(true)
   useEffect(() => {
+    let isComponentAlive = true // 1. Cờ sinh mệnh: Đánh dấu trang Discover còn sống
+
     const timer = setTimeout(() => {
+      // 2. NẾU ĐÃ BẤM CHUYỂN TRANG (Component chết) -> TỪ CHỐI THỰC THI LỆNH ĐIỀU HƯỚNG!
+      if (!isComponentAlive) return 
+
       setDebouncedSearchQuery(searchQuery)
       
-      // Update URL without full page reload
-      if (searchQuery.trim()) {
-        router.replace(`/discover?search=${encodeURIComponent(searchQuery.trim())}`, { scroll: false })
-      } else {
-        router.replace('/discover', { scroll: false })
+      if (initialRender.current) {
+        initialRender.current = false
+        return
+      }
+
+      const currentUrlSearch = searchParams.get('search') || ''
+      if (searchQuery !== currentUrlSearch) {
+        if (searchQuery.trim()) {
+          router.replace(`/discover?search=${encodeURIComponent(searchQuery.trim())}`, { scroll: false })
+        } else {
+          router.replace('/discover', { scroll: false })
+        }
       }
     }, 400)
 
-    return () => clearTimeout(timer)
-  }, [searchQuery, router])
-
-  // Sync URL search param to local state (only on initial load or external URL changes)
+    // 3. HÀM TỰ HỦY: Ngay khi user bấm nút rời trang, lập tức hạ cờ sinh mệnh và đập vỡ đồng hồ!
+    return () => {
+      isComponentAlive = false 
+      clearTimeout(timer)
+    }
+  }, [searchQuery, searchParams, router])
+  
+  // Sync URL search param to local state
   useEffect(() => {
     if (urlSearchQuery && urlSearchQuery !== searchQuery) {
       setSearchQuery(urlSearchQuery)
     }
   }, [urlSearchQuery])
 
-  // FIX 2: Dùng cờ isCancelled để chặn Race Condition
   useEffect(() => {
     let isCancelled = false 
-
+    
     async function loadMentors() {
       if (!currentUser) return
-      
+
+      // SỬA LỖI CACHE: Chỉ dùng cache khi KHÔNG tìm kiếm, và phải tắt loading thành công!
+      if (!debouncedSearchQuery.trim() && cachedDiscoverData) {
+        setBestMatches(cachedDiscoverData.bestMatches)
+        setOtherMentors(cachedDiscoverData.otherMentors)
+        setUserGoals(cachedDiscoverData.userGoals)
+        setIsLoading(false) 
+        return
+      }
+
+      if (isFetchingRef.current) return
+      isFetchingRef.current = true
       setIsLoading(true)
 
-      // Check if there's a search query (from URL or manual input)
       if (debouncedSearchQuery.trim()) {
         console.log(`🔍 Performing semantic search for: "${debouncedSearchQuery}"`)
-        
         try {
-          // Use AI semantic search
+          // GỌI BACKEND SIÊU TỐC: Không bọc thêm bất kỳ Promise.all rating nào ở đây nữa!
           const searchResult = await searchMentorsSemantically(debouncedSearchQuery, currentUser.id)
           
-          // Add ratings to search results
-          const mentorsWithRatings = await Promise.all(
-            searchResult.mentors.map(async (mentor) => {
-              const rating = await getMentorRating(mentor.id)
-              return { ...mentor, rating }
-            })
-          )
-          
           if (!isCancelled) {
-            setBestMatches(mentorsWithRatings)
+            setBestMatches(searchResult.mentors)
             setOtherMentors([])
-            setUserGoals([]) // Not applicable for search
-            console.log(`Semantic search found ${mentorsWithRatings.length} relevant mentors`)
+            setUserGoals([]) 
           }
         } catch (error) {
           console.error('Semantic search failed:', error)
@@ -107,30 +937,21 @@ function DiscoverContent() {
           }
         }
       } else {
-        // No search query - use default AI matching based on user profile
         console.log('Loading default AI-matched mentors')
-        
         try {
           const result = await getAutoMatchedMentors(currentUser.id)
           
-          const bestMatchesWithRatings = await Promise.all(
-            result.bestMatches.map(async (mentor) => {
-              const rating = await getMentorRating(mentor.id)
-              return { ...mentor, rating }
-            })
-          )
-          
-          const otherMentorsWithRatings = await Promise.all(
-            result.otherMentors.map(async (mentor) => {
-              const rating = await getMentorRating(mentor.id)
-              return { ...mentor, rating }
-            })
-          )
-          
           if (!isCancelled) {
-            setBestMatches(bestMatchesWithRatings)
-            setOtherMentors(otherMentorsWithRatings)
+            setBestMatches(result.bestMatches)
+            setOtherMentors(result.otherMentors)
             setUserGoals(result.userLearningGoals)
+
+            // Ghi nhớ vào cache để nhảy tab không bị xoay spinner nữa
+            cachedDiscoverData = {
+              bestMatches: result.bestMatches,
+              otherMentors: result.otherMentors,
+              userGoals: result.userLearningGoals,
+            }
           }
         } catch (error) {
           console.error('Auto match failed:', error)
@@ -144,12 +965,14 @@ function DiscoverContent() {
       if (!isCancelled) {
         setIsLoading(false)
       }
+      isFetchingRef.current = false
     }
 
     loadMentors()
 
     return () => {
       isCancelled = true
+      isFetchingRef.current = false
     }
   }, [currentUser, debouncedSearchQuery])
 
@@ -164,7 +987,6 @@ function DiscoverContent() {
     )
   }
 
-  // DevMode: show fallback when no user selected. Production: middleware redirects before we get here.
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -176,7 +998,6 @@ function DiscoverContent() {
     )
   }
 
-  // Check if we're in search mode
   const isSearching = searchQuery.trim().length > 0
   const displayedBestMatches = bestMatches
   const displayedOtherMentors = otherMentors
@@ -189,19 +1010,8 @@ function DiscoverContent() {
       }`}
     >
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        {/* {isMatch && mentor.matchScore > 0 && (
-          <div className="flex items-center gap-2 bg-green-100 px-3 py-1.5 rounded-lg">
-            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm font-bold text-green-800">
-              {Math.round(mentor.matchScore * 100)}% AI Match
-            </span>
-          </div>
-        )} */}
-        {/* Trust score chip — always visible so users can compare at a glance */}
         <div
-          title="Trust Score is calculated from session completion rate, ratings, response time, and reliability."
+          title="Trust Score is calculated from session completion rate..."
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-default ${
             mentor.trustScore >= 85
               ? 'bg-emerald-50 border-emerald-200'
@@ -212,11 +1022,7 @@ function DiscoverContent() {
         >
           <svg
             className={`w-3.5 h-3.5 flex-shrink-0 ${
-              mentor.trustScore >= 85
-                ? 'text-emerald-600'
-                : mentor.trustScore >= 50
-                ? 'text-amber-600'
-                : 'text-red-500'
+              mentor.trustScore >= 85 ? 'text-emerald-600' : mentor.trustScore >= 50 ? 'text-amber-600' : 'text-red-500'
             }`}
             fill="none"
             stroke="currentColor"
@@ -226,11 +1032,7 @@ function DiscoverContent() {
           </svg>
           <span
             className={`text-xs font-semibold ${
-              mentor.trustScore >= 85
-                ? 'text-emerald-700'
-                : mentor.trustScore >= 50
-                ? 'text-amber-700'
-                : 'text-red-600'
+              mentor.trustScore >= 85 ? 'text-emerald-700' : mentor.trustScore >= 50 ? 'text-amber-700' : 'text-red-600'
             }`}
           >
             {mentor.trustScore >= 85 ? 'High Trust · ' : 'Trust: '}
@@ -259,26 +1061,10 @@ function DiscoverContent() {
             </h3>
           </Link>
           <p className="text-sm text-gray-500">{mentor.email}</p>
-          {mentor.rating && mentor.rating.count > 0 && (
-            <Link href={`/profile/${mentor.id}`} className="inline-block group">
-              <div className="flex items-center gap-2 mt-1 group-hover:opacity-80 transition-opacity">
-                <div className="flex items-center gap-1">
-                  <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {mentor.rating.average.toFixed(1)}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500">
-                  ({mentor.rating.count} review{mentor.rating.count !== 1 ? 's' : ''})
-                </span>
-              </div>
-            </Link>
-          )}
-          {mentor.rating && mentor.rating.count === 0 && (
-            <p className="text-xs text-gray-400 mt-1">No reviews yet</p>
-          )}
+          
+          {/* TỐI ƯU HÓA: Thay thế logic cũ bằng Component con gọi Lazy Fetching */}
+          <MentorRatingSection mentorId={mentor.id} />
+          
         </div>
       </div>
 
@@ -307,14 +1093,10 @@ function DiscoverContent() {
                 }`}
               >
                 {skill.isVerified && (
-                  <svg 
-                  className="w-3.5 h-3.5 text-yellow-300" 
-                  fill="currentColor" 
-                  viewBox="0 0 20 20"
-                >
-                  <title>AI Verified Skill</title>
-                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+                  <svg className="w-3.5 h-3.5 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
+                    <title>AI Verified Skill</title>
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
                 )}
                 {skill.name}
                 {isMatched && ' ✓'}
@@ -328,9 +1110,7 @@ function DiscoverContent() {
         <Link
           href={`/profile/${mentor.id}`}
           className={`block w-full text-white text-center py-2.5 rounded-lg font-medium transition ${
-            isMatch
-              ? 'bg-green-600 hover:bg-green-700 shadow-md'
-              : 'bg-purple-600 hover:bg-purple-700'
+            isMatch ? 'bg-green-600 hover:bg-green-700 shadow-md' : 'bg-purple-600 hover:bg-purple-700'
           }`}
         >
           📅 View Available Slots
@@ -358,12 +1138,9 @@ function DiscoverContent() {
             <h1 className="text-3xl font-bold text-gray-900">Smart Mentor Discovery</h1>
           </div>
           <p className="text-gray-600 ml-14">
-            {isSearching
-              ? `Showing results for "${searchQuery}"`
-              : 'AI-powered matching based on your learning goals'}
+            {isSearching ? `Showing results for "${searchQuery}"` : 'AI-powered matching based on your learning goals'}
           </p>
           
-          {/* Search Input */}
           <form onSubmit={(e) => e.preventDefault()} className="mt-4 ml-14 max-w-md">
             <div className="relative">
               <input
@@ -373,30 +1150,13 @@ function DiscoverContent() {
                 placeholder="Search by skill (e.g., ReactJS, Python)..."
                 className="w-full px-4 py-2 pl-10 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition"
               />
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                >
+                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 </button>
               )}
@@ -405,18 +1165,8 @@ function DiscoverContent() {
           
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="inline-flex items-center gap-2 bg-purple-100 px-4 py-2 rounded-lg">
-              <svg
-                className="w-5 h-5 text-purple-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-sm font-semibold text-purple-900">
                 Your Balance: {currentUser.givePoints} GivePoints
@@ -443,15 +1193,10 @@ function DiscoverContent() {
               {isSearching ? `No mentors found for "${searchQuery}"` : 'No Mentors Available'}
             </h2>
             <p className="text-gray-600">
-              {isSearching
-                ? 'Try searching for a different skill or browse all mentors'
-                : 'There are no mentors available at the moment. Check back later!'}
+              {isSearching ? 'Try searching for a different skill or browse all mentors' : 'There are no mentors available at the moment. Check back later!'}
             </p>
             {isSearching && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition"
-              >
+              <button onClick={() => setSearchQuery('')} className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition">
                 Clear Search
               </button>
             )}
@@ -471,19 +1216,14 @@ function DiscoverContent() {
                       <h2 className="text-2xl font-bold text-white">
                         🔍 Search Results for "{searchQuery}"
                       </h2>
-                      <p className="text-purple-100 text-sm">
-                        Mentors teaching skills matching your search
-                      </p>
+                      <p className="text-purple-100 text-sm">Mentors teaching skills matching your search</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
                     <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
                       {displayedBestMatches.length} {displayedBestMatches.length === 1 ? 'Mentor' : 'Mentors'} Found
                     </span>
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="text-white/80 hover:text-white text-sm underline transition"
-                    >
+                    <button onClick={() => setSearchQuery('')} className="text-white/80 hover:text-white text-sm underline transition">
                       Clear Search
                     </button>
                   </div>
@@ -505,12 +1245,8 @@ function DiscoverContent() {
                           </svg>
                         </div>
                         <div>
-                          <h2 className="text-2xl font-bold text-white">
-                            ✨ Best Matches for You
-                          </h2>
-                          <p className="text-green-100 text-sm">
-                            These mentors teach skills you want to learn
-                          </p>
+                          <h2 className="text-2xl font-bold text-white">✨ Best Matches for You</h2>
+                          <p className="text-green-100 text-sm">These mentors teach skills you want to learn</p>
                           <div className="flex items-center gap-1.5 mt-1.5">
                             <span className="inline-flex items-center gap-1 bg-white/15 text-white/90 text-xs font-medium px-2.5 py-0.5 rounded-full ring-1 ring-white/20">
                               <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -525,9 +1261,7 @@ function DiscoverContent() {
                         <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
                           {displayedBestMatches.length} Perfect {displayedBestMatches.length === 1 ? 'Match' : 'Matches'}
                         </span>
-                        <span className="text-green-100 text-sm">
-                          Priority recommendations
-                        </span>
+                        <span className="text-green-100 text-sm">Priority recommendations</span>
                       </div>
                     </div>
 
@@ -547,12 +1281,8 @@ function DiscoverContent() {
                           </svg>
                         </div>
                         <div>
-                          <h2 className="text-2xl font-bold text-gray-900">
-                            Explore Other Mentors
-                          </h2>
-                          <p className="text-gray-600 text-sm">
-                            Discover mentors teaching different skills
-                          </p>
+                          <h2 className="text-2xl font-bold text-gray-900">Explore Other Mentors</h2>
+                          <p className="text-gray-600 text-sm">Discover mentors teaching different skills</p>
                         </div>
                       </div>
                     </div>
@@ -570,12 +1300,8 @@ function DiscoverContent() {
         {bestMatches.length === 0 && otherMentors.length === 0 && userGoals.length === 0 && (
           <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-dashed border-blue-300 rounded-xl p-8 text-center">
             <div className="text-6xl mb-4">🎯</div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              Set Your Learning Goals
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Define what skills you want to learn to get personalized mentor recommendations!
-            </p>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Set Your Learning Goals</h3>
+            <p className="text-gray-600 mb-4">Define what skills you want to learn to get personalized mentor recommendations!</p>
             <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
               Add Learning Goals
             </button>

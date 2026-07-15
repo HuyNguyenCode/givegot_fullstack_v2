@@ -70,27 +70,31 @@ export default function ProfilePage() {
       setBio(currentUser.bio || '')
       setAvatarUrl(currentUser.avatarUrl || '')
 
-      const skills = await getAllAvailableSkills()
+      // Run all 4 independent data fetches in parallel — eliminates sequential waterfall
+      const [skills, rawTeachingSkills, rawLearningGoals, trustDashboard] = await Promise.all([
+        getAllAvailableSkills(),
+        getUserTeachingSkills(currentUser.id),
+        getUserLearningGoals(currentUser.id),
+        getUserTrustDashboard(currentUser.id),
+      ])
+
       setAvailableSkills(skills)
 
-      // const teachingSkills = await getUserTeachingSkills(currentUser.id)
-      // setSelectedTeachingSkills(teachingSkills)
-
-      // const learningGoals = await getUserLearningGoals(currentUser.id)
-      // setSelectedLearningGoals(learningGoals)
-
-      const rawTeachingSkills = await getUserTeachingSkills(currentUser.id)
       const teachingSkills = rawTeachingSkills.map((s: any) => typeof s === 'string' ? s : s.name)
       setSelectedTeachingSkills(teachingSkills)
 
-      const rawLearningGoals = await getUserLearningGoals(currentUser.id)
       const learningGoals = rawLearningGoals.map((s: any) => typeof s === 'string' ? s : s.name)
       setSelectedLearningGoals(learningGoals)
 
-      // Load verification status for teaching skills
-      await loadVerificationStatus(currentUser.id, teachingSkills)
+      // Build verification map directly from getUserTeachingSkills result.
+      // isVerified is already included in each skill object — no extra DB round trips needed.
+      const verified: Record<string, boolean> = {}
+      rawTeachingSkills.forEach((s: any) => {
+        const name = typeof s === 'string' ? s : s.name
+        verified[name] = typeof s === 'object' && s !== null && 'isVerified' in s ? s.isVerified : false
+      })
+      setVerifiedSkills(verified)
 
-      const trustDashboard = await getUserTrustDashboard(currentUser.id)
       setTrustData(trustDashboard)
 
       setIsLoading(false)
@@ -100,15 +104,12 @@ export default function ProfilePage() {
   }, [currentUser?.id])
 
   const loadVerificationStatus = async (userId: string, skills: string[]) => {
+    // Refresh verification state with a single batched call instead of one call per skill.
+    const freshSkills = await getUserTeachingSkills(userId)
     const verified: Record<string, boolean> = {}
-    
-    for (const skillName of skills) {
-      const userSkill = await getUserSkillDetails(userId, skillName, 'GIVE')
-      if (userSkill) {
-        verified[skillName] = userSkill.isVerified
-      }
-    }
-    
+    freshSkills.forEach(s => {
+      verified[s.name] = s.isVerified
+    })
     setVerifiedSkills(verified)
   }
 

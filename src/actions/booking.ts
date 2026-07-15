@@ -281,8 +281,10 @@ export async function createBooking(
 
     console.log('Creating booking:', { mentorId, menteeId, startTime, endTime, note })
 
-    const mentee = await prisma.user.findUnique({ where: { id: menteeId } })
-    const mentor = await prisma.user.findUnique({ where: { id: mentorId } })
+    const [mentee, mentor] = await Promise.all([
+      prisma.user.findUnique({ where: { id: menteeId }, select: { id: true, givePoints: true } }),
+      prisma.user.findUnique({ where: { id: mentorId }, select: { id: true } }),
+    ])
 
     if (!mentee || !mentor) {
       return { success: false, message: 'User not found' }
@@ -374,28 +376,54 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
     }
 
     // Fetch both participants in parallel — needed for Meet link and notification
+    // const [mentor, mentee] = await Promise.all([
+    //   prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } }),
+    //   prisma.user.findUnique({ where: { id: booking.menteeId }, select: { name: true, email: true } }),
+    // ])
+
+    // // Attempt Google Meet creation. Non-fatal: booking proceeds even if this fails.
+    // let meetingUrl: string | null = null
+    // if (mentor?.email && mentee?.email) {
+    //   meetingUrl = await createGoogleMeetLink(
+    //     booking.startTime,
+    //     booking.endTime,
+    //     mentee.email,
+    //     mentor.email
+    //   )
+    // }
+    // Fetch both participants in parallel
     const [mentor, mentee] = await Promise.all([
       prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } }),
       prisma.user.findUnique({ where: { id: booking.menteeId }, select: { name: true, email: true } }),
     ])
 
-    // Attempt Google Meet creation. Non-fatal: booking proceeds even if this fails.
+    // 👇 MÁY PHÁT HIỆN NÓI DỐI 👇
+    console.log("=========================================")
+    console.log("🕵️ KIỂM TRA ĐIỀU KIỆN TẠO GOOGLE MEET")
+    console.log("Mentor:", mentor)
+    console.log("Mentee:", mentee)
+    console.log("=========================================")
+
+    // Attempt Google Meet creation.
     let meetingUrl: string | null = null
+    
     if (mentor?.email && mentee?.email) {
+      console.log("✅ Cả 2 đều có email! Bắt đầu gọi Google API...");
       meetingUrl = await createGoogleMeetLink(
         booking.startTime,
         booking.endTime,
         mentee.email,
         mentor.email
       )
+      console.log("✅ Kết quả Google trả về:", meetingUrl);
+    } else {
+      console.log("❌ LỖI RỒI: Một trong 2 người KHÔNG CÓ EMAIL, hệ thống tự động HỦY BỎ việc tạo link!");
     }
 
     // Persist CONFIRMED status and Meet URL atomically
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await prisma.booking.update({
       where: { id: bookingId },
-      // meetingUrl is valid after `prisma db push`; cast needed until `prisma generate` re-runs
-      data: { status: BookingStatus.CONFIRMED, meetingUrl } as any,
+      data: { status: BookingStatus.CONFIRMED, meetingUrl },
     })
 
     revalidatePath('/')
@@ -432,7 +460,6 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
   try {
     const booking = await prisma.booking.findUnique({ 
       where: { id: bookingId },
-      include: { slot: true }
     })
 
     if (!booking) {
@@ -526,7 +553,6 @@ export async function completeSessionWithReview(
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { mentor: true, mentee: true },
     })
 
     if (!booking) return { success: false, message: 'Booking not found' }
@@ -539,6 +565,17 @@ export async function completeSessionWithReview(
         message: `Cannot complete booking with status: ${booking.status}. Booking must be confirmed first.`,
       }
     }
+    
+    // ---- THÊM ĐOẠN CHẶN THỜI GIAN NÀY VÀO ĐÂY ----
+    // Bắt buộc thời gian hiện tại phải lớn hơn hoặc bằng thời gian kết thúc của session
+    if (new Date() < new Date(booking.endTime)) {
+      return { 
+        success: false, 
+        message: 'Cannot complete a session that has not ended yet.' 
+      }
+    }
+    // ---------------------------------------------
+
     if (rating < 1 || rating > 5) {
       return { success: false, message: 'Rating must be between 1 and 5' }
     }
@@ -605,7 +642,7 @@ export async function completeSessionWithReview(
     // We detect this by counting AFTER the new review was committed.
     const totalReviews = await prisma.review.count({ where: { authorId: menteeId } })
 
-    if (totalReviews === 4) {
+    if (totalReviews > 0 && totalReviews % 3 === 0 && comment && comment.length >= 100) {
       const menteeData = await prisma.user.findUnique({
         where: { id: menteeId },
         select: { trustScore: true },

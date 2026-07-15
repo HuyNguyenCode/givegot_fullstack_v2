@@ -1,5 +1,5 @@
 'use client'
-
+import { Suspense } from 'react'
 import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -100,7 +100,7 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
-export default function WalletPage() {
+function WalletContent() {
   const { currentUser, isLoading: userLoading, refreshUser } = useUser()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -457,5 +457,26 @@ export default function WalletPage() {
         </div>
       )}
     </div>
+  )
+  
+}
+
+
+export default function WalletPage() {
+  return (
+    // Bọc Suspense ở ngoài cùng. 
+    // fallback là giao diện sẽ hiển thị tạm trong lúc chờ đọc URL
+    <Suspense 
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+            <p className="text-sm text-gray-500 font-medium">Loading wallet data...</p>
+          </div>
+        </div>
+      }
+    >
+      <WalletContent />
+    </Suspense>
   )
 }

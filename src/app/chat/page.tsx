@@ -228,7 +228,7 @@ function ChatContent() {
     }
 
     load()
-  }, [selectedConvId, currentUser, scrollToBottom])
+  }, [selectedConvId, currentUser?.id, scrollToBottom])
 
   // ── Pusher: subscribe to selected conversation's channel ──────────────────
   // React's effect cleanup guarantees the previous return-cleanup runs before
@@ -279,11 +279,11 @@ function ChatContent() {
   }, [selectedConvId])
 
   // ── Cleanup Pusher connection on unmount ───────────────────────────────────
-  useEffect(() => {
-    return () => {
-      getPusherClient()?.disconnect()
-    }
-  }, [])
+  // useEffect(() => {
+  //   return () => {
+  //     getPusherClient()?.disconnect()
+  //   }
+  // }, [])
 
   // ── Actions ────────────────────────────────────────────────────────────────
 

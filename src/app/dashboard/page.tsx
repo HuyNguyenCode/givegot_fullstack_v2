@@ -53,15 +53,19 @@ export default function DashboardPage() {
 
   const loadBookings = async () => {
     if (!currentUser) return
-    
     setIsLoading(true)
-    await refreshUser()
-    const bookings = await getMyBookings(currentUser.id)
+    
+    // refreshUser không nhất thiết phải block việc lấy dữ liệu
+    refreshUser(); 
+  
+    // Chạy 2 truy vấn database CÙNG LÚC
+    const [bookings, rawLearningGoals] = await Promise.all([
+      getMyBookings(currentUser.id),
+      getUserLearningGoals(currentUser.id)
+    ]);
+  
     setMentoringBookings(bookings.asMentor)
     setLearningBookings(bookings.asMentee)
-    
-    // Load learning goals with roadmaps for the roadmap cards
-    const rawLearningGoals = await getUserLearningGoals(currentUser.id)
     setLearningSkillsWithRoadmap(rawLearningGoals)
     
     setIsLoading(false)
@@ -237,7 +241,7 @@ export default function DashboardPage() {
   const isNearSession = (startTime: Date, endTime: Date): boolean => {
     const start = new Date(startTime)
     const end = new Date(endTime)
-    const tenMinBefore = new Date(start.getTime() - 10 * 60 * 1000)
+    const tenMinBefore = new Date(start.getTime() - 15 * 60 * 1000)
     return currentTime >= tenMinBefore && currentTime <= end
   }
 
@@ -557,8 +561,10 @@ export default function DashboardPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {mentoringBookings.map((booking) => (
+              <>
+                <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-4">
+                    {mentoringBookings.slice(0, 10).map((booking) => (
                   <div
                     key={booking.id}
                     className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-600"
@@ -682,8 +688,13 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </div>
+                <a href="#" className="text-sm text-blue-500 hover:underline mt-4 inline-block">
+                  View all sessions &rarr;
+                </a>
+              </>
             )}
           </section>
 
@@ -709,8 +720,10 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
-                {learningBookings.map((booking) => (
+              <>
+                <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-4">
+                    {learningBookings.slice(0, 10).map((booking) => (
                   <div
                     key={booking.id}
                     className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-600"
@@ -842,8 +855,13 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </div>
+                <a href="#" className="text-sm text-blue-500 hover:underline mt-4 inline-block">
+                  View all sessions &rarr;
+                </a>
+              </>
             )}
           </section>
         </div>

@@ -83,35 +83,6 @@ export async function getAutoMatchedMentors(currentUserId: string) {
     
    const ilikePatterns = userLearningGoalNames.map(name => `%${name}%`)
 
-  // --- START DEBUG BLOCK ---
-  // 1. Count APPROVED WANT skills (with embeddings) for the current user
-  const debugWantCount = await prisma.$queryRaw<{ count: bigint }[]>`
-    SELECT COUNT(*) as count
-    FROM "UserSkill" us
-    INNER JOIN "Skill" s ON s.id = us."skillId"
-    WHERE us."userId" = ${currentUserId}
-      AND us.type = 'WANT'
-      AND s.embedding IS NOT NULL
-      AND s.status = 'APPROVED'
-  `
-  console.log('[DEBUG] APPROVED WANT skills with embeddings for current user:', Number(debugWantCount[0].count))
-
-  // 2. Count Mentors with at least one APPROVED GIVE skill with embeddings
-  const debugGiveCount = await prisma.$queryRaw<{ count: bigint }[]>`
-    SELECT COUNT(DISTINCT u.id) as count
-    FROM "User" u
-    INNER JOIN "UserSkill" us_give ON us_give."userId" = u.id AND us_give.type = 'GIVE'
-    INNER JOIN "Skill" s_give ON s_give.id = us_give."skillId"
-      AND s_give.status = 'APPROVED'
-      AND s_give.embedding IS NOT NULL
-    WHERE u.id != ${currentUserId}
-  `
-  console.log('[DEBUG] Mentors with APPROVED GIVE skills with embeddings:', Number(debugGiveCount[0].count))
-
-  // 3. Log the raw IDs of the fetched userLearningSkills
-  console.log('[DEBUG] userLearningSkills IDs:', userLearningSkills.map(us => ({ userSkillId: us.id, skillId: us.skillId, skillName: us.skill.name, skillStatus: (us.skill as any).status })))
-  // --- END DEBUG BLOCK ---
-
    const rawMentors = await prisma.$queryRaw<GranularMatchResult[]>`
      SELECT 
        u.id,
@@ -171,46 +142,51 @@ export async function getAutoMatchedMentors(currentUserId: string) {
 
     console.log(`Found ${rawMentors.length} mentors via granular skill-level search`)
 
-    // Step 3: Enrich with full teaching skills and isVerified status
-    const mentorsWithSkills = await Promise.all(
-      rawMentors.map(async (mentor) => {
-        const skills = await prisma.userSkill.findMany({
-          where: {
-            userId: mentor.id,
-            type: SkillType.GIVE,
-          },
-          include: {
-            skill: true,
-          },
-        })
+    // Step 3: Enrich with teaching skills — single batched query instead of N separate queries
+    const mentorIds = rawMentors.map(m => m.id)
+    const allMentorSkills = await prisma.userSkill.findMany({
+      where: {
+        userId: { in: mentorIds },
+        type: SkillType.GIVE,
+        skill: { status: 'APPROVED' },
+      },
+      select: {
+        userId: true,
+        isVerified: true,
+        skill: { select: { id: true, name: true, slug: true } },
+      },
+    })
 
-        // Filter to only include APPROVED skills
-        const approvedSkills = skills.filter(us => (us.skill as any).status === 'APPROVED')
+    const skillsByMentor = new Map<string, typeof allMentorSkills>()
+    for (const us of allMentorSkills) {
+      if (!skillsByMentor.has(us.userId)) skillsByMentor.set(us.userId, [])
+      skillsByMentor.get(us.userId)!.push(us)
+    }
 
-        const teachingSkills = approvedSkills.map(us => ({
-          id: us.skill.id,
-          name: us.skill.name,
-          slug: us.skill.slug,
-          isVerified: us.isVerified,
-        }))
+    const mentorsWithSkills = rawMentors.map((mentor) => {
+      const mentorSkills = skillsByMentor.get(mentor.id) ?? []
 
-        // Identify which skills are matched (exist in user's learning goals)
-        const matchedSkills = teachingSkills
-          .filter(skill => userLearningGoalNames.includes(skill.name))
-          .map(skill => skill.name)
+      const teachingSkills = mentorSkills.map(us => ({
+        id: us.skill.id,
+        name: us.skill.name,
+        slug: us.skill.slug,
+        isVerified: us.isVerified,
+      }))
 
-        // Trust-weighted match score: a mentor with higher trust floats up the rankings
-        const adjustedScore = mentor.maxSimilarity * (mentor.trustScore / 100)
+      const matchedSkills = teachingSkills
+        .filter(skill => userLearningGoalNames.includes(skill.name))
+        .map(skill => skill.name)
 
-        return {
-          ...mentor,
-          teachingSkills,
-          matchedSkills,
-          matchScore: adjustedScore,
-          similarity: mentor.maxSimilarity,
-        }
-      })
-    )
+      const adjustedScore = mentor.maxSimilarity * (mentor.trustScore / 100)
+
+      return {
+        ...mentor,
+        teachingSkills,
+        matchedSkills,
+        matchScore: adjustedScore,
+        similarity: mentor.maxSimilarity,
+      }
+    })
 
     console.log('\nGRANULAR SKILL-LEVEL MATCH SCORES (trust-weighted):')
     mentorsWithSkills.forEach(m => {
@@ -291,13 +267,21 @@ export async function getAutoMatchedMentors(currentUserId: string) {
             },
           },
         },
-        include: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatarUrl: true,
+          bio: true,
+          givePoints: true,
+          trustScore: true,
+          createdAt: true,
+          updatedAt: true,
           skills: {
-            where: {
-              type: SkillType.GIVE,
-            },
-            include: {
-              skill: true,
+            where: { type: SkillType.GIVE },
+            select: {
+              isVerified: true,
+              skill: { select: { id: true, name: true, slug: true } },
             },
           },
         },
@@ -368,13 +352,21 @@ export async function getMentors(excludeUserId?: string) {
           },
         },
       },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        bio: true,
+        givePoints: true,
+        trustScore: true,
+        createdAt: true,
+        updatedAt: true,
         skills: {
-          where: {
-            type: SkillType.GIVE,
-          },
-          include: {
-            skill: true,
+          where: { type: SkillType.GIVE },
+          select: {
+            isVerified: true,
+            skill: { select: { id: true, name: true, slug: true, category: true, status: true } },
           },
         },
       },
@@ -384,7 +376,7 @@ export async function getMentors(excludeUserId?: string) {
       ...mentor,
       teachingSkills: mentor.skills.map(us => ({
         ...us.skill,
-        isVerified: us.isVerified, 
+        isVerified: us.isVerified,
       })),
     }))
   } catch (error) {
@@ -397,13 +389,21 @@ export async function getMentorById(mentorId: string) {
   try {
     const mentor = await prisma.user.findUnique({
       where: { id: mentorId },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        bio: true,
+        givePoints: true,
+        trustScore: true,
+        createdAt: true,
+        updatedAt: true,
         skills: {
-          where: {
-            type: SkillType.GIVE,
-          },
-          include: {
-            skill: true,
+          where: { type: SkillType.GIVE },
+          select: {
+            isVerified: true,
+            skill: { select: { id: true, name: true, slug: true, category: true, status: true } },
           },
         },
       },
@@ -417,7 +417,7 @@ export async function getMentorById(mentorId: string) {
       ...mentor,
       teachingSkills: mentor.skills.map(us => ({
         ...us.skill,
-        isVerified: us.isVerified, 
+        isVerified: us.isVerified,
       })),
     }
   } catch (error) {
@@ -523,49 +523,54 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
     console.log(`   - Keyword matches: ${rawResults.filter(r => r.hasKeywordMatch).length}`)
     console.log(`   - Pure semantic matches: ${rawResults.filter(r => !r.hasKeywordMatch).length}`)
 
-    // Step C: Enrich with full teaching skills and isVerified status
-    const mentorsWithSkills = await Promise.all(
-      rawResults.map(async (mentor) => {
-        const skills = await prisma.userSkill.findMany({
-          where: {
-            userId: mentor.id,
-            type: SkillType.GIVE,
-          },
-          include: {
-            skill: true,
-          },
-        })
+    // Step C: Enrich with teaching skills — single batched query instead of N separate queries
+    const searchMentorIds = rawResults.map(m => m.id)
+    const allSearchMentorSkills = await prisma.userSkill.findMany({
+      where: {
+        userId: { in: searchMentorIds },
+        type: SkillType.GIVE,
+        skill: { status: 'APPROVED' },
+      },
+      select: {
+        userId: true,
+        isVerified: true,
+        skill: { select: { id: true, name: true, slug: true } },
+      },
+    })
 
-        // Filter to only include APPROVED skills
-        const approvedSkills = skills.filter(us => (us.skill as any).status === 'APPROVED')
+    const searchSkillsByMentor = new Map<string, typeof allSearchMentorSkills>()
+    for (const us of allSearchMentorSkills) {
+      if (!searchSkillsByMentor.has(us.userId)) searchSkillsByMentor.set(us.userId, [])
+      searchSkillsByMentor.get(us.userId)!.push(us)
+    }
 
-        const teachingSkills = approvedSkills.map(us => ({
-          id: us.skill.id,
-          name: us.skill.name,
-          slug: us.skill.slug,
-          isVerified: us.isVerified,
-        }))
+    const mentorsWithSkills = rawResults.map((mentor) => {
+      const mentorSkills = searchSkillsByMentor.get(mentor.id) ?? []
 
-        // Identify which skills are keyword matches (for UI highlighting)
-        const matchedSkills = teachingSkills
-          .filter(skill => 
-            skill.name.toLowerCase().includes(queryLower) ||
-            skill.slug.toLowerCase().includes(queryLower)
-          )
-          .map(skill => skill.name)
+      const teachingSkills = mentorSkills.map(us => ({
+        id: us.skill.id,
+        name: us.skill.name,
+        slug: us.skill.slug,
+        isVerified: us.isVerified,
+      }))
 
-        // Trust-weighted score for search results
-        const adjustedScore = mentor.maxSimilarity * (mentor.trustScore / 100)
+      const matchedSkills = teachingSkills
+        .filter(skill =>
+          skill.name.toLowerCase().includes(queryLower) ||
+          skill.slug.toLowerCase().includes(queryLower)
+        )
+        .map(skill => skill.name)
 
-        return {
-          ...mentor,
-          teachingSkills,
-          matchedSkills, // Skills that directly match the keyword
-          matchScore: adjustedScore,
-          similarity: mentor.maxSimilarity,
-        }
-      })
-    )
+      const adjustedScore = mentor.maxSimilarity * (mentor.trustScore / 100)
+
+      return {
+        ...mentor,
+        teachingSkills,
+        matchedSkills,
+        matchScore: adjustedScore,
+        similarity: mentor.maxSimilarity,
+      }
+    })
 
     // Sort purely by finalScore (= similarity × trustScore/100) so the list
     // matches the UI label "Ranked by Skill Match × Trust Score".

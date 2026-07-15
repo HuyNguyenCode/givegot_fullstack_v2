@@ -13,6 +13,10 @@ interface MenteeBookingCalendarProps {
   currentUserPoints: number
   bookingDisabled?: boolean
   pendingReviewCount?: number
+  /** Pre-fetched slots from the parent Server Component. When provided the
+   *  component skips the client-side fetch on mount and renders immediately.
+   *  After a booking or error the component still calls loadSlots() to refresh. */
+  initialSlots?: AvailableSlot[]
 }
 
 interface AvailableSlot {
@@ -29,10 +33,23 @@ export default function MenteeBookingCalendar({
   currentUserPoints,
   bookingDisabled = false,
   pendingReviewCount = 0,
+  initialSlots,
 }: MenteeBookingCalendarProps) {
   const router = useRouter()
-  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+
+  // When the parent Server Component pre-fetches slots, seed state immediately
+  // so the calendar renders without any loading spinner. The same defensive
+  // filter (isBooked=false & startTime in future) is applied here to guard
+  // against any slots that expired between the server render and hydration.
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>(() => {
+    if (!initialSlots) return []
+    const now = new Date()
+    return initialSlots.filter((s) => !s.isBooked && new Date(s.startTime) > now)
+  })
+
+  // Start in a non-loading state when server-fetched slots are provided.
+  const [isLoading, setIsLoading] = useState(initialSlots === undefined)
+
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [bookingNote, setBookingNote] = useState('')
@@ -55,7 +72,13 @@ export default function MenteeBookingCalendar({
   }
 
   useEffect(() => {
-    loadSlots()
+    // When initialSlots is provided by the parent Server Component the data is
+    // already in state — skip the redundant client-side fetch on mount.
+    // loadSlots() is still called after a booking or error to refresh live data.
+    if (initialSlots === undefined) {
+      loadSlots()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mentorId])
 
   const handleSlotClick = (slot: AvailableSlot) => {

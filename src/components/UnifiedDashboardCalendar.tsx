@@ -94,7 +94,7 @@ function resolveEventStyle(
     if (status === 'DISPUTED')  return { ...slate, icon: '⚖️',  label: 'Disputed'   }
     if (status === 'CANCELLED') return { ...slate, icon: '✕',   label: 'Cancelled'  }
     // CONFIRMED past → "Missed / not-yet-reviewed"
-    return { ...slate, icon: '⏰', label: 'Missed' }
+    return { ...slate, icon: '🎓', label: 'Completed' }
   }
 
   // ── Priority 2: Future by role ────────────────────────────────────────────

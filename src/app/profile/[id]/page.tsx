@@ -8,6 +8,7 @@ import {
   checkReviewGate,
 } from '@/actions/booking'
 import { getUserTrustDashboard } from '@/actions/analytics'
+import { getAvailableSlots } from '@/actions/slots'
 import TrustReputationCard from '@/components/TrustReputationCard'
 import MenteeBookingCalendar from '@/components/MenteeBookingCalendar'
 import Image from 'next/image'
@@ -41,6 +42,13 @@ export default async function PublicProfilePage({
 }) {
   const { id } = await params
 
+
+  const resolvedParams = await params
+  const rawId = resolvedParams.id
+  
+  // Đảm bảo ID không bị dính ký tự mã hóa URL
+  const cleanId = decodeURIComponent(rawId)
+
   // ── 1. Fetch profile subject ───────────────────────────────────────────────
   const profileUser = await prisma.user.findUnique({
     where: { id },
@@ -56,7 +64,12 @@ export default async function PublicProfilePage({
     },
   })
 
-  if (!profileUser) notFound()
+  // if (!profileUser) notFound()
+  if (!profileUser) {
+    console.error(`[Profile Page Error] User not found for ID: "${cleanId}" (Raw: "${rawId}")`)
+    notFound()
+  }
+
 
   // ── 2. Current session & ownership ────────────────────────────────────────
   const session = await auth()
@@ -71,19 +84,23 @@ export default async function PublicProfilePage({
     getUserTrustDashboard(id),
   ])
 
-  // ── 4. Viewer-specific data (review gate + points balance) ─────────────────
+  // ── 4. Viewer-specific data (review gate + points balance + available slots) ─
   // Only needed when someone else is viewing the profile so they can book.
   type ReviewGate = Awaited<ReturnType<typeof checkReviewGate>>
+  type SlotList = Awaited<ReturnType<typeof getAvailableSlots>>
   let reviewGate: ReviewGate = { blocked: false, pendingCount: 0, sessions: [] }
   let viewerPoints = 0
+  let initialSlots: SlotList = []
 
   if (viewerId && !isOwner) {
-    const [gate, viewer] = await Promise.all([
+    const [gate, viewer, slots] = await Promise.all([
       checkReviewGate(viewerId),
       prisma.user.findUnique({ where: { id: viewerId }, select: { givePoints: true } }),
+      getAvailableSlots(id),
     ])
     reviewGate = gate
     viewerPoints = viewer?.givePoints ?? 0
+    initialSlots = slots
   }
 
   const hasTeachingSkills = teachingSkills.length > 0
@@ -340,6 +357,7 @@ export default async function PublicProfilePage({
                       currentUserPoints={viewerPoints}
                       bookingDisabled={reviewGate.blocked}
                       pendingReviewCount={reviewGate.pendingCount}
+                      initialSlots={initialSlots}
                     />
                   </>
                 ) : (
