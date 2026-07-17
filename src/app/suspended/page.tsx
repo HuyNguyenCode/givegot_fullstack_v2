@@ -3,7 +3,7 @@ import { ShieldOff, Mail } from 'lucide-react'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Account Suspended — GiveGot',
+  title: 'Tài khoản Bị Tạm Ngưng — GiveGot',
 }
 
 /**
@@ -24,9 +24,9 @@ export default function SuspendedPage() {
             <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mb-4">
               <ShieldOff size={40} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Account Suspended</h1>
+            <h1 className="text-2xl font-bold text-white">Tài khoản Bị Tạm Ngưng</h1>
             <p className="text-red-100 mt-2 text-sm leading-relaxed">
-              Your account has been temporarily restricted by an administrator.
+              Tài khoản của bạn đã tạm thời bị hạn chế bởi quản trị viên.
             </p>
           </div>
 
@@ -34,9 +34,9 @@ export default function SuspendedPage() {
           <div className="px-8 py-8 space-y-6">
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
               <p className="text-sm text-orange-800 leading-relaxed">
-                Access to GiveGot has been restricted. This may be due to a
-                violation of our community guidelines or a pending review.
-                If you believe this is a mistake, please contact support.
+                Quyền truy cập GiveGot của bạn đã bị hạn chế. Điều này có thể do
+                vi phạm quy tắc cộng đồng hoặc đang trong quá trình xem xét.
+                Nếu bạn cho rằng đây là nhầm lẫn, vui lòng liên hệ bộ phận hỗ trợ.
               </p>
             </div>
 
@@ -44,16 +44,16 @@ export default function SuspendedPage() {
             <div className="flex items-start gap-3">
               <Mail size={18} className="text-purple-500 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-gray-800">Contact Support</p>
+                <p className="text-sm font-semibold text-gray-800">Liên hệ Hỗ trợ</p>
                 <p className="text-sm text-gray-600 mt-0.5">
-                  Email us at{' '}
+                  Gửi email cho chúng mình tại{' '}
                   <a
                     href="mailto:support@givegot.app"
                     className="text-purple-600 hover:text-purple-800 font-medium underline underline-offset-2"
                   >
                     support@givegot.app
                   </a>{' '}
-                  and include your registered email address.
+                  và kèm theo địa chỉ email đã đăng ký của bạn.
                 </p>
               </div>
             </div>
@@ -63,7 +63,7 @@ export default function SuspendedPage() {
             <SignOutButton />
 
             <p className="text-center text-xs text-gray-400">
-              GiveGot · Time-Banking Mentorship Platform
+              GiveGot · Nền tảng Mentorship Time-Banking
             </p>
           </div>
         </div>

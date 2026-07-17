@@ -66,7 +66,7 @@ export default function SkillsPage() {
 
   const handleCreateSkill = async () => {
     if (!createForm.name.trim()) {
-      alert('Please enter a skill name')
+      alert('Vui lòng nhập tên kỹ năng')
       return
     }
 
@@ -117,7 +117,7 @@ export default function SkillsPage() {
   }
 
   const handleDeleteSkill = async (skillId: string, skillName: string) => {
-    if (!confirm(`Are you sure you want to DELETE the skill "${skillName}"? This action cannot be undone.`)) {
+    if (!confirm(`Bạn có chắc chắn muốn XÓA kỹ năng "${skillName}"? Hành động này không thể hoàn tác.`)) {
       return
     }
 
@@ -143,7 +143,7 @@ export default function SkillsPage() {
   }
 
   const handleReject = async (skillId: string) => {
-    if (!confirm('Are you sure you want to reject this skill?')) return
+    if (!confirm('Bạn có chắc chắn muốn từ chối kỹ năng này?')) return
 
     setProcessingId(skillId)
     const result = await rejectSkill(skillId)
@@ -186,38 +186,38 @@ export default function SkillsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Skill Management</h2>
-          <p className="text-gray-600">Full CRUD operations for platform skills</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Quản lý kỹ năng</h2>
+          <p className="text-gray-600">Quản lý đầy đủ (thêm/sửa/xóa) các kỹ năng trên nền tảng</p>
         </div>
         <button
           onClick={openCreateModal}
           className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition shadow-md"
         >
           <Plus className="w-5 h-5" />
-          Create Master Skill
+          Tạo kỹ năng chuẩn
         </button>
       </div>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Total Skills</div>
+          <div className="text-sm text-gray-600">Tổng số kỹ năng</div>
           <div className="text-2xl font-bold text-gray-900">{skills.length}</div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Pending Review</div>
+          <div className="text-sm text-gray-600">Đang chờ duyệt</div>
           <div className="text-2xl font-bold text-orange-600">
             {skills.filter(s => s.status === 'PENDING').length}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Approved</div>
+          <div className="text-sm text-gray-600">Đã duyệt</div>
           <div className="text-2xl font-bold text-green-600">
             {skills.filter(s => s.status === 'APPROVED').length}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Rejected</div>
+          <div className="text-sm text-gray-600">Đã từ chối</div>
           <div className="text-2xl font-bold text-red-600">
             {skills.filter(s => s.status === 'REJECTED').length}
           </div>
@@ -235,7 +235,7 @@ export default function SkillsPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search skills..."
+                placeholder="Tìm kiếm kỹ năng..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
               />
             </div>
@@ -247,10 +247,10 @@ export default function SkillsPage() {
             onChange={(e) => setStatusFilter(e.target.value as any)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="all">Tất cả trạng thái</option>
+            <option value="pending">Đang chờ duyệt</option>
+            <option value="approved">Đã duyệt</option>
+            <option value="rejected">Đã từ chối</option>
           </select>
 
           {/* Category Filter */}
@@ -259,7 +259,7 @@ export default function SkillsPage() {
             onChange={(e) => setCategoryFilter(e.target.value as 'all' | SkillCategory)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
-            <option value="all">All Categories</option>
+            <option value="all">Tất cả danh mục</option>
             {SKILL_CATEGORY_ORDER.map(cat => (
               <option key={cat} value={cat}>{SKILL_CATEGORY_LABELS[cat]}</option>
             ))}
@@ -267,7 +267,7 @@ export default function SkillsPage() {
         </div>
 
         <div className="mt-3 text-sm text-gray-600">
-          Showing {filteredSkills.length} of {skills.length} skills
+          Hiển thị {filteredSkills.length} trong số {skills.length} kỹ năng
         </div>
       </div>
 
@@ -275,8 +275,8 @@ export default function SkillsPage() {
       {filteredSkills.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
           <CheckCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Skills Found</h3>
-          <p className="text-gray-600">Try adjusting your filters or create a new skill</p>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Không tìm thấy kỹ năng nào</h3>
+          <p className="text-gray-600">Hãy thử điều chỉnh bộ lọc hoặc tạo kỹ năng mới</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -285,22 +285,22 @@ export default function SkillsPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Skill Name
+                    Tên kỹ năng
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
+                    Danh mục
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Trạng thái
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Users
+                    Người dùng
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
+                    Ngày tạo
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    Hành động
                   </th>
                 </tr>
               </thead>
@@ -322,7 +322,7 @@ export default function SkillsPage() {
                           <>
                             <Clock className="w-4 h-4 text-orange-600" />
                             <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">
-                              PENDING
+                              Đang chờ duyệt
                             </span>
                           </>
                         )}
@@ -330,7 +330,7 @@ export default function SkillsPage() {
                           <>
                             <CheckCircle className="w-4 h-4 text-green-600" />
                             <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                              APPROVED
+                              Đã duyệt
                             </span>
                           </>
                         )}
@@ -338,7 +338,7 @@ export default function SkillsPage() {
                           <>
                             <XCircle className="w-4 h-4 text-red-600" />
                             <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                              REJECTED
+                              Đã từ chối
                             </span>
                           </>
                         )}
@@ -361,7 +361,7 @@ export default function SkillsPage() {
                               onClick={() => handleApprove(skill.id)}
                               disabled={processingId === skill.id}
                               className="text-green-600 hover:text-green-800 p-1"
-                              title="Approve"
+                              title="Duyệt"
                             >
                               <CheckCircle className="w-4 h-4" />
                             </button>
@@ -369,7 +369,7 @@ export default function SkillsPage() {
                               onClick={() => handleReject(skill.id)}
                               disabled={processingId === skill.id}
                               className="text-red-600 hover:text-red-800 p-1"
-                              title="Reject"
+                              title="Từ chối"
                             >
                               <XCircle className="w-4 h-4" />
                             </button>
@@ -378,14 +378,14 @@ export default function SkillsPage() {
                         <button
                           onClick={() => openEditModal(skill)}
                           className="text-blue-600 hover:text-blue-800 p-1"
-                          title="Edit Skill"
+                          title="Sửa kỹ năng"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteSkill(skill.id, skill.name)}
                           className="text-red-600 hover:text-red-800 p-1"
-                          title="Delete Skill"
+                          title="Xóa kỹ năng"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -404,29 +404,29 @@ export default function SkillsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Create Master Skill
+              Tạo kỹ năng chuẩn
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Master skills are pre-approved and immediately available to all users.
+              Kỹ năng chuẩn được duyệt sẵn và có thể sử dụng ngay cho tất cả người dùng.
             </p>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Skill Name *
+                  Tên kỹ năng *
                 </label>
                 <input
                   type="text"
                   value={createForm.name}
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="e.g., Advanced React Development"
+                  placeholder="Ví dụ: Lập trình React nâng cao"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category *
+                  Danh mục *
                 </label>
                 <select
                   value={createForm.category}
@@ -446,14 +446,14 @@ export default function SkillsPage() {
                 disabled={isSavingCreate}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 transition"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 onClick={handleCreateSkill}
                 disabled={isSavingCreate}
                 className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-300"
               >
-                {isSavingCreate ? 'Creating...' : 'Create Skill'}
+                {isSavingCreate ? 'Đang tạo...' : 'Tạo kỹ năng'}
               </button>
             </div>
           </div>
@@ -465,13 +465,13 @@ export default function SkillsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Edit Skill: {editingSkill.name}
+              Sửa kỹ năng: {editingSkill.name}
             </h3>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Skill Name *
+                  Tên kỹ năng *
                 </label>
                 <input
                   type="text"
@@ -483,7 +483,7 @@ export default function SkillsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category *
+                  Danh mục *
                 </label>
                 <select
                   value={editForm.category}
@@ -498,22 +498,22 @@ export default function SkillsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Approval Status *
+                  Trạng thái duyệt *
                 </label>
                 <select
                   value={editForm.status}
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value as SkillStatus })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
-                  <option value="PENDING">PENDING</option>
-                  <option value="APPROVED">APPROVED</option>
-                  <option value="REJECTED">REJECTED</option>
+                  <option value="PENDING">Đang chờ duyệt</option>
+                  <option value="APPROVED">Đã duyệt</option>
+                  <option value="REJECTED">Đã từ chối</option>
                 </select>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <div className="text-xs text-blue-800">
-                  <strong>Current Usage:</strong> {editingSkill._count.users} user(s) teaching/learning this skill
+                  <strong>Đang sử dụng:</strong> {editingSkill._count.users} người dùng đang dạy/học kỹ năng này
                 </div>
               </div>
             </div>
@@ -524,14 +524,14 @@ export default function SkillsPage() {
                 disabled={isSavingEdit}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 transition"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 onClick={handleUpdateSkill}
                 disabled={isSavingEdit}
                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition disabled:bg-gray-300"
               >
-                {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                {isSavingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
             </div>
           </div>

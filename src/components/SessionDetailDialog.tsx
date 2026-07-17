@@ -70,9 +70,9 @@ const ROLE_GRADIENT: Record<SessionRole, string> = {
 }
 
 const ROLE_LABEL: Record<SessionRole, string> = {
-  mentor: 'Teaching session',
-  mentee: 'Learning session',
-  owner:  'Available slot',
+  mentor: 'Buổi dạy',
+  mentee: 'Buổi học',
+  owner:  'Khung giờ trống',
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ export default function SessionDetailDialog({
       if (r.success) { setFeedback({ ok: true, msg: r.message }); onMutate(); onClose() }
       else             setFeedback({ ok: false, msg: r.message })
     } catch {
-      setFeedback({ ok: false, msg: 'Something went wrong. Please try again.' })
+      setFeedback({ ok: false, msg: 'Đã có lỗi xảy ra. Vui lòng thử lại.' })
     } finally {
       setIsLoading(false)
     }
@@ -136,19 +136,19 @@ export default function SessionDetailDialog({
 
   const handleAccept      = ()  => run(() => acceptBooking(s.bookingId!, currentUserId))
   const handleDecline     = ()  => {
-    if (!window.confirm('Decline this session? The mentee will be refunded points.')) return
+    if (!window.confirm('Từ chối buổi học này? Mentee sẽ được hoàn lại điểm.')) return
     run(() => declineBooking(s.bookingId!, currentUserId))
   }
   const handleCancel      = ()  => {
-    if (!window.confirm('Cancel this session? Your Trust Score may be reduced.')) return
+    if (!window.confirm('Hủy buổi học này? Trust Score của bạn có thể bị giảm.')) return
     run(() => cancelBooking(s.bookingId!, currentUserId))
   }
   const handleReportNoShow = () => {
-    if (!window.confirm('Report no-show? The system will verify via the Google Meet API.')) return
+    if (!window.confirm('Báo cáo vắng mặt? Hệ thống sẽ xác minh qua Google Meet API.')) return
     run(() => reportNoShow(s.bookingId!, currentUserId))
   }
   const handleDeleteSlot  = ()  => {
-    if (!window.confirm(`Delete this time slot?\n${s.sessionLabel}`)) return
+    if (!window.confirm(`Xóa khung giờ này?\n${s.sessionLabel}`)) return
     run(() => deleteMentorSlot(s.slotId!, currentUserId))
   }
 
@@ -173,15 +173,15 @@ export default function SessionDetailDialog({
                 {s.isPast && (
                   menteeGraceConfirmed ? (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-sm">
-                      Awaiting Review 
+                      Đang chờ đánh giá 
                     </span>
                   ) : mentorGraceConfirmed ? (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-sm">
-                      Awaiting for Mentee Review 
+                      Đang chờ Mentee đánh giá 
                     </span>
                   ) : (
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/20">
-                      Past slot
+                      Khung giờ đã qua
                     </span>
                   )
                 )}
@@ -223,10 +223,10 @@ export default function SessionDetailDialog({
 
           {/* Session meta */}
           <div className="bg-gray-50 rounded-xl p-3.5 space-y-2 text-sm">
-            <MetaRow label="Time" value={s.sessionLabel} />
+            <MetaRow label="Thời gian" value={s.sessionLabel} />
             {s.type === 'booking' && s.bookingStatus && (
               <div className="flex items-center justify-between">
-                <span className="text-gray-500">Status</span>
+                <span className="text-gray-500">Trạng thái</span>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[s.bookingStatus] ?? 'bg-gray-100 text-gray-600'}`}>
                   {s.bookingStatus}
                 </span>
@@ -260,17 +260,17 @@ export default function SessionDetailDialog({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              Join session now
+              Tham gia buổi học ngay
             </a>
           )}
 
           {/* ── Role: owner (available slot) ─────────────────────────────── */}
           {s.type === 'slot' && s.role === 'owner' && (
             s.isPast ? (
-              <Info icon="⏰">This is a past slot - no actions are available.</Info>
+              <Info icon="⏰">Khung giờ này đã qua - không thể thực hiện thao tác nào.</Info>
             ) : (
               <DangerButton onClick={handleDeleteSlot} loading={isLoading}>
-                Delete slot
+                Xóa khung giờ
               </DangerButton>
             )
           )}
@@ -287,10 +287,10 @@ export default function SessionDetailDialog({
                     loading={isLoading}
                     className="flex-1"
                   >
-                    Accept
+                    Chấp nhận
                   </PrimaryButton>
                   <DangerButton onClick={handleDecline} loading={isLoading} className="flex-1">
-                    Decline
+                    Từ chối
                   </DangerButton>
                 </div>
               )}
@@ -302,14 +302,14 @@ export default function SessionDetailDialog({
                     <ChatLink bookingId={s.bookingId} className="flex-1" />
                   )}
                   <DangerButton onClick={handleCancel} loading={isLoading} className="flex-1">
-                    Cancel session
+                    Hủy buổi học
                   </DangerButton>
                 </div>
               )}
 
               {/* Past PENDING → expired */}
               {s.isPast && s.bookingStatus === 'PENDING' && (
-                <Info icon="⚠️">This booking request has expired - the session start time has passed.</Info>
+                <Info icon="⚠️">Yêu cầu đặt lịch này đã hết hạn - đã qua giờ bắt đầu buổi học.</Info>
               )}
 
               {/* Past CONFIRMED → grace window (message mentee) vs after 48h */}
@@ -318,7 +318,7 @@ export default function SessionDetailDialog({
                   {isWithin48h ? (
                     <>
                       <Info icon="⭐">
-                        The session has ended. The mentee can still submit a review within 48 hours - message them if needed.
+                        Buổi học đã kết thúc. Mentee vẫn có thể gửi đánh giá trong vòng 48 giờ - nhắn tin cho họ nếu cần.
                       </Info>
                       {s.bookingId && (
                         <BlindReviewSection
@@ -330,7 +330,7 @@ export default function SessionDetailDialog({
                     </>
                   ) : (
                     <>
-                      <Info icon="⏰">This confirmed session is now in the past. Check chat history.</Info>
+                      <Info icon="⏰">Buổi học đã xác nhận này giờ đã ở trong quá khứ. Xem lại lịch sử chat.</Info>
                       {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                     </>
                   )}
@@ -346,18 +346,18 @@ export default function SessionDetailDialog({
                     booking={{ id: s.bookingId }}
                     currentUserId={currentUserId}
                   />
-                  <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
+                  <ChatLink bookingId={s.bookingId} label="🎓 Xem lịch sử chat" />
                 </div>
               )}
 
               {/* MISSED */}
               {s.bookingStatus === 'MISSED' && s.bookingId && (
-                <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
+                <ChatLink bookingId={s.bookingId} label="🎓 Xem lịch sử chat" />
               )}
 
               {/* DISPUTED */}
               {s.bookingStatus === 'DISPUTED' && (
-                <Info icon="⚖️">This session is being reviewed by admin. Points are currently on hold.</Info>
+                <Info icon="⚖️">Buổi học này đang được admin xem xét. Điểm đang được tạm giữ.</Info>
               )}
             </div>
           )}
@@ -368,7 +368,7 @@ export default function SessionDetailDialog({
               {/* Future PENDING → Cancel */}
               {!s.isPast && s.bookingStatus === 'PENDING' && (
                 <DangerButton onClick={handleCancel} loading={isLoading}>
-                  Cancel booking
+                  Hủy lịch đặt
                 </DangerButton>
               )}
 
@@ -377,7 +377,7 @@ export default function SessionDetailDialog({
                 <div className="flex gap-2">
                   {s.bookingId && <ChatLink bookingId={s.bookingId} className="flex-1" />}
                   <DangerButton onClick={handleCancel} loading={isLoading} className="flex-1">
-                    Cancel session
+                    Hủy buổi học
                   </DangerButton>
                 </div>
               )}
@@ -417,7 +417,7 @@ export default function SessionDetailDialog({
                   {isWithin48h ? (
                     <>
                       <Info icon="⚠️">
-                        Mentor did not show up? You can report it within 48 hours after the session.
+                        Mentor không xuất hiện? Bạn có thể báo cáo trong vòng 48 giờ sau buổi học.
                       </Info>
                       <div className="flex flex-col sm:flex-row gap-2" style={{ display: "flex", flexDirection: "column" }}>
                         <div className="flex-1">
@@ -433,12 +433,12 @@ export default function SessionDetailDialog({
                           loading={isLoading}
                           className="flex-1 !bg-red-600 hover:!bg-red-700 text-white"
                         >
-                          🚨 Report no-show
+                          🚨 Báo cáo vắng mặt
                         </DangerButton>
                       </div>
                     </>
                   ) : (
-                    <Info icon="🔒">The 48-hour reporting window has ended.</Info>
+                    <Info icon="🔒">Thời hạn báo cáo 48 giờ đã kết thúc.</Info>
                   )}
                   {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                 </div>
@@ -453,26 +453,26 @@ export default function SessionDetailDialog({
                     booking={{ id: s.bookingId }}
                     currentUserId={currentUserId}
                   />
-                  <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
+                  <ChatLink bookingId={s.bookingId} label="🎓 Xem lịch sử chat" />
                 </div>
               )}
 
               {/* MISSED */}
               {s.bookingStatus === 'MISSED' && s.bookingId && (
-                <ChatLink bookingId={s.bookingId} label="🎓 View chat history" />
+                <ChatLink bookingId={s.bookingId} label="🎓 Xem lịch sử chat" />
               )}
 
               {/* DISPUTED */}
               {s.bookingStatus === 'DISPUTED' && (
                 <>
-                  <Info icon="⚖️">This dispute is under admin review. Points are currently held.</Info>
+                  <Info icon="⚖️">Tranh chấp này đang được admin xem xét. Điểm đang được tạm giữ.</Info>
                   {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                 </>
               )}
 
               {/* Past PENDING */}
               {s.isPast && s.bookingStatus === 'PENDING' && (
-                <Info icon="⚠️">This booking request expired - the mentor did not respond.</Info>
+                <Info icon="⚠️">Yêu cầu đặt lịch này đã hết hạn - mentor không phản hồi.</Info>
               )}
             </div>
           )}
@@ -482,7 +482,7 @@ export default function SessionDetailDialog({
             onClick={onClose}
             className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition font-medium"
           >
-            Close
+            Đóng
           </button>
         </div>
       </div>
@@ -563,7 +563,7 @@ function DangerButton({
 
 function ChatLink({
   bookingId,
-  label = '💬 Message',
+  label = '💬 Nhắn tin',
   className = 'w-full',
 }: {
   bookingId: string
@@ -588,8 +588,8 @@ function ChatLink({
 export function ReviewForm({
   rating, hover, comment, submitting,
   onRating, onHover, onComment, onSubmit, onCancel,
-  title = 'Session review',
-  submitLabel = 'Submit & complete (1 point to mentor)',
+  title = 'Đánh giá buổi học',
+  submitLabel = 'Gửi đánh giá & hoàn thành (1 điểm cho mentor)',
 }: {
   rating: number; hover: number; comment: string; submitting: boolean
   onRating: (n: number) => void; onHover: (n: number) => void
@@ -616,7 +616,7 @@ export function ReviewForm({
         rows={2}
         value={comment}
         onChange={e => onComment(e.target.value)}
-        placeholder="Share your experience (optional)..."
+        placeholder="Chia sẻ trải nghiệm của bạn (không bắt buộc)..."
         className="w-full text-xs px-3 py-2 border border-orange-200 rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-orange-400 bg-white"
         maxLength={300}
       />
@@ -625,14 +625,14 @@ export function ReviewForm({
           onClick={onCancel}
           className="flex-1 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
         >
-          Cancel
+          Hủy
         </button>
         <button
           onClick={onSubmit}
           disabled={submitting || rating === 0}
           className="flex-1 py-1.5 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 transition"
         >
-          {submitting ? 'Submitting…' : submitLabel}
+          {submitting ? 'Đang gửi…' : submitLabel}
         </button>
       </div>
     </div>

@@ -772,7 +772,7 @@ function MentorRatingSection({ mentorId }: { mentorId: string }) {
   if (loading) return <div className="h-4 w-24 bg-gray-100 animate-pulse rounded mt-1"></div>
 
   if (!rating || rating.count === 0) {
-    return <p className="text-xs text-gray-400 mt-1">No reviews yet</p>
+    return <p className="text-xs text-gray-400 mt-1">Chưa có đánh giá</p>
   }
 
   return (
@@ -786,7 +786,7 @@ function MentorRatingSection({ mentorId }: { mentorId: string }) {
         </span>
       </div>
       <span className="text-xs text-gray-500">
-        ({rating.count} review{rating.count !== 1 ? 's' : ''})
+        ({rating.count} đánh giá)
       </span>
     </div>
   )
@@ -1007,7 +1007,7 @@ function DiscoverContent() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Finding your perfect mentors...</p>
+          <p className="text-gray-600">Đang tìm Mentor phù hợp với bạn...</p>
         </div>
       </div>
     )
@@ -1017,8 +1017,8 @@ function DiscoverContent() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-red-600">Authentication Required</h2>
-          <p className="text-gray-600 mt-2">Please select a user from the switcher above.</p>
+          <h2 className="text-xl font-bold text-red-600">Yêu cầu đăng nhập</h2>
+          <p className="text-gray-600 mt-2">Vui lòng chọn một người dùng từ bộ chuyển đổi ở trên.</p>
         </div>
       </div>
     )
@@ -1037,7 +1037,7 @@ function DiscoverContent() {
     >
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <div
-          title="Trust Score is calculated from session completion rate..."
+          title="Điểm tín nhiệm được tính dựa trên tỷ lệ hoàn thành buổi học, đánh giá, thời gian phản hồi và độ uy tín."
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-default ${
             mentor.trustScore >= 85
               ? 'bg-emerald-50 border-emerald-200'
@@ -1061,7 +1061,7 @@ function DiscoverContent() {
               mentor.trustScore >= 85 ? 'text-emerald-700' : mentor.trustScore >= 50 ? 'text-amber-700' : 'text-red-600'
             }`}
           >
-            {mentor.trustScore >= 85 ? 'High Trust · ' : 'Trust: '}
+            {mentor.trustScore >= 85 ? 'Tín nhiệm cao · ' : 'Tín nhiệm: '}
             <span className="font-bold">{mentor.trustScore}</span>
             <span className="font-normal opacity-70">/100</span>
           </span>
@@ -1083,7 +1083,7 @@ function DiscoverContent() {
         <div className="flex-1 min-w-0">
           <Link href={`/profile/${mentor.id}`} className="group">
             <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
-              {mentor.name || 'Anonymous Mentor'}
+              {mentor.name || 'Mentor ẩn danh'}
             </h3>
           </Link>
           <p className="text-sm text-gray-500">{mentor.email}</p>
@@ -1102,7 +1102,7 @@ function DiscoverContent() {
 
       <div className="mb-4">
         <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase">
-          Teaching Skills:
+          Kỹ năng giảng dạy:
         </h4>
         <div className="flex flex-wrap gap-2">
           {mentor.teachingSkills.map((skill) => {
@@ -1120,7 +1120,7 @@ function DiscoverContent() {
               >
                 {skill.isVerified && (
                   <svg className="w-3.5 h-3.5 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-                    <title>AI Verified Skill</title>
+                    <title>Kỹ năng đã được AI xác minh</title>
                     <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                 )}
@@ -1139,13 +1139,13 @@ function DiscoverContent() {
             isMatch ? 'bg-green-600 hover:bg-green-700 shadow-md' : 'bg-purple-600 hover:bg-purple-700'
           }`}
         >
-          📅 View Available Slots
+          📅 Xem lịch còn trống
         </Link>
         <Link
           href={`/profile/${mentor.id}#reviews`}
           className="block text-center text-sm text-purple-600 hover:text-purple-700 font-medium transition"
         >
-          View Full Profile & Reviews →
+          Xem hồ sơ đầy đủ & Đánh giá →
         </Link>
       </div>
     </div>
@@ -1161,10 +1161,10 @@ function DiscoverContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Smart Mentor Discovery</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Khám phá Mentor thông minh</h1>
           </div>
           <p className="text-gray-600 ml-14">
-            {isSearching ? `Showing results for "${searchQuery}"` : 'AI-powered matching based on your learning goals'}
+            {isSearching ? `Kết quả tìm kiếm cho "${searchQuery}"` : 'Ghép đôi bằng AI dựa trên mục tiêu học tập của bạn'}
           </p>
           
           <form onSubmit={(e) => e.preventDefault()} className="mt-4 ml-14 max-w-md">
@@ -1173,7 +1173,7 @@ function DiscoverContent() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by skill (e.g., ReactJS, Python)..."
+                placeholder="Tìm theo kỹ năng (VD: ReactJS, Python)..."
                 className="w-full px-4 py-2 pl-10 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition"
               />
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1195,7 +1195,7 @@ function DiscoverContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-sm font-semibold text-purple-900">
-                Your Balance: {currentUser.givePoints} GivePoints
+                Số dư của bạn: {currentUser.givePoints} GivePoints
               </span>
             </div>
 
@@ -1205,7 +1205,7 @@ function DiscoverContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
                 <span className="text-sm font-medium text-blue-900">
-                  Learning: {userGoals.join(', ')}
+                  Đang học: {userGoals.join(', ')}
                 </span>
               </div>
             )}
@@ -1221,14 +1221,14 @@ function DiscoverContent() {
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <div className="text-6xl mb-4">🔍</div>
             <h2 className="text-xl font-semibold text-gray-800 mb-2">
-              {isSearching ? `No mentors found for "${searchQuery}"` : 'No Mentors Available'}
+              {isSearching ? `Không tìm thấy Mentor cho "${searchQuery}"` : 'Chưa có Mentor nào'}
             </h2>
             <p className="text-gray-600">
-              {isSearching ? 'Try searching for a different skill or browse all mentors' : 'There are no mentors available at the moment. Check back later!'}
+              {isSearching ? 'Hãy thử tìm kỹ năng khác hoặc xem tất cả Mentor' : 'Hiện chưa có Mentor nào. Quay lại sau nhé!'}
             </p>
             {isSearching && (
               <button onClick={() => setSearchQuery('')} className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition">
-                Clear Search
+                Xóa tìm kiếm
               </button>
             )}
           </div>
@@ -1245,17 +1245,17 @@ function DiscoverContent() {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-white">
-                        🔍 Search Results for "{searchQuery}"
+                        🔍 Kết quả tìm kiếm cho "{searchQuery}"
                       </h2>
-                      <p className="text-purple-100 text-sm">Mentors teaching skills matching your search</p>
+                      <p className="text-purple-100 text-sm">Các Mentor dạy kỹ năng phù hợp với tìm kiếm của bạn</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-3">
                     <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      {displayedBestMatches.length} {displayedBestMatches.length === 1 ? 'Mentor' : 'Mentors'} Found
+                      Tìm thấy {displayedBestMatches.length} {displayedBestMatches.length === 1 ? 'Mentor' : 'Mentor'}
                     </span>
                     <button onClick={() => setSearchQuery('')} className="text-white/80 hover:text-white text-sm underline transition">
-                      Clear Search
+                      Xóa tìm kiếm
                     </button>
                   </div>
                 </div>
@@ -1276,23 +1276,23 @@ function DiscoverContent() {
                           </svg>
                         </div>
                         <div>
-                          <h2 className="text-2xl font-bold text-white">✨ Best Matches for You</h2>
-                          <p className="text-green-100 text-sm">These mentors teach skills you want to learn</p>
+                          <h2 className="text-2xl font-bold text-white">✨ Ghép đôi hoàn hảo cho bạn</h2>
+                          <p className="text-green-100 text-sm">Những Mentor này dạy kỹ năng bạn muốn học</p>
                           <div className="flex items-center gap-1.5 mt-1.5">
                             <span className="inline-flex items-center gap-1 bg-white/15 text-white/90 text-xs font-medium px-2.5 py-0.5 rounded-full ring-1 ring-white/20">
                               <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
-                              Ranked by Skill Match &times; Trust Score
+                              Xếp hạng theo Kỹ năng phù hợp &times; Điểm tín nhiệm
                             </span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-3">
                         <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
-                          {displayedBestMatches.length} Perfect {displayedBestMatches.length === 1 ? 'Match' : 'Matches'}
+                          {displayedBestMatches.length} {displayedBestMatches.length === 1 ? 'Ghép đôi hoàn hảo' : 'Ghép đôi hoàn hảo'}
                         </span>
-                        <span className="text-green-100 text-sm">Priority recommendations</span>
+                        <span className="text-green-100 text-sm">Gợi ý ưu tiên</span>
                       </div>
                     </div>
 
@@ -1312,8 +1312,8 @@ function DiscoverContent() {
                           </svg>
                         </div>
                         <div>
-                          <h2 className="text-2xl font-bold text-gray-900">Explore Other Mentors</h2>
-                          <p className="text-gray-600 text-sm">Discover mentors teaching different skills</p>
+                          <h2 className="text-2xl font-bold text-gray-900">Khám phá thêm Mentor khác</h2>
+                          <p className="text-gray-600 text-sm">Tìm các Mentor dạy những kỹ năng khác</p>
                         </div>
                       </div>
                     </div>
@@ -1331,10 +1331,10 @@ function DiscoverContent() {
         {bestMatches.length === 0 && otherMentors.length === 0 && userGoals.length === 0 && (
           <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-dashed border-blue-300 rounded-xl p-8 text-center">
             <div className="text-6xl mb-4">🎯</div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Set Your Learning Goals</h3>
-            <p className="text-gray-600 mb-4">Define what skills you want to learn to get personalized mentor recommendations!</p>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Thiết lập mục tiêu học tập</h3>
+            <p className="text-gray-600 mb-4">Xác định kỹ năng bạn muốn học để nhận gợi ý Mentor phù hợp!</p>
             <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
-              Add Learning Goals
+              Thêm mục tiêu học tập
             </button>
           </div>
         )}
@@ -1345,7 +1345,7 @@ function DiscoverContent() {
 
 export default function DiscoverPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading mentors...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Đang tải Mentor...</div>}>
       <DiscoverContent />
     </Suspense>
   )

@@ -104,7 +104,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
 
     if (slot.isBooked && slot.booking) {
       const { status } = slot.booking
-      const menteeName = slot.booking.mentee.name ?? slot.booking.mentee.email ?? 'Booked'
+      const menteeName = slot.booking.mentee.name ?? slot.booking.mentee.email ?? 'Đã đặt'
       const end = new Date(slot.endTime)
       const sessionEnded = end < now
       const awaitingMenteeReview =
@@ -119,15 +119,15 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
         if (sessionEnded) {
           if (awaitingMenteeReview) {
             bgColor = '#fef3c7'; borderColor = '#fbbf24'; textColor = '#78350f'
-            statusIcon = '⭐'; statusLabel = 'Awaiting for Mentee Review '
+            statusIcon = '⭐'; statusLabel = 'Đang chờ Mentee đánh giá '
           } else {
             // Quá 48h không có khiếu nại -> Chuyển màu xanh Teal và label Done
             bgColor = '#0d9488'; borderColor = '#0f766e'; textColor = '#fff'
-            statusIcon = '🎓'; statusLabel = 'Done'
+            statusIcon = '🎓'; statusLabel = 'Hoàn thành'
           }
         } else {
           bgColor = '#3b82f6'; borderColor = '#2563eb'
-          statusIcon = '📘'; statusLabel = 'Teaching'
+          statusIcon = '📘'; statusLabel = 'Đang dạy'
         }
       // } else if (status === 'COMPLETED') {
       //   bgColor = '#0d9488'; borderColor = '#0f766e'
@@ -143,21 +143,21 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
       //   }
       // }
       } else if (status === 'COMPLETED') {
-        bgColor = '#0d9488'; borderColor = '#0f766e'; statusIcon = '🎓'; statusLabel = 'Done';
+        bgColor = '#0d9488'; borderColor = '#0f766e'; statusIcon = '🎓'; statusLabel = 'Hoàn thành';
       } else if (status === 'MISSED') {
-        bgColor = '#fecaca'; borderColor = '#f87171'; textColor = '#991b1b'; statusIcon = '⏰'; statusLabel = 'Missed';
+        bgColor = '#fecaca'; borderColor = '#f87171'; textColor = '#991b1b'; statusIcon = '⏰'; statusLabel = 'Vắng mặt';
       } else if (status === 'DISPUTED') {
-        bgColor = '#6366f1'; borderColor = '#4f46e5'; textColor = '#fff'; statusIcon = '⚖️'; statusLabel = 'Disputed';
+        bgColor = '#6366f1'; borderColor = '#4f46e5'; textColor = '#fff'; statusIcon = '⚖️'; statusLabel = 'Tranh chấp';
       } else if (status === 'CANCELLED') {
-        bgColor = '#94a3b8'; borderColor = '#64748b'; textColor = '#fff'; statusIcon = '✕'; statusLabel = 'Cancelled';
+        bgColor = '#94a3b8'; borderColor = '#64748b'; textColor = '#fff'; statusIcon = '✕'; statusLabel = 'Đã hủy';
       } else {
         // At this point, this branch handles only PENDING
         if (isPast) {
           bgColor = '#fef3c7'; borderColor = '#fbbf24'; textColor = '#78350f'
-          statusIcon = '⚠️'; statusLabel = 'Expired'
+          statusIcon = '⚠️'; statusLabel = 'Hết hạn'
         } else {
           bgColor = '#7c3aed'; borderColor = '#6d28d9'
-          statusIcon = '⏳'; statusLabel = 'Pending'
+          statusIcon = '⏳'; statusLabel = 'Đang chờ'
         }
       }
 
@@ -190,7 +190,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
     if (isPast) {
       return {
         id:              `slot-${slot.id}`,
-        title:           '✗ Past slot',
+        title:           '✗ Khung giờ đã qua',
         start:           new Date(slot.startTime),
         end:             new Date(slot.endTime),
         backgroundColor: '#e2e8f0',
@@ -203,7 +203,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
 
     return {
       id:              `slot-${slot.id}`,
-      title:           '✓ Available',
+      title:           '✓ Trống',
       start:           new Date(slot.startTime),
       end:             new Date(slot.endTime),
       backgroundColor: '#10b981',
@@ -219,7 +219,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
   const handleSelect = async (selectInfo: DateSelectArg) => {
     if (selectInfo.start < new Date()) {
       selectInfo.view.calendar.unselect()
-      showToast('Cannot create a time slot in the past', 'error')
+      showToast('Không thể tạo khung giờ trong quá khứ', 'error')
       return
     }
     setIsSaving(true)
@@ -228,7 +228,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
     ])
     setIsSaving(false)
     if (result.success) {
-      showToast(`Created time slot — ${formatTimeRange(selectInfo.start, selectInfo.end)}`)
+      showToast(`Đã tạo khung giờ — ${formatTimeRange(selectInfo.start, selectInfo.end)}`)
       await loadSlots()
     } else {
       showToast(result.message, 'error')
@@ -241,11 +241,11 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
   const handleEventDrop = async (dropInfo: EventDropArg) => {
     const { event, revert } = dropInfo
     if (event.extendedProps.type !== 'available') {
-      revert(); showToast('Booked sessions cannot be moved', 'error'); return
+      revert(); showToast('Không thể di chuyển buổi học đã được đặt', 'error'); return
     }
     if (!event.start || !event.end) { revert(); return }
     if (event.start < new Date()) {
-      revert(); showToast('Cannot move a time slot into the past', 'error'); return
+      revert(); showToast('Không thể di chuyển khung giờ vào quá khứ', 'error'); return
     }
     setIsSaving(true)
     const result = await updateMentorSlot(
@@ -253,7 +253,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
     )
     setIsSaving(false)
     if (result.success) {
-      showToast(`Moved time slot to ${formatTimeRange(event.start, event.end)}`)
+      showToast(`Đã di chuyển khung giờ đến ${formatTimeRange(event.start, event.end)}`)
       await loadSlots()
     } else {
       revert(); showToast(result.message, 'error')
@@ -271,7 +271,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
     )
     setIsSaving(false)
     if (result.success) {
-      showToast('Updated slot duration')
+      showToast('Đã cập nhật thời lượng khung giờ')
       await loadSlots()
     } else {
       revert(); showToast(result.message, 'error')
@@ -352,8 +352,8 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Manage Teaching calendar</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Drag to create · Drag to move · Drag to resize</p>
+            <h2 className="text-lg font-bold text-gray-900">Quản lý lịch dạy</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Kéo để tạo · Kéo để di chuyển · Kéo để đổi kích thước</p>
           </div>
         </div>
         <button
@@ -365,7 +365,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {isLoading ? 'Loading…' : 'Refresh'}
+          {isLoading ? 'Đang tải…' : 'Làm mới'}
         </button>
       </div>
 
@@ -373,24 +373,24 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
       <div className="mx-6 mt-4 bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 flex items-start gap-3">
         <span className="text-purple-500 text-lg leading-none mt-0.5">💡</span>
         <div className="text-sm text-purple-800 space-y-0.5">
-          <p><strong>Drag &amp; drop</strong> an empty area to create a new time slot.</p>
-          <p><strong>Drag</strong> a green slot to reschedule. <strong>Drag the bottom edge</strong> to change its duration.</p>
-          <p><strong>Click</strong> any event to view details and take actions.</p>
+          <p><strong>Kéo và thả</strong> vào vùng trống để tạo khung giờ mới.</p>
+          <p><strong>Kéo</strong> khung giờ màu xanh để đổi lịch. <strong>Kéo mép dưới</strong> để thay đổi thời lượng.</p>
+          <p><strong>Nhấn</strong> vào bất kỳ sự kiện nào để xem chi tiết và thực hiện thao tác.</p>
         </div>
       </div>
 
       {/* ── Legend ─────────────────────────────────────────────────────── */}
       <div className="px-6 pt-3 pb-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600">
         {[
-          { color: '#10b981', label: 'Available' },
-          { color: '#7c3aed', label: 'Pending' },
-          { color: '#3b82f6', label: 'Teaching' },
-          { color: '#fef3c7', border: '#fbbf24', label: 'Awaiting for Mentee Review ' },
-          { color: '#0d9488', label: 'Done' },
-          { color: '#e2e8f0', border: '#94a3b8', label: 'Past slot' },
-          { color: '#fef3c7', border: '#fbbf24', label: 'Expired' },
-          { color: '#fecaca', border: '#f87171', label: 'Missed' },
-          { color: '#6366f1', border: '#4f46e5', label: 'Disputed' },
+          { color: '#10b981', label: 'Trống' },
+          { color: '#7c3aed', label: 'Đang chờ' },
+          { color: '#3b82f6', label: 'Đang dạy' },
+          { color: '#fef3c7', border: '#fbbf24', label: 'Đang chờ Mentee đánh giá ' },
+          { color: '#0d9488', label: 'Hoàn thành' },
+          { color: '#e2e8f0', border: '#94a3b8', label: 'Khung giờ đã qua' },
+          { color: '#fef3c7', border: '#fbbf24', label: 'Hết hạn' },
+          { color: '#fecaca', border: '#f87171', label: 'Vắng mặt' },
+          { color: '#6366f1', border: '#4f46e5', label: 'Tranh chấp' },
         ].map(({ color, border, label }) => (
           <div key={label} className="flex items-center gap-1.5">
             <div
@@ -411,7 +411,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              <span className="text-sm font-semibold text-purple-700">Saving…</span>
+              <span className="text-sm font-semibold text-purple-700">Đang lưu…</span>
             </div>
           </div>
         )}
@@ -422,7 +422,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' }}
-            buttonText={{ today: 'Today', week: 'Week', day: 'Day' }}
+            buttonText={{ today: 'Hôm nay', week: 'Tuần', day: 'Ngày' }}
             height="auto"
             contentHeight={620}
             slotMinTime="07:00:00"
@@ -458,21 +458,21 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
                   props.bookingStatus === 'CONFIRMED'
                     ? (isPast
                         ? (awaiting
-                            ? 'Awaiting mentee review - click to message'
-                            : 'Missed - click to view')
-                        : 'Click to cancel / chat')
+                            ? 'Đang chờ mentee đánh giá - nhấn để nhắn tin'
+                            : 'Vắng mặt - nhấn để xem')
+                        : 'Nhấn để hủy / nhắn tin')
                     : props.bookingStatus === 'COMPLETED'
-                      ? 'Done'
+                      ? 'Hoàn thành'
                       : isPast
-                        ? 'Expired'
-                        : 'Click to accept / decline'
+                        ? 'Hết hạn'
+                        : 'Nhấn để chấp nhận / từ chối'
                 info.el.setAttribute('title', `${(props.mentee as { name?: string | null }).name ?? 'Mentee'} · ${action}`)
               } else if (isPast) {
                 info.el.style.pointerEvents = 'none'
                 info.el.style.cursor = 'default'
-                info.el.setAttribute('title', 'Past slot - no actions available')
+                info.el.setAttribute('title', 'Khung giờ đã qua - không có thao tác nào')
               } else {
-                info.el.setAttribute('title', 'Click to delete · Drag to move · Drag edge to resize')
+                info.el.setAttribute('title', 'Nhấn để xóa · Kéo để di chuyển · Kéo mép để đổi kích thước')
               }
             }}
           />
@@ -500,7 +500,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
         currentUserId={mentorId}
         onClose={() => setDialogOpen(false)}
         onMutate={async () => {
-          showToast('Updated successfully!')
+          showToast('Cập nhật thành công!')
           await loadSlots()
         }}
       />

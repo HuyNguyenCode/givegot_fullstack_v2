@@ -104,7 +104,7 @@ export default async function PublicProfilePage({
   }
 
   const hasTeachingSkills = teachingSkills.length > 0
-  const firstName = profileUser.name?.split(' ')[0] ?? 'this mentor'
+  const firstName = profileUser.name?.split(' ')[0] ?? 'mentor này'
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -120,7 +120,7 @@ export default async function PublicProfilePage({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Discover
+            Về trang Khám phá
           </Link>
         </div>
 
@@ -140,7 +140,7 @@ export default async function PublicProfilePage({
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  Edit Profile
+                  Chỉnh sửa hồ sơ
                 </Link>
               </div>
             )}
@@ -151,7 +151,7 @@ export default async function PublicProfilePage({
                 {profileUser.avatarUrl ? (
                   <Image
                     src={profileUser.avatarUrl}
-                    alt={profileUser.name ?? 'Profile'}
+                    alt={profileUser.name ?? 'Hồ sơ'}
                     width={120}
                     height={120}
                     className="rounded-full ring-4 ring-white shadow-xl"
@@ -169,14 +169,14 @@ export default async function PublicProfilePage({
               <div className="flex-1 text-center md:text-left">
                 <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1">
                   <h1 className="text-3xl font-bold text-white">
-                    {profileUser.name ?? 'Anonymous User'}
+                    {profileUser.name ?? 'Người dùng ẩn danh'}
                   </h1>
                   {profileUser.trustScore >= 85 && (
                     <span className="inline-flex items-center gap-1 bg-emerald-400/30 text-emerald-100 text-xs font-semibold px-2.5 py-1 rounded-full ring-1 ring-emerald-300/50">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
-                      High Trust
+                      Độ tin cậy cao
                     </span>
                   )}
                 </div>
@@ -190,7 +190,7 @@ export default async function PublicProfilePage({
                       <StarRating rating={Math.round(rating.average)} />
                       <span className="text-white font-semibold">{rating.average.toFixed(1)}</span>
                       <span className="text-purple-200">
-                        ({rating.count} review{rating.count !== 1 ? 's' : ''})
+                        ({rating.count} lượt đánh giá)
                       </span>
                     </div>
                   )}
@@ -200,7 +200,7 @@ export default async function PublicProfilePage({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                     </svg>
                     <span className="font-semibold">
-                      {trustData.breakdown.completedSessions} session{trustData.breakdown.completedSessions !== 1 ? 's' : ''} completed
+                      {trustData.breakdown.completedSessions} buổi học đã hoàn thành
                     </span>
                   </div>
 
@@ -227,12 +227,12 @@ export default async function PublicProfilePage({
                 <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                About
+                Giới thiệu
               </h2>
               {profileUser.bio ? (
                 <p className="text-gray-700 leading-relaxed">{profileUser.bio}</p>
               ) : (
-                <p className="text-gray-400 italic">No bio provided yet.</p>
+                <p className="text-gray-400 italic">Chưa có giới thiệu.</p>
               )}
             </section>
 
@@ -242,12 +242,12 @@ export default async function PublicProfilePage({
                 <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
-                Trust &amp; Reputation
+                Tín nhiệm &amp; Uy tín
               </h2>
               <p className="text-sm text-gray-500 mb-4 ml-7">
                 {isOwner
-                  ? 'Your reputation score and score breakdown'
-                  : 'Based on completed sessions, ratings, and reliability'}
+                  ? 'Điểm tín nhiệm và chi tiết các thành phần điểm của bạn'
+                  : 'Dựa trên buổi học đã hoàn thành, đánh giá và độ tin cậy'}
               </p>
               {/* isOwner=true → shows breakdown + action warning; isOwner=false → gauge + badges only */}
               <TrustReputationCard data={trustData} isOwner={isOwner} />
@@ -260,7 +260,7 @@ export default async function PublicProfilePage({
                   <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
-                  Teaching Skills
+                  Kỹ năng giảng dạy
                 </h2>
 
                 <div className="flex flex-wrap gap-3 mb-8">
@@ -275,14 +275,14 @@ export default async function PublicProfilePage({
                     >
                       {skill.isVerified && (
                         <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-                          <title>AI Verified Skill</title>
+                          <title>Kỹ năng đã được AI xác thực</title>
                           <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       )}
                       {skill.name}
                       {skill.isVerified && (
                         <span className="text-xs bg-yellow-300 text-purple-900 px-2 py-0.5 rounded-full font-bold">
-                          Verified
+                          Đã xác thực
                         </span>
                       )}
                     </span>
@@ -294,16 +294,16 @@ export default async function PublicProfilePage({
                   // Owner sees a management shortcut instead of the booking form
                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-5 flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-purple-900">Manage your availability</p>
+                      <p className="font-semibold text-purple-900">Quản lý lịch rảnh của bạn</p>
                       <p className="text-sm text-purple-700 mt-0.5">
-                        Set the time slots when you are available to mentor others.
+                        Thiết lập các khung giờ bạn có thể nhận dạy cho người khác.
                       </p>
                     </div>
                     <Link
                       href="/dashboard"
                       className="flex-shrink-0 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
                     >
-                      Go to Dashboard →
+                      Đến Bảng điều khiển →
                     </Link>
                   </div>
                 ) : viewerId ? (
@@ -318,20 +318,20 @@ export default async function PublicProfilePage({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-amber-900">
-                            ⚠️ Action Required: Review Past Sessions to Unlock Booking
+                            ⚠️ Cần thao tác: Đánh giá buổi học cũ để mở khóa đặt lịch
                           </p>
                           <p className="text-sm text-amber-800 mt-1 mb-3">
-                            You have{' '}
+                            Bạn có{' '}
                             <strong>
-                              {reviewGate.pendingCount} session{reviewGate.pendingCount !== 1 ? 's' : ''}
+                              {reviewGate.pendingCount} buổi học
                             </strong>{' '}
-                            that ended over 24 hours ago without a review.
+                            đã kết thúc hơn 24 giờ trước mà chưa được đánh giá.
                           </p>
                           <ul className="space-y-1 mb-4">
                             {reviewGate.sessions.map((s) => (
                               <li key={s.bookingId} className="flex items-center gap-2 text-xs text-amber-700">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                                Session with <span className="font-semibold">{s.mentorName}</span> on{' '}
+                                Buổi học với <span className="font-semibold">{s.mentorName}</span> vào{' '}
                                 {new Date(s.sessionDate).toLocaleDateString('en-US', {
                                   weekday: 'short',
                                   month: 'short',
@@ -344,7 +344,7 @@ export default async function PublicProfilePage({
                             href="/dashboard"
                             className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-4 py-2 rounded-lg transition shadow-sm"
                           >
-                            Submit Review(s) in Dashboard
+                            Gửi đánh giá tại Bảng điều khiển
                           </Link>
                         </div>
                       </div>
@@ -367,16 +367,16 @@ export default async function PublicProfilePage({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                      Book a Session with {firstName}
+                      Đặt buổi học với {firstName}
                     </h3>
                     <p className="text-sm text-gray-500 mb-4">
-                      Sign in to view available slots and book your first session.
+                      Đăng nhập để xem các khung giờ trống và đặt buổi học đầu tiên của bạn.
                     </p>
                     <Link
                       href="/auth/signin"
                       className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-2.5 rounded-lg transition"
                     >
-                      Sign In to Book
+                      Đăng nhập để đặt lịch
                     </Link>
                   </div>
                 )}
@@ -389,7 +389,7 @@ export default async function PublicProfilePage({
                 <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                 </svg>
-                Reviews
+                Đánh giá
                 <span className="ml-1 text-sm font-normal text-gray-500">({rating.count})</span>
               </h2>
 
@@ -404,7 +404,7 @@ export default async function PublicProfilePage({
                         {review.reviewer?.avatarUrl ? (
                           <Image
                             src={review.reviewer.avatarUrl}
-                            alt={review.reviewer.name ?? 'Reviewer'}
+                            alt={review.reviewer.name ?? 'Người đánh giá'}
                             width={44}
                             height={44}
                             className="rounded-full ring-2 ring-purple-100 flex-shrink-0"
@@ -420,7 +420,7 @@ export default async function PublicProfilePage({
                           <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
                             <div>
                               <p className="font-semibold text-gray-900 text-sm">
-                                {review.reviewer?.name ?? 'Anonymous'}
+                                {review.reviewer?.name ?? 'Ẩn danh'}
                               </p>
                               <p className="text-xs text-gray-400">
                                 {new Date(review.createdAt).toLocaleDateString('en-US', {
@@ -447,9 +447,9 @@ export default async function PublicProfilePage({
                   <svg className="w-14 h-14 text-purple-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                   </svg>
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">No Reviews Yet</h3>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Chưa có đánh giá</h3>
                   <p className="text-gray-500 text-sm">
-                    Be the first to book a session with {firstName} and leave a review!
+                    Hãy là người đầu tiên đặt buổi học với {firstName} và để lại đánh giá!
                   </p>
                 </div>
               )}

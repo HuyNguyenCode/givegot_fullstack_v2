@@ -34,15 +34,15 @@ const TYPE_META: Record<
   string,
   { label: string; icon: React.ReactNode; color: string }
 > = {
-  BOOKING_CREATED:         { label: 'Session Booked',          icon: <BookOpen className="w-4 h-4" />,       color: 'text-blue-600 bg-blue-50'     },
-  BOOKING_COMPLETED:       { label: 'Session Completed',        icon: <CheckCircle2 className="w-4 h-4" />,   color: 'text-emerald-600 bg-emerald-50' },
-  BOOKING_CANCELLED:       { label: 'Session Cancelled',        icon: <XCircle className="w-4 h-4" />,        color: 'text-gray-500 bg-gray-100'    },
-  BOOKING_DECLINED:        { label: 'Session Declined',         icon: <XCircle className="w-4 h-4" />,        color: 'text-red-500 bg-red-50'       },
-  INITIAL_BONUS:           { label: 'Welcome Bonus',            icon: <Gift className="w-4 h-4" />,           color: 'text-purple-600 bg-purple-50' },
-  ADMIN_ADJUSTMENT:        { label: 'Admin Adjustment',         icon: <Settings className="w-4 h-4" />,       color: 'text-gray-600 bg-gray-100'    },
-  CANCELLATION_COMPENSATION: { label: 'Cancellation Refund',   icon: <RefreshCw className="w-4 h-4" />,      color: 'text-teal-600 bg-teal-50'     },
-  TOPUP:                   { label: 'Top Up',                   icon: <ArrowUpCircle className="w-4 h-4" />,  color: 'text-purple-600 bg-purple-50' },
-  CASHOUT:                 { label: 'Cash Out',                 icon: <ArrowDownCircle className="w-4 h-4" />,color: 'text-orange-600 bg-orange-50' },
+  BOOKING_CREATED:         { label: 'Đã đặt buổi học',          icon: <BookOpen className="w-4 h-4" />,       color: 'text-blue-600 bg-blue-50'     },
+  BOOKING_COMPLETED:       { label: 'Buổi học hoàn thành',        icon: <CheckCircle2 className="w-4 h-4" />,   color: 'text-emerald-600 bg-emerald-50' },
+  BOOKING_CANCELLED:       { label: 'Buổi học đã hủy',        icon: <XCircle className="w-4 h-4" />,        color: 'text-gray-500 bg-gray-100'    },
+  BOOKING_DECLINED:        { label: 'Buổi học bị từ chối',         icon: <XCircle className="w-4 h-4" />,        color: 'text-red-500 bg-red-50'       },
+  INITIAL_BONUS:           { label: 'Điểm thưởng chào mừng',            icon: <Gift className="w-4 h-4" />,           color: 'text-purple-600 bg-purple-50' },
+  ADMIN_ADJUSTMENT:        { label: 'Điều chỉnh bởi Admin',         icon: <Settings className="w-4 h-4" />,       color: 'text-gray-600 bg-gray-100'    },
+  CANCELLATION_COMPENSATION: { label: 'Hoàn điểm do hủy',   icon: <RefreshCw className="w-4 h-4" />,      color: 'text-teal-600 bg-teal-50'     },
+  TOPUP:                   { label: 'Nạp điểm',                   icon: <ArrowUpCircle className="w-4 h-4" />,  color: 'text-purple-600 bg-purple-50' },
+  CASHOUT:                 { label: 'Rút tiền',                 icon: <ArrowDownCircle className="w-4 h-4" />,color: 'text-orange-600 bg-orange-50' },
 }
 
 function getTypeMeta(type: string) {
@@ -78,7 +78,7 @@ function StatusBadge({ status }: { status: string }) {
     return (
       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
         <CheckCircle2 className="w-3 h-3" />
-        Success
+        Thành công
       </span>
     )
   }
@@ -86,14 +86,14 @@ function StatusBadge({ status }: { status: string }) {
     return (
       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
         <Clock className="w-3 h-3" />
-        Pending
+        Đang xử lý
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
       <XCircle className="w-3 h-3" />
-      Failed
+      Thất bại
     </span>
   )
 }
@@ -142,15 +142,15 @@ function WalletContent() {
     if (!status && !error) return
 
     if (status === 'success') {
-      showToast('Top-up successful! Your GivePoints balance has been updated.')
+      showToast('Nạp điểm thành công! Số dư GivePoints của bạn đã được cập nhật.')
       if (currentUser) {
         refreshUser()
         loadData(currentUser.id)
       }
     } else if (error === 'invalid_signature') {
-      showToast('Payment callback could not be verified. Please contact support.', 'error')
+      showToast('Không thể xác minh giao dịch. Vui lòng liên hệ hỗ trợ.', 'error')
     } else {
-      showToast('Payment failed or was cancelled. No points were added.', 'error')
+      showToast('Thanh toán thất bại hoặc đã bị hủy. Không có điểm nào được cộng thêm.', 'error')
     }
 
     // Strip query params from the URL without a full navigation
@@ -164,7 +164,7 @@ function WalletContent() {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
-          <p className="text-sm text-gray-500 font-medium">Loading wallet...</p>
+          <p className="text-sm text-gray-500 font-medium">Đang tải ví...</p>
         </div>
       </div>
     )
@@ -175,8 +175,8 @@ function WalletContent() {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm text-center">
           <Wallet className="w-12 h-12 text-purple-400 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-gray-800 mb-2">Sign in to view your wallet</h2>
-          <p className="text-sm text-gray-500">You need to be logged in to access wallet features.</p>
+          <h2 className="text-lg font-bold text-gray-800 mb-2">Đăng nhập để xem ví của bạn</h2>
+          <p className="text-sm text-gray-500">Bạn cần đăng nhập để sử dụng các tính năng của ví.</p>
         </div>
       </div>
     )
@@ -188,7 +188,7 @@ function WalletContent() {
   const handleCashoutSuccess = async () => {
     await refreshUser()
     if (currentUser) loadData(currentUser.id)
-    showToast('Withdrawal request submitted. Admin will process within 1–3 business days.')
+    showToast('Yêu cầu rút tiền đã được gửi. Admin sẽ xử lý trong 1–3 ngày làm việc.')
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -202,14 +202,14 @@ function WalletContent() {
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-purple-600 font-medium mb-6 transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back
+          Quay lại
         </button>
 
         {/* ── Page title ── */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900">My Wallet</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Manage your GivePoints balance and transactions</p>
+            <h1 className="text-2xl font-extrabold text-gray-900">Ví của tôi</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Quản lý số dư GivePoints và giao dịch của bạn</p>
           </div>
           <button
             onClick={() => loadData(currentUser.id)}
@@ -217,7 +217,7 @@ function WalletContent() {
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:border-purple-300 hover:text-purple-600 transition-all disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${isDataLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            Làm mới
           </button>
         </div>
 
@@ -236,7 +236,7 @@ function WalletContent() {
                   <Wallet className="w-5 h-5" />
                 </div>
                 <span className="text-purple-200 text-sm font-semibold uppercase tracking-widest">
-                  GivePoints Balance
+                  Số dư GivePoints
                 </span>
               </div>
 
@@ -245,7 +245,7 @@ function WalletContent() {
                 <span className="text-2xl font-bold text-purple-300 ml-2">pts</span>
               </div>
               <p className="text-purple-200 text-sm mb-8">
-                ≈ {vndValue.toLocaleString('vi-VN')} ₫ equivalent
+                ≈ {vndValue.toLocaleString('vi-VN')} ₫
               </p>
 
               {/* CTA buttons */}
@@ -255,14 +255,14 @@ function WalletContent() {
                   className="flex items-center gap-2 px-5 py-2.5 bg-white text-purple-700 rounded-xl text-sm font-bold hover:bg-purple-50 transition-colors shadow-sm"
                 >
                   <ArrowUpCircle className="w-4 h-4" />
-                  Top Up (Nạp điểm)
+                  Nạp điểm
                 </button>
                 <button
                   onClick={() => setIsCashoutOpen(true)}
                   className="flex items-center gap-2 px-5 py-2.5 bg-white/15 border border-white/30 text-white rounded-xl text-sm font-bold hover:bg-white/25 transition-colors"
                 >
                   <ArrowDownCircle className="w-4 h-4" />
-                  Cash Out (Rút tiền)
+                  Rút tiền
                 </button>
               </div>
             </div>
@@ -275,7 +275,7 @@ function WalletContent() {
                 <TrendingUp className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Earned</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tổng điểm nhận</p>
                 <p className="text-xl font-extrabold text-gray-800">+{summary.totalEarned.toLocaleString()} pts</p>
               </div>
             </div>
@@ -284,7 +284,7 @@ function WalletContent() {
                 <TrendingDown className="w-5 h-5 text-red-500" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Spent</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tổng điểm đã dùng</p>
                 <p className="text-xl font-extrabold text-gray-800">−{summary.totalSpent.toLocaleString()} pts</p>
               </div>
             </div>
@@ -293,7 +293,7 @@ function WalletContent() {
                 <BookOpen className="w-5 h-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sessions</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Buổi học</p>
                 <p className="text-xl font-extrabold text-gray-800">{summary.bookingsCreated}</p>
               </div>
             </div>
@@ -304,9 +304,9 @@ function WalletContent() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between p-6 border-b border-gray-100">
             <div>
-              <h2 className="text-base font-bold text-gray-900">Transaction History</h2>
+              <h2 className="text-base font-bold text-gray-900">Lịch sử giao dịch</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} found
+                Tìm thấy {transactions.length} giao dịch
               </p>
             </div>
           </div>
@@ -314,13 +314,13 @@ function WalletContent() {
           {isDataLoading ? (
             <div className="py-16 flex flex-col items-center gap-3 text-gray-400">
               <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
-              <span className="text-sm font-medium">Loading transactions...</span>
+              <span className="text-sm font-medium">Đang tải giao dịch...</span>
             </div>
           ) : transactions.length === 0 ? (
             <div className="py-16 flex flex-col items-center gap-3 text-gray-400">
               <Wallet className="w-10 h-10 text-gray-300" />
-              <p className="text-sm font-medium">No transactions yet</p>
-              <p className="text-xs text-gray-400">Top up your wallet to get started</p>
+              <p className="text-sm font-medium">Chưa có giao dịch nào</p>
+              <p className="text-xs text-gray-400">Nạp điểm vào ví để bắt đầu</p>
             </div>
           ) : (
             <>
@@ -330,16 +330,16 @@ function WalletContent() {
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
                       <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Date & Time
+                        Ngày & Giờ
                       </th>
                       <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Description
+                        Mô tả
                       </th>
                       <th className="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Amount
+                        Số tiền
                       </th>
                       <th className="px-6 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Status
+                        Trạng thái
                       </th>
                     </tr>
                   </thead>
@@ -365,7 +365,7 @@ function WalletContent() {
                               <div>
                                 <div className="font-semibold text-gray-800">{meta.label}</div>
                                 {counterparty && (
-                                  <div className="text-xs text-gray-400 mt-0.5">with {counterparty}</div>
+                                  <div className="text-xs text-gray-400 mt-0.5">với {counterparty}</div>
                                 )}
                               </div>
                             </div>
@@ -410,7 +410,7 @@ function WalletContent() {
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-gray-800 text-sm truncate">{meta.label}</div>
                         {counterparty && (
-                          <div className="text-xs text-gray-400 truncate">with {counterparty}</div>
+                          <div className="text-xs text-gray-400 truncate">với {counterparty}</div>
                         )}
                         <div className="text-xs text-gray-400 mt-0.5">
                           {formatDate(tx.createdAt)} · {formatTime(tx.createdAt)}
@@ -471,7 +471,7 @@ export default function WalletPage() {
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
-            <p className="text-sm text-gray-500 font-medium">Loading wallet data...</p>
+            <p className="text-sm text-gray-500 font-medium">Đang tải dữ liệu ví...</p>
           </div>
         </div>
       }

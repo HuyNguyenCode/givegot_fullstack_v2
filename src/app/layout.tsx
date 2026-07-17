@@ -21,8 +21,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'GiveGot - Time Banking Mentorship',
-  description: 'Teach 1 hour, earn 1 point. Learn from experts.',
+  title: 'GiveGot - Mentorship Time Banking',
+  description: 'Dạy 1 giờ, kiếm 1 điểm. Học hỏi từ các chuyên gia.',
 }
 
 // Paths where the suspension check must be skipped to avoid an infinite

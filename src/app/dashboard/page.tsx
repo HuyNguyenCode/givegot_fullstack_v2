@@ -104,7 +104,7 @@ export default function DashboardPage() {
   const handleDecline = async (bookingId: string) => {
     if (!currentUser) return
 
-    if (!confirm('Are you sure you want to decline this booking? The mentee will be refunded.')) {
+    if (!confirm('Bạn có chắc muốn từ chối lịch đặt này? Mentee sẽ được hoàn điểm.')) {
       return
     }
 
@@ -126,7 +126,7 @@ export default function DashboardPage() {
   const handleCancel = async (bookingId: string) => {
     if (!currentUser) return
 
-    if (!confirm('Are you sure you want to cancel this booking? Your point will be refunded.')) {
+    if (!confirm('Bạn có chắc muốn hủy lịch đặt này? Điểm của bạn sẽ được hoàn lại.')) {
       return
     }
 
@@ -150,7 +150,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">Đang tải bảng điều khiển...</p>
         </div>
       </div>
     )
@@ -161,8 +161,8 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-red-600">Authentication Required</h2>
-          <p className="text-gray-600 mt-2">Please select a user from the switcher above.</p>
+          <h2 className="text-xl font-bold text-red-600">Yêu cầu đăng nhập</h2>
+          <p className="text-gray-600 mt-2">Vui lòng chọn người dùng từ bộ chuyển đổi phía trên.</p>
         </div>
       </div>
     )
@@ -206,11 +206,11 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Bảng điều khiển</h1>
             <p className="mt-1 text-gray-500 text-sm">
-              Welcome back,{' '}
-              <span className="font-semibold text-purple-600">{currentUser.name ?? 'there'}</span>
-              {' '}— here's your overview
+              Chào mừng bạn trở lại,{' '}
+              <span className="font-semibold text-purple-600">{currentUser.name ?? 'bạn'}</span>
+              {' '}— đây là tổng quan của bạn
             </p>
           </div>
           <button
@@ -221,7 +221,7 @@ export default function DashboardPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            {isLoading ? 'Refreshing...' : 'Refresh'}
+            {isLoading ? 'Đang làm mới...' : 'Làm mới'}
           </button>
         </div>
 
@@ -252,7 +252,7 @@ export default function DashboardPage() {
 
           <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-600">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800">As Mentor</h2>
+              <h2 className="text-lg font-semibold text-gray-800">Vai trò Mentor</h2>
               <div className="bg-green-100 p-2 rounded-full">
                 <svg
                   className="w-6 h-6 text-green-600"
@@ -271,13 +271,13 @@ export default function DashboardPage() {
             </div>
             <div className="mt-3">
               <span className="text-3xl font-bold text-green-600">{mentoringBookings.length}</span>
-              <span className="text-sm text-gray-600 ml-2">sessions</span>
+              <span className="text-sm text-gray-600 ml-2">buổi học</span>
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-600">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800">As Mentee</h2>
+              <h2 className="text-lg font-semibold text-gray-800">Vai trò Mentee</h2>
               <div className="bg-blue-100 p-2 rounded-full">
                 <svg
                   className="w-6 h-6 text-blue-600"
@@ -296,7 +296,7 @@ export default function DashboardPage() {
             </div>
             <div className="mt-3">
               <span className="text-3xl font-bold text-blue-600">{learningBookings.length}</span>
-              <span className="text-sm text-gray-600 ml-2">sessions</span>
+              <span className="text-sm text-gray-600 ml-2">buổi học</span>
             </div>
           </div>
         </div>
@@ -309,7 +309,7 @@ export default function DashboardPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            Discover Mentors
+            Khám phá Mentor
           </Link>
           <Link
             href="/profile"
@@ -319,7 +319,7 @@ export default function DashboardPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Edit Profile
+            Chỉnh sửa hồ sơ
           </Link>
         </div>
 
@@ -332,8 +332,8 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Insights Center</h2>
-              <p className="text-sm text-gray-500">Your activity analytics and community trends</p>
+              <h2 className="text-2xl font-bold text-gray-900">Trung tâm Thống kê</h2>
+              <p className="text-sm text-gray-500">Số liệu hoạt động của bạn và xu hướng cộng đồng</p>
             </div>
           </div>
 
@@ -341,13 +341,13 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
             <div className="flex items-start justify-between mb-1">
               <div>
-                <h3 className="text-base font-semibold text-gray-800">GivePoints Balance</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Last 30 days — daily running balance</p>
+                <h3 className="text-base font-semibold text-gray-800">Số dư GivePoints</h3>
+                <p className="text-xs text-gray-400 mt-0.5">30 ngày qua — số dư hàng ngày</p>
               </div>
               <div className="flex items-center gap-1.5 bg-purple-50 px-3 py-1.5 rounded-full">
                 <div className="w-2 h-2 rounded-full bg-purple-600" />
                 <span className="text-xs font-semibold text-purple-700">
-                  {currentUser.givePoints} pts now
+                  {currentUser.givePoints} điểm hiện tại
                 </span>
               </div>
             </div>
@@ -359,28 +359,28 @@ export default function DashboardPage() {
             {/* Skills Demand vs Supply */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="mb-4">
-                <h3 className="text-base font-semibold text-gray-800">Skill Demand vs Supply</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Top 8 most-requested skills in the community</p>
+                <h3 className="text-base font-semibold text-gray-800">Nhu cầu &amp; Cung ứng Kỹ năng</h3>
+                <p className="text-xs text-gray-400 mt-0.5">8 kỹ năng được yêu cầu nhiều nhất trong cộng đồng</p>
               </div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-sm bg-purple-700" />
-                  <span className="text-xs text-gray-500">Demand (WANT)</span>
+                  <span className="text-xs text-gray-500">Nhu cầu (WANT)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-sm bg-emerald-500" />
-                  <span className="text-xs text-gray-500">Supply (GIVE)</span>
+                  <span className="text-xs text-gray-500">Cung ứng (GIVE)</span>
                 </div>
               </div>
               <SkillDemandChart data={skillDemand} isLoading={analyticsLoading} />
               {!analyticsLoading && skillDemand.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-50">
                   <p className="text-xs text-gray-400 text-center">
-                    Highest gap:{' '}
+                    Chênh lệch cao nhất:{' '}
                     <span className="font-semibold text-orange-500">
                       {skillDemand.reduce((a, b) => (a.gap > b.gap ? a : b)).skill}
                     </span>{' '}
-                    — consider teaching this skill!
+                    — hãy thử dạy kỹ năng này nhé!
                   </p>
                 </div>
               )}
@@ -390,14 +390,14 @@ export default function DashboardPage() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-base font-semibold text-gray-800">Top Mentors</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Ranked by Trust Score</p>
+                  <h3 className="text-base font-semibold text-gray-800">Mentor hàng đầu</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Xếp hạng theo Điểm tin cậy</p>
                 </div>
                 <Link
                   href="/discover"
                   className="text-xs text-purple-600 hover:text-purple-700 font-medium transition"
                 >
-                  View all →
+                  Xem tất cả →
                 </Link>
               </div>
               <MentorLeaderboard data={popularMentors} isLoading={analyticsLoading} />
@@ -419,7 +419,7 @@ export default function DashboardPage() {
               }`}
             >
               <span className="text-base">🎓</span>
-              Teaching calendar
+              Lịch giảng dạy
               {mentoringBookings.filter(b => b.status === 'PENDING').length > 0 && (
                 <span className="ml-1 bg-purple-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                   {mentoringBookings.filter(b => b.status === 'PENDING').length}
@@ -435,7 +435,7 @@ export default function DashboardPage() {
               }`}
             >
               <span className="text-base">📚</span>
-              Study calendar
+              Lịch học tập
               {learningBookings.filter(b => b.status === 'CONFIRMED').length > 0 && (
                 <span className="ml-1 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                   {learningBookings.filter(b => b.status === 'CONFIRMED').length}
@@ -475,10 +475,10 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    🗺️ Your Learning Roadmaps
+                    🗺️ Lộ trình học tập của bạn
                   </h2>
                   <p className="text-gray-600 text-sm">
-                    AI-generated step-by-step paths to master your goals
+                    Lộ trình từng bước do AI tạo để giúp bạn đạt mục tiêu
                   </p>
                 </div>
               </div>
@@ -501,19 +501,19 @@ export default function DashboardPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-2xl">🎓</span>
-              Mentoring Sessions
+              Buổi giảng dạy
               {mentoringBookings.length > 0 && (
                 <span className="text-sm font-normal text-gray-500">
-                  ({mentoringBookings.length} total)
+                  (tổng: {mentoringBookings.length})
                 </span>
               )}
             </h2>
 
             {mentoringBookings.length === 0 ? (
               <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                <p className="text-gray-600">No one has booked you yet.</p>
+                <p className="text-gray-600">Chưa có ai đặt lịch với bạn.</p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Your teaching opportunities will appear here.
+                  Các cơ hội giảng dạy của bạn sẽ xuất hiện ở đây.
                 </p>
               </div>
             ) : (
@@ -538,7 +538,7 @@ export default function DashboardPage() {
                         )}
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-gray-900">
-                            {booking.mentee.name || 'Anonymous'}
+                            {booking.mentee.name || 'Ẩn danh'}
                           </h3>
                           <p className="text-sm text-gray-500">{booking.mentee.email}</p>
                           <div className="mt-2">
@@ -556,14 +556,14 @@ export default function DashboardPage() {
                         <p className="text-sm font-medium text-gray-700">
                           {formatDateTime(booking.startTime)}
                         </p>
-                        <p className="text-xs text-gray-500">1 hour session</p>
+                        <p className="text-xs text-gray-500">Buổi học 1 giờ</p>
                       </div>
                     </div>
 
                     {booking.note && (
                       <div className="bg-gray-50 rounded-lg p-3 mb-4">
                         <p className="text-sm text-gray-700">
-                          <span className="font-semibold">Note:</span> {booking.note}
+                          <span className="font-semibold">Ghi chú:</span> {booking.note}
                         </p>
                       </div>
                     )}
@@ -576,14 +576,14 @@ export default function DashboardPage() {
                             disabled={actionLoading === booking.id}
                             className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 transition disabled:bg-gray-300"
                           >
-                            {actionLoading === booking.id ? 'Processing...' : 'Accept Booking'}
+                            {actionLoading === booking.id ? 'Đang xử lý...' : 'Chấp nhận lịch đặt'}
                           </button>
                           <button
                             onClick={() => handleDecline(booking.id)}
                             disabled={actionLoading === booking.id}
                             className="px-4 bg-red-100 text-red-700 py-2 rounded-lg font-medium hover:bg-red-200 transition disabled:bg-gray-300"
                           >
-                            {actionLoading === booking.id ? 'Processing...' : 'Decline'}
+                            {actionLoading === booking.id ? 'Đang xử lý...' : 'Từ chối'}
                           </button>
                         </>
                       )}
@@ -599,12 +599,12 @@ export default function DashboardPage() {
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                               </svg>
-                              Join Meeting
+                              Tham gia buổi học
                             </a>
                           ) : (
                             <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
                               <p className="text-sm text-blue-800">
-                                ⏰ Session confirmed. {booking.meetingUrl ? 'Join Meeting button appears 10 min before start.' : 'Waiting for mentee to mark as complete.'}
+                                ⏰ Buổi học đã xác nhận. {booking.meetingUrl ? 'Nút Tham gia buổi học sẽ xuất hiện 10 phút trước giờ bắt đầu.' : 'Đang chờ mentee đánh dấu hoàn thành.'}
                               </p>
                             </div>
                           )}
@@ -615,7 +615,7 @@ export default function DashboardPage() {
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
-                            Message
+                            Nhắn tin
                           </Link>
                           <CancelBookingDialog
                             booking={booking}
@@ -628,7 +628,7 @@ export default function DashboardPage() {
                         <>
                           <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3 text-center">
                             <p className="text-sm text-green-800">
-                              ✅ Session completed! You earned 1 GivePoint.
+                              ✅ Buổi học đã hoàn thành! Bạn nhận được 1 GivePoint.
                             </p>
                           </div>
                           <Link
@@ -638,7 +638,7 @@ export default function DashboardPage() {
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
-                            Chat
+                            Trò chuyện
                           </Link>
                         </>
                       )}
@@ -648,7 +648,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <a href="#" className="text-sm text-blue-500 hover:underline mt-4 inline-block">
-                  View all sessions &rarr;
+                  Xem tất cả buổi học &rarr;
                 </a>
               </>
             )}
@@ -657,22 +657,22 @@ export default function DashboardPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-2xl">📚</span>
-              Learning Sessions
+              Buổi học
               {learningBookings.length > 0 && (
                 <span className="text-sm font-normal text-gray-500">
-                  ({learningBookings.length} total)
+                  (tổng: {learningBookings.length})
                 </span>
               )}
             </h2>
 
             {learningBookings.length === 0 ? (
               <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                <p className="text-gray-600">You haven't booked any sessions yet.</p>
+                <p className="text-gray-600">Bạn chưa đặt buổi học nào.</p>
                 <Link
                   href="/discover"
                   className="inline-block mt-4 text-purple-600 hover:text-purple-700 font-medium"
                 >
-                  Find a Mentor →
+                  Tìm Mentor →
                 </Link>
               </div>
             ) : (
@@ -697,7 +697,7 @@ export default function DashboardPage() {
                         )}
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-gray-900">
-                            {booking.mentor.name || 'Anonymous'}
+                            {booking.mentor.name || 'Ẩn danh'}
                           </h3>
                           <p className="text-sm text-gray-500">{booking.mentor.email}</p>
                           <div className="mt-2">
@@ -715,14 +715,14 @@ export default function DashboardPage() {
                         <p className="text-sm font-medium text-gray-700">
                           {formatDateTime(booking.startTime)}
                         </p>
-                        <p className="text-xs text-gray-500">1 hour session</p>
+                        <p className="text-xs text-gray-500">Buổi học 1 giờ</p>
                       </div>
                     </div>
 
                     {booking.note && (
                       <div className="bg-gray-50 rounded-lg p-3 mb-4">
                         <p className="text-sm text-gray-700">
-                          <span className="font-semibold">Your note:</span> {booking.note}
+                          <span className="font-semibold">Ghi chú của bạn:</span> {booking.note}
                         </p>
                       </div>
                     )}
@@ -732,7 +732,7 @@ export default function DashboardPage() {
                         <>
                           <div className="flex-1 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
                             <p className="text-sm text-yellow-800">
-                              ⏳ Waiting for mentor to accept...
+                              ⏳ Đang chờ mentor xác nhận...
                             </p>
                           </div>
                           <button
@@ -740,7 +740,7 @@ export default function DashboardPage() {
                             disabled={actionLoading === booking.id}
                             className="px-4 bg-red-100 text-red-700 py-2 rounded-lg font-medium hover:bg-red-200 transition"
                           >
-                            Cancel
+                            Hủy
                           </button>
                         </>
                       )}
@@ -756,7 +756,7 @@ export default function DashboardPage() {
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                               </svg>
-                              Join Meeting
+                              Tham gia buổi học
                             </a>
                           )}
                           <div className="flex-1">
@@ -772,14 +772,14 @@ export default function DashboardPage() {
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
-                            Message
+                            Nhắn tin
                           </Link>
                           <button
                             onClick={() => handleCancel(booking.id)}
                             disabled={actionLoading === booking.id}
                             className="px-4 bg-red-100 text-red-700 py-2 rounded-lg font-medium hover:bg-red-200 transition"
                           >
-                            Cancel
+                            Hủy
                           </button>
                         </>
                       )}
@@ -788,7 +788,7 @@ export default function DashboardPage() {
                           <div className="w-full space-y-2">
                             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
                               <p className="text-sm text-green-800">
-                                ✅ Session completed! 1 GivePoint transferred.
+                                ✅ Buổi học đã hoàn thành! Đã chuyển 1 GivePoint.
                               </p>
                             </div>
                             {/* Blind review may still be pending/revealed even
@@ -805,14 +805,14 @@ export default function DashboardPage() {
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
-                            Chat
+                            Trò chuyện
                           </Link>
                         </>
                       )}
                       {booking.status === BookingStatus.CANCELLED && (
                         <div className="flex-1 bg-red-50 border border-red-200 rounded-lg p-3 text-center">
                           <p className="text-sm text-red-800">
-                            ❌ Booking cancelled. Point refunded.
+                            ❌ Lịch đặt đã bị hủy. Điểm đã được hoàn lại.
                           </p>
                         </div>
                       )}
@@ -822,7 +822,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <a href="#" className="text-sm text-blue-500 hover:underline mt-4 inline-block">
-                  View all sessions &rarr;
+                  Xem tất cả buổi học &rarr;
                 </a>
               </>
             )}

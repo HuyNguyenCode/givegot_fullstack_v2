@@ -92,7 +92,7 @@ export default function UsersPage() {
   }
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to DELETE user "${userName}"? This action cannot be undone.`)) {
+    if (!confirm(`Bạn có chắc chắn muốn XÓA người dùng "${userName}"? Hành động này không thể hoàn tác.`)) {
       return
     }
 
@@ -106,8 +106,8 @@ export default function UsersPage() {
   }
 
   const handleToggleSuspension = async (userId: string, currentStatus: boolean) => {
-    const action = currentStatus ? 'activate' : 'suspend'
-    if (!confirm(`Are you sure you want to ${action} this user?`)) return
+    const action = currentStatus ? 'kích hoạt' : 'khóa'
+    if (!confirm(`Bạn có chắc chắn muốn ${action} người dùng này?`)) return
 
     const result = await toggleUserSuspension(userId, !currentStatus)
     if (result.success) {
@@ -169,30 +169,30 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">User Management</h2>
-        <p className="text-gray-600">Full CRUD operations for user accounts</p>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Quản lý người dùng</h2>
+        <p className="text-gray-600">Quản lý đầy đủ (thêm/sửa/xóa) tài khoản người dùng</p>
       </div>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Total Users</div>
+          <div className="text-sm text-gray-600">Tổng số người dùng</div>
           <div className="text-2xl font-bold text-blue-600">{users.length}</div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Admins</div>
+          <div className="text-sm text-gray-600">Quản trị viên</div>
           <div className="text-2xl font-bold text-red-600">
             {users.filter(u => u.role === 'ADMIN').length}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Active Users</div>
+          <div className="text-sm text-gray-600">Người dùng hoạt động</div>
           <div className="text-2xl font-bold text-green-600">
             {users.filter(u => !u.isSuspended).length}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Suspended</div>
+          <div className="text-sm text-gray-600">Đã khóa</div>
           <div className="text-2xl font-bold text-orange-600">
             {users.filter(u => u.isSuspended).length}
           </div>
@@ -210,7 +210,7 @@ export default function UsersPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name or email..."
+                placeholder="Tìm theo tên hoặc email..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
               />
             </div>
@@ -222,9 +222,9 @@ export default function UsersPage() {
             onChange={(e) => setRoleFilter(e.target.value as any)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
-            <option value="all">All Roles</option>
-            <option value="user">Users Only</option>
-            <option value="admin">Admins Only</option>
+            <option value="all">Tất cả vai trò</option>
+            <option value="user">Chỉ người dùng</option>
+            <option value="admin">Chỉ quản trị viên</option>
           </select>
 
           {/* Status Filter */}
@@ -233,14 +233,14 @@ export default function UsersPage() {
             onChange={(e) => setStatusFilter(e.target.value as any)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
-            <option value="all">All Status</option>
-            <option value="active">Active Only</option>
-            <option value="suspended">Suspended Only</option>
+            <option value="all">Tất cả trạng thái</option>
+            <option value="active">Chỉ đang hoạt động</option>
+            <option value="suspended">Chỉ bị khóa</option>
           </select>
         </div>
 
         <div className="mt-3 text-sm text-gray-600">
-          Showing {filteredUsers.length} of {users.length} users
+          Hiển thị {filteredUsers.length} trong số {users.length} người dùng
         </div>
       </div>
 
@@ -251,22 +251,22 @@ export default function UsersPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                  Người dùng
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
+                  Vai trò
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Points
+                  Điểm
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Trạng thái
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Activity
+                  Hoạt động
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  Hành động
                 </th>
               </tr>
             </thead>
@@ -278,7 +278,7 @@ export default function UsersPage() {
                       {user.avatarUrl && (
                         <Image
                           src={user.avatarUrl}
-                          alt={user.name || 'User'}
+                          alt={user.name || 'Người dùng'}
                           width={40}
                           height={40}
                           className="rounded-full"
@@ -286,7 +286,7 @@ export default function UsersPage() {
                       )}
                       <div>
                         <div className="font-semibold text-gray-900">
-                          {user.name || 'Anonymous'}
+                          {user.name || 'Người dùng ẩn danh'}
                         </div>
                         <div className="text-sm text-gray-500">{user.email}</div>
                       </div>
@@ -315,23 +315,23 @@ export default function UsersPage() {
                     {user.isSuspended ? (
                       <span className="flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">
                         <Ban className="w-3 h-3" />
-                        Suspended
+                        Đã khóa
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
                         <CheckCircle className="w-3 h-3" />
-                        Active
+                        Đang hoạt động
                       </span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-600">
-                      <div>Mentoring: {user._count.mentoring}</div>
-                      <div>Learning: {user._count.learning}</div>
+                      <div>Đang dạy: {user._count.mentoring}</div>
+                      <div>Đang học: {user._count.learning}</div>
                       {user._count.reportsReceived > 0 && (
                         <div className="text-red-600 flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3" />
-                          Reports: {user._count.reportsReceived}
+                          Báo cáo: {user._count.reportsReceived}
                         </div>
                       )}
                     </div>
@@ -341,28 +341,28 @@ export default function UsersPage() {
                       <button
                         onClick={() => openEditModal(user)}
                         className="text-blue-600 hover:text-blue-800 p-1"
-                        title="Edit User"
+                        title="Sửa người dùng"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setAdjustingUser(user)}
                         className="text-purple-600 hover:text-purple-800 p-1"
-                        title="Adjust Points"
+                        title="Điều chỉnh điểm"
                       >
                         <Coins className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleToggleSuspension(user.id, user.isSuspended)}
                         className="text-orange-600 hover:text-orange-800 p-1"
-                        title={user.isSuspended ? 'Activate' : 'Suspend'}
+                        title={user.isSuspended ? 'Kích hoạt' : 'Khóa'}
                       >
                         <Ban className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteUser(user.id, user.name || user.email)}
                         className="text-red-600 hover:text-red-800 p-1"
-                        title="Delete User"
+                        title="Xóa người dùng"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -380,43 +380,43 @@ export default function UsersPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Edit User: {editingUser.name || editingUser.email}
+              Sửa người dùng: {editingUser.name || editingUser.email}
             </h3>
             
             <div className="space-y-4">
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Name
+                  Tên
                 </label>
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="User name"
+                  placeholder="Tên người dùng"
                 />
               </div>
 
               {/* Role */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Role
+                  Vai trò
                 </label>
                 <select
                   value={editForm.role}
                   onChange={(e) => setEditForm({ ...editForm, role: e.target.value as UserRole })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
-                  <option value="USER">USER</option>
-                  <option value="ADMIN">ADMIN</option>
+                  <option value="USER">Người dùng</option>
+                  <option value="ADMIN">Quản trị viên</option>
                 </select>
               </div>
 
               {/* GivePoints */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  GivePoints Balance
+                  Số dư GivePoints
                 </label>
                 <input
                   type="number"
@@ -436,7 +436,7 @@ export default function UsersPage() {
                   className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
                 />
                 <label htmlFor="suspended" className="text-sm font-medium text-gray-700">
-                  Account Suspended
+                  Khóa tài khoản
                 </label>
               </div>
             </div>
@@ -447,14 +447,14 @@ export default function UsersPage() {
                 disabled={isSaving}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 transition"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 onClick={handleSaveUser}
                 disabled={isSaving}
                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition disabled:bg-gray-300"
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
             </div>
           </div>
@@ -466,29 +466,29 @@ export default function UsersPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Adjust Points: {adjustingUser.name || adjustingUser.email}
+              Điều chỉnh điểm: {adjustingUser.name || adjustingUser.email}
             </h3>
             
             <div className="mb-4">
-              <div className="text-sm text-gray-600 mb-2">Current Balance:</div>
+              <div className="text-sm text-gray-600 mb-2">Số dư hiện tại:</div>
               <div className="text-3xl font-bold text-purple-600">
-                {adjustingUser.givePoints} points
+                {adjustingUser.givePoints} điểm
               </div>
             </div>
 
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Adjustment Amount
+                Số điểm điều chỉnh
               </label>
               <input
                 type="number"
                 value={pointsAdjustment}
                 onChange={(e) => setPointsAdjustment(parseInt(e.target.value) || 0)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Enter amount (positive or negative)"
+                placeholder="Nhập số điểm (dương hoặc âm)"
               />
               <div className="text-sm text-gray-500 mt-2">
-                New balance: {adjustingUser.givePoints + pointsAdjustment} points
+                Số dư mới: {adjustingUser.givePoints + pointsAdjustment} điểm
               </div>
             </div>
 
@@ -500,14 +500,14 @@ export default function UsersPage() {
                 }}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 transition"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 onClick={handlePointsAdjustment}
                 disabled={isAdjusting || pointsAdjustment === 0}
                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition disabled:bg-gray-300"
               >
-                {isAdjusting ? 'Adjusting...' : 'Confirm'}
+                {isAdjusting ? 'Đang xử lý...' : 'Xác nhận'}
               </button>
             </div>
           </div>

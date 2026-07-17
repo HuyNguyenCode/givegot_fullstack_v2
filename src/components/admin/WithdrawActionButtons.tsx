@@ -23,7 +23,7 @@ export default function WithdrawActionButtons({ requestId }: WithdrawActionButto
       const result = await updateWithdrawStatus(requestId, newStatus)
       if (result.success) {
         showToast(
-          newStatus === 'APPROVED' ? 'Request approved.' : 'Request rejected.',
+          newStatus === 'APPROVED' ? 'Đã duyệt yêu cầu.' : 'Đã từ chối yêu cầu.',
           newStatus === 'APPROVED' ? 'success' : 'error',
         )
         // Page will revalidate automatically via revalidatePath in the action
@@ -31,7 +31,7 @@ export default function WithdrawActionButtons({ requestId }: WithdrawActionButto
         showToast(result.message, 'error')
       }
     } catch {
-      showToast('Unexpected error. Please try again.', 'error')
+      showToast('Đã xảy ra lỗi. Vui lòng thử lại.', 'error')
     } finally {
       setIsPending(null)
     }
@@ -44,7 +44,7 @@ export default function WithdrawActionButtons({ requestId }: WithdrawActionButto
         <button
           onClick={() => handleAction('APPROVED')}
           disabled={isPending !== null}
-          title="Approve and mark as transferred"
+          title="Duyệt và đánh dấu đã chuyển tiền"
           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-lg hover:bg-emerald-100 hover:border-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isPending === 'APPROVED' ? (
@@ -52,14 +52,14 @@ export default function WithdrawActionButtons({ requestId }: WithdrawActionButto
           ) : (
             <CheckCircle className="w-3.5 h-3.5" />
           )}
-          Approve
+          Duyệt
         </button>
 
         {/* Reject */}
         <button
           onClick={() => handleAction('REJECTED')}
           disabled={isPending !== null}
-          title="Reject this request"
+          title="Từ chối yêu cầu này"
           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-100 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isPending === 'REJECTED' ? (
@@ -67,7 +67,7 @@ export default function WithdrawActionButtons({ requestId }: WithdrawActionButto
           ) : (
             <XCircle className="w-3.5 h-3.5" />
           )}
-          Reject
+          Từ chối
         </button>
       </div>
 

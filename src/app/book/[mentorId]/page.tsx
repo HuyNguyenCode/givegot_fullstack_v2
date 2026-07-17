@@ -48,12 +48,12 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
     if (!currentUser || !mentor) return
 
     if (currentUser.id === mentor.id) {
-      setError('You cannot book a session with yourself!')
+      setError('Bạn không thể đặt lịch với chính mình!')
       return
     }
 
     if (!selectedDate || !selectedTime) {
-      setError('Please select both date and time for the session.')
+      setError('Vui lòng chọn cả ngày và giờ cho buổi học.')
       return
     }
 
@@ -88,7 +88,7 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading mentor details...</p>
+          <p className="text-gray-600">Đang tải thông tin Mentor...</p>
         </div>
       </div>
     )
@@ -98,12 +98,12 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-red-600">Mentor Not Found</h2>
+          <h2 className="text-xl font-bold text-red-600">Không tìm thấy Mentor</h2>
           <button
             onClick={() => router.push('/discover')}
             className="mt-4 text-purple-600 hover:text-purple-700"
           >
-            ← Back to Discovery
+            ← Về trang khám phá
           </button>
         </div>
       </div>
@@ -124,12 +124,12 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Discovery
+          Về trang khám phá
         </button>
 
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">
-            Book a Session
+            Đặt lịch buổi học
           </h1>
 
           <div className="flex items-start gap-6 mb-8 pb-6 border-b">
@@ -144,7 +144,7 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
             )}
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900">
-                {mentor.name || 'Anonymous Mentor'}
+                {mentor.name || 'Mentor ẩn danh'}
               </h2>
               <p className="text-sm text-gray-500 mb-2">{mentor.email}</p>
               {mentor.bio && (
@@ -179,26 +179,26 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <h3 className="font-semibold text-blue-900">Time-Banking Rules</h3>
+                <h3 className="font-semibold text-blue-900">Quy tắc Time-Banking</h3>
               </div>
               <ul className="text-sm text-blue-800 space-y-1 ml-7">
-                <li>• 1 hour session = 1 GivePoint (held when you book)</li>
-                <li>• Point transfers to mentor after session completion</li>
-                <li>• You need at least 1 point to book</li>
+                <li>• 1 giờ học = 1 GivePoint (giữ khi bạn đặt lịch)</li>
+                <li>• Điểm sẽ chuyển cho Mentor sau khi buổi học hoàn thành</li>
+                <li>• Bạn cần ít nhất 1 điểm để đặt lịch</li>
               </ul>
             </div>
 
             {currentUser && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-purple-900 font-medium">Your Current Balance:</span>
+                  <span className="text-purple-900 font-medium">Số dư hiện tại của bạn:</span>
                   <span className="text-2xl font-bold text-purple-600">
-                    {currentUser.givePoints} pts
+                    {currentUser.givePoints} điểm
                   </span>
                 </div>
                 {currentUser.givePoints < 1 && (
                   <p className="text-sm text-red-600 mt-2">
-                    ⚠️ You don't have enough points to book this session.
+                    ⚠️ Bạn không có đủ điểm để đặt lịch buổi học này.
                   </p>
                 )}
               </div>
@@ -207,7 +207,7 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
-                  Session Date *
+                  Ngày học *
                 </label>
                 <input
                   type="date"
@@ -222,7 +222,7 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
 
               <div>
                 <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Time *
+                  Giờ bắt đầu *
                 </label>
                 <input
                   type="time"
@@ -237,14 +237,14 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
 
             <div>
               <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-2">
-                Note for Mentor (Optional)
+                Lời nhắn cho Mentor (Không bắt buộc)
               </label>
               <textarea
                 id="note"
                 rows={4}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="What would you like to learn? Any specific topics?"
+                placeholder="Bạn muốn học gì? Có chủ đề cụ thể nào không?"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none"
               />
             </div>
@@ -261,14 +261,14 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
                 onClick={() => router.push('/discover')}
                 className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || (currentUser?.givePoints ?? 0) < 1}
                 className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Booking...' : 'Book Session (1 pt)'}
+                {isSubmitting ? 'Đang đặt lịch...' : 'Đặt lịch (1 điểm)'}
               </button>
             </div>
           </form>

@@ -16,7 +16,7 @@ export function UserSwitcher() {
     return (
       <div className="bg-yellow-100 border-b-2 border-yellow-400 px-4 py-2">
         <div className="max-w-7xl mx-auto">
-          <p className="text-sm text-yellow-800">Loading users...</p>
+          <p className="text-sm text-yellow-800">Đang tải người dùng...</p>
         </div>
       </div>
     )
@@ -30,14 +30,14 @@ export function UserSwitcher() {
             DEV MODE
           </span>
           <span className="text-sm font-medium text-white">
-            Logged in as:
+            Đang đăng nhập với:
           </span>
           {currentUser && (
             <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
               {currentUser.avatarUrl && (
                 <Image
                   src={currentUser.avatarUrl}
-                  alt={currentUser.name || 'User'}
+                  alt={currentUser.name || 'Người dùng'}
                   width={24}
                   height={24}
                   className="rounded-full"
@@ -47,7 +47,7 @@ export function UserSwitcher() {
                 {currentUser.name || currentUser.email}
               </span>
               <span className="text-xs text-white/70">
-                ({currentUser.givePoints} pts)
+                ({currentUser.givePoints} điểm)
               </span>
             </div>
           )}
@@ -57,25 +57,25 @@ export function UserSwitcher() {
           <a
             href="/profile"
             className="text-white/90 hover:text-white transition flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg"
-            title="Edit Profile"
+            title="Chỉnh sửa Hồ sơ"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span className="text-sm font-medium hidden sm:inline">Profile</span>
+            <span className="text-sm font-medium hidden sm:inline">Hồ sơ</span>
           </a>
           <a
             href="/wallet"
             className="text-white/90 hover:text-white transition flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg"
-            title="My Wallet"
+            title="Ví của Mình"
           >
             <Wallet className="w-4 h-4" />
-            <span className="text-sm font-medium hidden sm:inline">Wallet</span>
+            <span className="text-sm font-medium hidden sm:inline">Ví</span>
           </a>
           
           <label htmlFor="user-select" className="text-sm font-medium text-white">
-            Switch User:
+            Chuyển Người Dùng:
           </label>
           <select
             id="user-select"
@@ -85,7 +85,7 @@ export function UserSwitcher() {
           >
             {allUsers.map((user) => (
               <option key={user.id} value={user.id} className="text-black">
-                {user.name || user.email} - {user.givePoints} pts
+                {user.name || user.email} - {user.givePoints} điểm
               </option>
             ))}
           </select>

@@ -29,10 +29,10 @@ export default async function AdminLayout({
   }
 
   const navItems = [
-    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/users', label: 'Users', icon: Users },
-    { href: '/admin/reports', label: 'Reports', icon: AlertTriangle },
-    { href: '/admin/skills', label: 'Skills', icon: CheckSquare },
+    { href: '/admin', label: 'Tổng quan', icon: LayoutDashboard },
+    { href: '/admin/users', label: 'Người dùng', icon: Users },
+    { href: '/admin/reports', label: 'Báo cáo', icon: AlertTriangle },
+    { href: '/admin/skills', label: 'Kỹ năng', icon: CheckSquare },
   ]
 
   return (
@@ -46,8 +46,8 @@ export default async function AdminLayout({
                 <LayoutDashboard className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Admin Panel</h1>
-                <p className="text-sm text-red-100">GiveGot Time-Banking Platform</p>
+                <h1 className="text-2xl font-bold">Trang quản trị</h1>
+                <p className="text-sm text-red-100">Nền tảng Time-Banking GiveGot</p>
               </div>
             </div>
             <Link
@@ -55,7 +55,7 @@ export default async function AdminLayout({
               className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition"
             >
               <Home className="w-4 h-4" />
-              <span className="text-sm font-medium">Back to Site</span>
+              <span className="text-sm font-medium">Về trang chủ</span>
             </Link>
           </div>
         </div>
@@ -86,11 +86,11 @@ export default async function AdminLayout({
 
               {/* Admin Info */}
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="text-xs text-gray-500 mb-2">Logged in as:</div>
+                <div className="text-xs text-gray-500 mb-2">Đăng nhập với:</div>
                 <div className="text-sm font-semibold text-gray-900 truncate">
                   {user.name || user.email}
                 </div>
-                <div className="text-xs text-red-600 font-bold mt-1">ADMIN</div>
+                <div className="text-xs text-red-600 font-bold mt-1">QUẢN TRỊ VIÊN</div>
               </div>
             </nav>
           </aside>

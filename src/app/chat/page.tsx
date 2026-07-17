@@ -67,7 +67,7 @@ function Avatar({
     return (
       <Image
         src={user.avatarUrl}
-        alt={user.name || 'User'}
+        alt={user.name || 'Người dùng'}
         width={size}
         height={size}
         className={`rounded-full object-cover ${className}`}
@@ -88,13 +88,13 @@ function formatSidebarTime(iso: string) {
   const d = new Date(iso)
   const now = new Date()
   const diff = now.getTime() - d.getTime()
-  if (diff < 60_000) return 'now'
+  if (diff < 60_000) return 'vừa xong'
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`
   if (d.toDateString() === now.toDateString())
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  if (d.toDateString() === yesterday.toDateString()) return 'Hôm qua'
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
@@ -105,10 +105,10 @@ function formatBubbleTime(iso: string) {
 function formatDateDivider(iso: string) {
   const d = new Date(iso)
   const now = new Date()
-  if (d.toDateString() === now.toDateString()) return 'Today'
+  if (d.toDateString() === now.toDateString()) return 'Hôm nay'
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  if (d.toDateString() === yesterday.toDateString()) return 'Hôm qua'
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
@@ -380,12 +380,12 @@ function ChatContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Please sign in to access messages.</p>
+          <p className="text-gray-600 mb-4">Vui lòng đăng nhập để xem tin nhắn.</p>
           <Link
             href="/auth/signin"
             className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition"
           >
-            Sign In
+            Đăng nhập
           </Link>
         </div>
       </div>
@@ -407,9 +407,9 @@ function ChatContent() {
         {/* Sidebar header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+            <h1 className="text-xl font-bold text-gray-900">Tin nhắn</h1>
             <p className="text-xs text-gray-400 mt-0.5">
-              {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+              {conversations.length} cuộc trò chuyện
             </p>
           </div>
           <Link
@@ -425,7 +425,7 @@ function ChatContent() {
           {isLoadingConvs ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader2 className="animate-spin text-purple-500" size={28} />
-              <p className="text-sm text-gray-400">Loading conversations…</p>
+              <p className="text-sm text-gray-400">Đang tải cuộc trò chuyện…</p>
             </div>
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-4">
@@ -433,16 +433,16 @@ function ChatContent() {
                 <MessageSquare size={28} className="text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-800">No conversations yet</p>
+                <p className="text-sm font-semibold text-gray-800">Chưa có cuộc trò chuyện nào</p>
                 <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                  Once a booking is confirmed, a chat channel opens automatically.
+                  Khi lịch đặt được xác nhận, một cuộc trò chuyện sẽ tự động được mở.
                 </p>
               </div>
               <Link
                 href="/dashboard"
                 className="text-sm text-purple-600 hover:underline font-medium"
               >
-                Go to Dashboard →
+                Đến Dashboard →
               </Link>
             </div>
           ) : (
@@ -495,12 +495,12 @@ function ChatContent() {
                       {conv.lastMessage ? (
                         <>
                           {conv.lastMessage.senderId === currentUser.id ? (
-                            <span className="text-gray-400">You: </span>
+                            <span className="text-gray-400">Bạn: </span>
                           ) : null}
                           {conv.lastMessage.content}
                         </>
                       ) : (
-                        <span className="italic text-gray-400">Say hello 👋</span>
+                        <span className="italic text-gray-400">Nói lời chào 👋</span>
                       )}
                     </p>
                   </div>
@@ -524,13 +524,13 @@ function ChatContent() {
               <MessageSquare size={40} className="text-purple-500" />
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-900">Select a conversation</h2>
+              <h2 className="text-xl font-bold text-gray-900">Chọn một cuộc trò chuyện</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Choose from the sidebar or open a chat from your{' '}
+                Chọn từ danh sách bên cạnh hoặc mở một cuộc trò chuyện từ{' '}
                 <Link href="/dashboard" className="text-purple-600 hover:underline">
                   dashboard
-                </Link>
-                .
+                </Link>{' '}
+                của bạn.
               </p>
             </div>
           </div>
@@ -542,7 +542,7 @@ function ChatContent() {
               <button
                 onClick={() => setIsMobileShowChat(false)}
                 className="md:hidden flex-shrink-0 p-1.5 rounded-full hover:bg-gray-100 transition"
-                aria-label="Back to conversations"
+                aria-label="Quay lại danh sách trò chuyện"
               >
                 <ArrowLeft size={20} className="text-gray-600" />
               </button>
@@ -580,7 +580,7 @@ function ChatContent() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="hidden sm:flex items-center gap-1 text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live
+                  Trực tiếp
                 </span>
                 <button className="p-1.5 rounded-full hover:bg-gray-100 transition text-gray-500">
                   <MoreVertical size={18} />
@@ -599,9 +599,9 @@ function ChatContent() {
                   <div className="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center">
                     <MessageSquare size={22} className="text-purple-300" />
                   </div>
-                  <p className="text-sm font-medium text-gray-600">No messages yet</p>
+                  <p className="text-sm font-medium text-gray-600">Chưa có tin nhắn nào</p>
                   <p className="text-xs text-gray-400">
-                    Say hello to{' '}
+                    Nói lời chào với{' '}
                     {selectedConv.partner.name || selectedConv.partner.email}!
                   </p>
                 </div>
@@ -726,7 +726,7 @@ function ChatContent() {
                       autoResize(e.target)
                     }}
                     onKeyDown={handleKeyDown}
-                    placeholder={`Message ${selectedConv.partner.name || selectedConv.partner.email}…`}
+                    placeholder={`Nhập tin nhắn cho ${selectedConv.partner.name || selectedConv.partner.email}…`}
                     rows={1}
                     disabled={isSending}
                     className="flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-400 resize-none outline-none max-h-32 leading-relaxed disabled:opacity-50"
@@ -736,7 +736,7 @@ function ChatContent() {
                 <button
                   onClick={handleSend}
                   disabled={!draft.trim() || isSending}
-                  aria-label="Send message"
+                  aria-label="Gửi tin nhắn"
                   className="
                     w-11 h-11 flex-shrink-0 rounded-full flex items-center justify-center
                     bg-gradient-to-br from-purple-600 to-blue-600 text-white
@@ -754,8 +754,8 @@ function ChatContent() {
                 </button>
               </div>
               <p className="text-center text-[11px] text-gray-400 mt-2">
-                Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Enter</kbd> to send ·{' '}
-                <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Shift+Enter</kbd> for new line
+                Nhấn <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Enter</kbd> để gửi ·{' '}
+                <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Shift+Enter</kbd> để xuống dòng
               </p>
             </div>
           </>

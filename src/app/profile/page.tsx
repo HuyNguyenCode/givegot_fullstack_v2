@@ -338,7 +338,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading profile...</p>
+          <p className="text-gray-600">Đang tải hồ sơ...</p>
         </div>
       </div>
     )
@@ -349,8 +349,8 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-red-600">Authentication Required</h2>
-          <p className="text-gray-600 mt-2">Please select a user from the switcher above.</p>
+          <h2 className="text-xl font-bold text-red-600">Yêu cầu đăng nhập</h2>
+          <p className="text-gray-600 mt-2">Vui lòng chọn một người dùng từ bộ chuyển đổi phía trên.</p>
         </div>
       </div>
     )
@@ -374,7 +374,7 @@ export default function ProfilePage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Home
+            Về trang chủ
           </button>
         </div>
 
@@ -387,9 +387,9 @@ export default function ProfilePage() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white">Edit Your Profile</h1>
+                <h1 className="text-3xl font-bold text-white">Chỉnh sửa hồ sơ</h1>
                 <p className="text-purple-100">
-                  Update your skills to get better AI-powered mentor matches
+                  Cập nhật kỹ năng của bạn để AI ghép đôi mentor chính xác hơn
                 </p>
               </div>
             </div>
@@ -404,19 +404,19 @@ export default function ProfilePage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <span className="text-2xl">👤</span>
-                Basic Information
+                Thông tin cơ bản
               </h2>
 
               <div className="space-y-6">
                 <div>
                   <label htmlFor="avatar" className="block text-sm font-medium text-gray-700 mb-2">
-                    Profile Avatar
+                    Ảnh đại diện
                   </label>
                   <div className="flex items-center gap-4">
                     {avatarUrl && (
                       <Image
                         src={avatarUrl}
-                        alt="Avatar preview"
+                        alt="Xem trước ảnh đại diện"
                         width={80}
                         height={80}
                         className="rounded-full ring-4 ring-purple-200"
@@ -436,7 +436,7 @@ export default function ProfilePage() {
                         onClick={generateRandomAvatar}
                         className="mt-2 text-sm text-purple-600 hover:text-purple-700 font-medium"
                       >
-                        🎲 Generate Random Avatar
+                        🎲 Tạo ảnh đại diện ngẫu nhiên
                       </button>
                     </div>
                   </div>
@@ -444,7 +444,7 @@ export default function ProfilePage() {
 
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name *
+                    Họ và tên *
                   </label>
                   <input
                     type="text"
@@ -452,25 +452,25 @@ export default function ProfilePage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Your full name"
+                    placeholder="Họ và tên của bạn"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                   />
                 </div>
 
                 <div>
                   <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                    Bio / About Me
+                    Giới thiệu bản thân
                   </label>
                   <textarea
                     id="bio"
                     rows={4}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell others about yourself, your experience, and what you're passionate about..."
+                    placeholder="Chia sẻ về bản thân, kinh nghiệm và những điều bạn đam mê..."
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    This helps mentors/mentees understand your background
+                    Điều này giúp Mentor/Mentee hiểu hơn về bạn
                   </p>
                 </div>
               </div>
@@ -483,10 +483,10 @@ export default function ProfilePage() {
               <div className="mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-2xl">🎓</span>
-                  What I Can Teach (Give)
+                  Kỹ năng/Môn học bạn có thể Dạy (Give)
                 </h2>
                 <p className="text-sm text-gray-600">
-                  Type to search existing skills or create custom ones. Press Enter to add. Show off our AI by using broad terms!
+                  Gõ để tìm kỹ năng có sẵn hoặc tạo kỹ năng mới. Nhấn Enter để thêm. Thử dùng từ khóa rộng để xem AI của tụi mình "xử" ra sao!
                 </p>
               </div>
 
@@ -502,7 +502,7 @@ export default function ProfilePage() {
                         : 'bg-white text-gray-600 border border-gray-300 hover:bg-green-50'
                     }`}
                   >
-                    All
+                    Tất cả
                   </button>
                   {SKILL_CATEGORY_ORDER.map(cat => (
                     <button
@@ -542,7 +542,7 @@ export default function ProfilePage() {
                           <span>{skill}</span>
                           {isVerified && (
                             <span className="text-xs bg-yellow-300 text-green-800 px-1.5 py-0.5 rounded font-bold">
-                              Verified
+                              Đã xác thực
                             </span>
                           )}
                           {!isVerified && (
@@ -553,14 +553,14 @@ export default function ProfilePage() {
                               className="text-xs bg-white text-green-700 px-2 py-0.5 rounded font-semibold hover:bg-green-100 transition disabled:opacity-50"
                               title="Xác thực kỹ năng"
                             >
-                              {isLoadingQuiz ? '...' : 'Verify'}
+                              {isLoadingQuiz ? '...' : 'Xác thực'}
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => removeTeachingSkill(skill)}
                             className="hover:bg-green-700 rounded-full p-0.5 transition ml-1"
-                            aria-label={`Remove ${skill}`}
+                            aria-label={`Xóa ${skill}`}
                           >
                             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -586,7 +586,7 @@ export default function ProfilePage() {
                     onFocus={() => setTeachingDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setTeachingDropdownOpen(false), 200)}
                     onKeyDown={handleTeachingKeyDown}
-                    placeholder={selectedTeachingSkills.length === 0 ? 'Type to add skills (e.g., "Web Development", "ReactJS", "Leadership")...' : 'Add more skills...'}
+                    placeholder={selectedTeachingSkills.length === 0 ? 'Gõ để thêm kỹ năng (VD: "Web Development", "ReactJS", "Leadership")...' : 'Thêm kỹ năng khác...'}
                     className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 transition"
                   />
 
@@ -605,9 +605,9 @@ export default function ProfilePage() {
                           </svg>
                           <div>
                             <div className="font-medium text-green-700">
-                              Create "<span className="font-bold">{teachingInput}</span>"
+                              Tạo "<span className="font-bold">{teachingInput}</span>"
                             </div>
-                            <div className="text-xs text-gray-500">Press Enter to add custom skill</div>
+                            <div className="text-xs text-gray-500">Nhấn Enter để thêm kỹ năng tùy chỉnh</div>
                           </div>
                         </button>
                       )}
@@ -638,7 +638,7 @@ export default function ProfilePage() {
 
                       {filteredTeachingSkills.length === 0 && !teachingInput.trim() && (
                         <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                          Start typing to search or create skills
+                          Bắt đầu nhập để tìm hoặc tạo kỹ năng
                         </div>
                       )}
                     </div>
@@ -647,14 +647,13 @@ export default function ProfilePage() {
 
                 {selectedTeachingSkills.length === 0 && (
                   <p className="text-sm text-green-700 mt-4 text-center font-medium">
-                    💡 No teaching skills added. Type above to add skills you can teach!
+                    💡 Chưa có kỹ năng nào. Gõ ở trên để thêm kỹ năng bạn có thể dạy!
                   </p>
                 )}
                 {selectedTeachingSkills.length > 0 && (
                   <div className="mt-4 text-center bg-green-100 rounded-lg p-3">
                     <span className="text-sm font-bold text-green-800">
-                      ✓ {selectedTeachingSkills.length} skill
-                      {selectedTeachingSkills.length !== 1 ? 's' : ''} added
+                      ✓ Đã thêm {selectedTeachingSkills.length} kỹ năng
                     </span>
                   </div>
                 )}
@@ -668,10 +667,10 @@ export default function ProfilePage() {
               <div className="mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-2xl">📚</span>
-                  What I Want to Learn (Get)
+                  Kỹ năng/Môn học bạn muốn Học (Get)
                 </h2>
                 <p className="text-sm text-gray-600">
-                  Type broad concepts (like "Frontend Development") to see AI match you with specific mentors (like "ReactJS")!
+                  Gõ những khái niệm rộng (VD: "Frontend Development") để xem AI ghép đôi bạn với mentor dạy môn cụ thể (VD: "ReactJS")!
                 </p>
               </div>
 
@@ -687,7 +686,7 @@ export default function ProfilePage() {
                         : 'bg-white text-gray-600 border border-gray-300 hover:bg-blue-50'
                     }`}
                   >
-                    All
+                    Tất cả
                   </button>
                   {SKILL_CATEGORY_ORDER.map(cat => (
                     <button
@@ -718,7 +717,7 @@ export default function ProfilePage() {
                           type="button"
                           onClick={() => removeLearningGoal(skill)}
                           className="hover:bg-blue-700 rounded-full p-0.5 transition"
-                          aria-label={`Remove ${skill}`}
+                          aria-label={`Xóa ${skill}`}
                         >
                           <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -743,7 +742,7 @@ export default function ProfilePage() {
                     onFocus={() => setLearningDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setLearningDropdownOpen(false), 200)}
                     onKeyDown={handleLearningKeyDown}
-                    placeholder={selectedLearningGoals.length === 0 ? 'Type to add learning goals (e.g., "Web Frontend", "Machine Learning", "Business Strategy")...' : 'Add more goals...'}
+                    placeholder={selectedLearningGoals.length === 0 ? 'Gõ để thêm mục tiêu học tập (VD: "Web Frontend", "Machine Learning", "Business Strategy")...' : 'Thêm mục tiêu khác...'}
                     className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
                   />
 
@@ -762,9 +761,9 @@ export default function ProfilePage() {
                           </svg>
                           <div>
                             <div className="font-medium text-blue-700">
-                              Create "<span className="font-bold">{learningInput}</span>"
+                              Tạo "<span className="font-bold">{learningInput}</span>"
                             </div>
-                            <div className="text-xs text-gray-500">Press Enter to add custom goal</div>
+                            <div className="text-xs text-gray-500">Nhấn Enter để thêm mục tiêu tùy chỉnh</div>
                           </div>
                         </button>
                       )}
@@ -795,7 +794,7 @@ export default function ProfilePage() {
 
                       {filteredLearningSkills.length === 0 && !learningInput.trim() && (
                         <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                          Start typing to search or create skills
+                          Bắt đầu nhập để tìm hoặc tạo kỹ năng
                         </div>
                       )}
                     </div>
@@ -804,14 +803,13 @@ export default function ProfilePage() {
 
                 {selectedLearningGoals.length === 0 && (
                   <p className="text-sm text-blue-700 mt-4 text-center font-medium">
-                    💡 No learning goals added. Type above to add skills you want to learn!
+                    💡 Chưa có mục tiêu nào. Gõ ở trên để thêm kỹ năng bạn muốn học!
                   </p>
                 )}
                 {selectedLearningGoals.length > 0 && (
                   <div className="mt-4 text-center bg-blue-100 rounded-lg p-3">
                     <span className="text-sm font-bold text-blue-800">
-                      ✓ {selectedLearningGoals.length} goal
-                      {selectedLearningGoals.length !== 1 ? 's' : ''} added
+                      ✓ Đã thêm {selectedLearningGoals.length} mục tiêu
                     </span>
                   </div>
                 )}
@@ -825,11 +823,11 @@ export default function ProfilePage() {
                 </svg>
                 <div className="flex-1">
                   <h4 className="text-sm font-semibold text-purple-900 mb-1">
-                    🤖 AI Semantic Matching
+                    🤖 Ghép đôi ngữ nghĩa bằng AI
                   </h4>
                   <p className="text-sm text-purple-800">
-                    Our AI understands meaning, not just keywords! Type broad terms like "Web Frontend" and we'll match you 
-                    with mentors teaching specific tools like "ReactJS". Feel free to create custom skills to test the AI!
+                    AI của mình hiểu ý nghĩa, không chỉ dựa vào từ khóa! Gõ từ khóa rộng như "Web Frontend" và tụi mình 
+                    sẽ ghép bạn với mentor dạy công cụ cụ thể như "ReactJS". Cứ thoải mái tạo kỹ năng tùy chỉnh để test AI nhé!
                   </p>
                 </div>
               </div>
@@ -841,7 +839,7 @@ export default function ProfilePage() {
                 onClick={() => router.push('/homepage')}
                 className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 type="submit"
@@ -854,10 +852,10 @@ export default function ProfilePage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Saving & Generating AI Embeddings...
+                    Đang lưu & tạo AI Embeddings...
                   </span>
                 ) : (
-                  'Save Profile'
+                  'Lưu hồ sơ'
                 )}
               </button>
             </div>
@@ -885,9 +883,9 @@ export default function ProfilePage() {
             />
           </svg>
           <div>
-            <p className="font-semibold">Profile Updated!</p>
+            <p className="font-semibold">Đã cập nhật hồ sơ!</p>
             <p className="text-sm text-green-100">
-              AI embeddings generated, mentor matches refreshed
+              Đã tạo AI embeddings, cập nhật lại danh sách ghép đôi mentor
             </p>
           </div>
         </div>

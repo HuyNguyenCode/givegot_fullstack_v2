@@ -104,7 +104,7 @@ export default function BlindReviewSection({ booking, currentUserId }: BlindRevi
   // Still fetching — render a tiny placeholder instead of `null` so the
   // section doesn't just vanish/flicker while `status` resolves.
   if (loading) {
-    return <p className="text-xs text-gray-400 italic">Loading review status…</p>
+    return <p className="text-xs text-gray-400 italic">Đang tải trạng thái đánh giá…</p>
   }
 
   if (!status) {
@@ -120,10 +120,10 @@ export default function BlindReviewSection({ booking, currentUserId }: BlindRevi
     console.log('[BlindReviewSection] isReviewRevealed=true → showing Revealed state', status)
     return (
       <div className="space-y-2">
-        <p className="text-xs font-bold text-gray-700">⭐ Reviews revealed</p>
+        <p className="text-xs font-bold text-gray-700">⭐ Đánh giá đã được hiển thị</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <ReviewSummaryCard label="Mentee's review" entry={status.menteeReview} />
-          <ReviewSummaryCard label="Mentor's review" entry={status.mentorReview} />
+          <ReviewSummaryCard label="Đánh giá của Mentee" entry={status.menteeReview} />
+          <ReviewSummaryCard label="Đánh giá của Mentor" entry={status.mentorReview} />
         </div>
       </div>
     )
@@ -141,7 +141,7 @@ export default function BlindReviewSection({ booking, currentUserId }: BlindRevi
   // ── State 2: Pending Reveal ────────────────────────────────────────────
   if (status.myReviewSubmitted) {
     console.log('[BlindReviewSection] myReviewSubmitted=true, waiting on the other side.', status)
-    return <Info icon="🔒">Hidden until they review</Info>
+    return <Info icon="🔒">Ẩn cho đến khi họ đánh giá xong</Info>
   }
 
   // ── State 1: Needs Action ──────────────────────────────────────────────
@@ -151,7 +151,7 @@ export default function BlindReviewSection({ booking, currentUserId }: BlindRevi
       <div className="space-y-2">
         {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
         <PrimaryButton color="orange" onClick={() => setShowForm(true)} className="w-full">
-          Write review
+          Viết đánh giá
         </PrimaryButton>
       </div>
     )
@@ -168,8 +168,8 @@ export default function BlindReviewSection({ booking, currentUserId }: BlindRevi
       onComment={setComment}
       onSubmit={handleSubmit}
       onCancel={() => setShowForm(false)}
-      title={status.myRole === 'mentor' ? 'Rate your mentee' : 'Rate your mentor'}
-      submitLabel="Submit review"
+      title={status.myRole === 'mentor' ? 'Đánh giá Mentee của bạn' : 'Đánh giá Mentor của bạn'}
+      submitLabel="Gửi đánh giá"
     />
   )
 }
@@ -193,7 +193,7 @@ function ReviewSummaryCard({
           {entry.comment && <p className="text-xs text-gray-600 italic">&quot;{entry.comment}&quot;</p>}
         </>
       ) : (
-        <p className="text-xs text-gray-400">No review</p>
+        <p className="text-xs text-gray-400">Chưa có đánh giá</p>
       )}
     </div>
   )

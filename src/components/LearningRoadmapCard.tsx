@@ -45,11 +45,11 @@ export default function LearningRoadmapCard({
         setRoadmapData(result.roadmap)
         setIsExpanded(true)
       } else {
-        setError(result.message || 'Failed to generate roadmap')
+        setError(result.message || 'Không thể tạo lộ trình học tập')
       }
     } catch (err) {
       console.error('Error fetching roadmap:', err)
-      setError('Something went wrong. Please try again.')
+      setError('Đã có lỗi xảy ra. Vui lòng thử lại.')
     } finally {
       setIsLoading(false)
     }
@@ -78,10 +78,10 @@ export default function LearningRoadmapCard({
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900">
-                Learning Path for {skillName}
+                Lộ trình học cho {skillName}
               </h3>
               <p className="text-sm text-gray-600">
-                {roadmapData ? 'AI-generated 4-step roadmap' : 'Generate your personalized learning roadmap'}
+                {roadmapData ? 'Lộ trình 4 bước do AI tạo' : 'Tạo lộ trình học tập cá nhân hóa cho bạn'}
               </p>
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function LearningRoadmapCard({
             {isLoading ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                <span className="text-sm">Generating...</span>
+                <span className="text-sm">Đang tạo...</span>
               </>
             ) : roadmapData ? (
               <>
@@ -117,14 +117,14 @@ export default function LearningRoadmapCard({
                     d="M19 9l-7 7-7-7"
                   />
                 </svg>
-                <span className="text-sm">{isExpanded ? 'Hide' : 'View'} Roadmap</span>
+                <span className="text-sm">{isExpanded ? 'Ẩn' : 'Xem'} lộ trình</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                 </svg>
-                <span className="text-sm">Generate AI Roadmap</span>
+                <span className="text-sm">Tạo lộ trình bằng AI</span>
               </>
             )}
           </button>
@@ -147,7 +147,7 @@ export default function LearningRoadmapCard({
               <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 w-0 animate-pulse"></div>
               </div>
-              <span className="text-xs font-semibold text-gray-600">4 Steps</span>
+              <span className="text-xs font-semibold text-gray-600">4 Bước</span>
             </div>
 
             {/* Roadmap Steps */}
@@ -200,7 +200,7 @@ export default function LearningRoadmapCard({
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                           />
                         </svg>
-                        <span>Find Mentor for "{step.searchKeyword}"</span>
+                        <span>Tìm Mentor cho "{step.searchKeyword}"</span>
                       </Link>
                     </div>
                   </div>
@@ -219,7 +219,7 @@ export default function LearningRoadmapCard({
                   />
                 </svg>
                 <span>
-                  <strong>Pro tip:</strong> Follow these steps in order for the best learning experience. Click "Find Mentor" to discover experts for each stage!
+                  <strong>Mẹo nhỏ:</strong> Hãy theo thứ tự các bước này để có trải nghiệm học tốt nhất. Bấm "Tìm Mentor" để tìm chuyên gia cho từng giai đoạn!
                 </span>
               </p>
             </div>

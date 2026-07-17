@@ -77,17 +77,17 @@ function resolveStyle(
 ): EventStyle {
   // 1. Ưu tiên cao nhất: Trạng thái Vùng đệm chờ đánh giá (Giữ màu Vàng)
   if (awaitingReview) {
-    return { bgColor: '#fef3c7', borderColor: '#fbbf24', textColor: '#78350f', icon: '⭐', label: 'Awaiting Review' }
+    return { bgColor: '#fef3c7', borderColor: '#fbbf24', textColor: '#78350f', icon: '⭐', label: 'Đang chờ đánh giá' }
   }
 
   // 2. Bảng định nghĩa Nhãn và Màu sắc GỐC (Dành cho tương lai)
   const map: Record<string, EventStyle> = {
-    PENDING:   { bgColor: '#f59e0b', borderColor: '#d97706', textColor: '#fff', icon: '⏳', label: 'Pending Confirmation' },
-    CONFIRMED: { bgColor: '#f97316', borderColor: '#ea580c', textColor: '#fff', icon: '📚', label: 'Confirmed' },
-    COMPLETED: { bgColor: '#22c55e', borderColor: '#16a34a', textColor: '#fff', icon: '🎓', label: 'Completed'   },
-    CANCELLED: { bgColor: '#94a3b8', borderColor: '#64748b', textColor: '#fff', icon: '✕',  label: 'Cancelled'       },
-    MISSED:    { bgColor: '#fecaca', borderColor: '#f87171', textColor: '#991b1b', icon: '⏰', label: 'Missed' },
-    DISPUTED:  { bgColor: '#f59e0b', borderColor: '#d97706', textColor: '#fff', icon: '⚖️', label: 'Disputed'   },
+    PENDING:   { bgColor: '#f59e0b', borderColor: '#d97706', textColor: '#fff', icon: '⏳', label: 'Đang chờ xác nhận' },
+    CONFIRMED: { bgColor: '#f97316', borderColor: '#ea580c', textColor: '#fff', icon: '📚', label: 'Đã xác nhận' },
+    COMPLETED: { bgColor: '#22c55e', borderColor: '#16a34a', textColor: '#fff', icon: '🎓', label: 'Hoàn thành'   },
+    CANCELLED: { bgColor: '#94a3b8', borderColor: '#64748b', textColor: '#fff', icon: '✕',  label: 'Đã hủy'       },
+    MISSED:    { bgColor: '#fecaca', borderColor: '#f87171', textColor: '#991b1b', icon: '⏰', label: 'Vắng mặt' },
+    DISPUTED:  { bgColor: '#f59e0b', borderColor: '#d97706', textColor: '#fff', icon: '⚖️', label: 'Tranh chấp'   },
   }
 
   // Lấy style gốc ra
@@ -100,12 +100,12 @@ function resolveStyle(
 
     // Xử lý đổi nhãn (label) cho 2 trường hợp đặc biệt không có tính kết thúc:
     if (status === 'PENDING') {
-      style.label = 'Expired';
+      style.label = 'Hết hạn';
       style.icon = '⚠️';
     } 
     else if (status === 'CONFIRMED') {
       // Đã qua giờ mà chưa hoàn thành cũng không review -> Thành Đã qua/Bỏ lỡ
-      style.label = 'Past Due';
+      style.label = 'Quá hạn';
       style.icon = '⏰';
     }
     // Các trạng thái như COMPLETED, CANCELLED, MISSED, DISPUTED vẫn giữ nguyên icon và label.
@@ -239,7 +239,7 @@ export default function MenteeScheduleCalendar({
   }
 
   const handleMutate = async () => {
-    showToast('Updated successfully!', 'success')
+    showToast('Cập nhật thành công!', 'success')
     await loadData()
     onDataChange?.()
   }
@@ -265,8 +265,8 @@ export default function MenteeScheduleCalendar({
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">My calendar</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Click a session to view details and take actions</p>
+            <h2 className="text-lg font-bold text-gray-900">Lịch của tôi</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Nhấn vào buổi học để xem chi tiết và thực hiện thao tác</p>
           </div>
         </div>
         <button
@@ -278,20 +278,20 @@ export default function MenteeScheduleCalendar({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {isLoading ? 'Loading…' : 'Refresh'}
+          {isLoading ? 'Đang tải…' : 'Làm mới'}
         </button>
       </div>
 
       {/* Legend */}
       <div className="px-6 pt-3 pb-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-full">Status color</span>
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-full">Màu trạng thái</span>
         {[
-          { color: '#f59e0b', label: 'Pending' },
-          { color: '#f97316', label: 'Confirmed' },
-          { color: '#fef3c7', border: '#fbbf24', label: 'Awaiting Review ' },
-          { color: '#22c55e', label: 'Done' },
-          { color: '#94a3b8', label: 'Cancelled' },
-          { color: '#e2e8f0', border: '#94a3b8', label: 'Past slot' },
+          { color: '#f59e0b', label: 'Đang chờ' },
+          { color: '#f97316', label: 'Đã xác nhận' },
+          { color: '#fef3c7', border: '#fbbf24', label: 'Đang chờ đánh giá ' },
+          { color: '#22c55e', label: 'Hoàn thành' },
+          { color: '#94a3b8', label: 'Đã hủy' },
+          { color: '#e2e8f0', border: '#94a3b8', label: 'Khung giờ đã qua' },
         ].map(({ color, border, label }) => (
           <div key={label} className="flex items-center gap-1.5 text-xs text-gray-600">
             <div
@@ -308,8 +308,8 @@ export default function MenteeScheduleCalendar({
         {!hasAny && !isLoading ? (
           <div className="text-center py-16 text-gray-400">
             <div className="text-4xl mb-3">📚</div>
-            <p className="font-semibold text-gray-500">No sessions yet</p>
-            <p className="text-sm mt-1">Book a session with a mentor to get started!</p>
+            <p className="font-semibold text-gray-500">Chưa có buổi học nào</p>
+            <p className="text-sm mt-1">Đặt lịch với một mentor để bắt đầu!</p>
           </div>
         ) : (
           mounted && (
@@ -318,7 +318,7 @@ export default function MenteeScheduleCalendar({
               plugins={[timeGridPlugin, dayGridPlugin]}
               initialView="timeGridWeek"
               headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay,dayGridMonth' }}
-              buttonText={{ today: 'Today', week: 'Week', day: 'Day', month: 'Month' }}
+              buttonText={{ today: 'Hôm nay', week: 'Tuần', day: 'Ngày', month: 'Tháng' }}
               locale="en"
               height="auto"
               contentHeight={580}
@@ -342,11 +342,11 @@ export default function MenteeScheduleCalendar({
 
                 let tip = `${name} · ${label}`
                 if (isPast) {
-                  if (status === 'CONFIRMED') tip += ' · Click to report absence (within 48h)'
-                  else tip += ' · View history'
+                  if (status === 'CONFIRMED') tip += ' · Nhấn để báo cáo vắng mặt (trong 48 giờ)'
+                  else tip += ' · Xem lịch sử'
                 } else {
-                  if (status === 'CONFIRMED') tip += ' · Click to review or cancel'
-                  if (status === 'PENDING')   tip += ' · Waiting for mentor confirmation'
+                  if (status === 'CONFIRMED') tip += ' · Nhấn để đánh giá hoặc hủy'
+                  if (status === 'PENDING')   tip += ' · Đang chờ mentor xác nhận'
                 }
                 info.el.setAttribute('title', tip)
               }}

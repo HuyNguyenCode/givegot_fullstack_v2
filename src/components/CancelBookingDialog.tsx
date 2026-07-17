@@ -67,7 +67,7 @@ export default function CancelBookingDialog({ booking, userId, onSuccess }: Prop
         onClick={() => setIsOpen(true)}
         className="px-4 py-2 bg-white border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50 hover:border-red-400 transition text-sm"
       >
-        Cancel Booking
+        Hủy lịch đặt
       </button>
 
       {/* ── Confirmation modal ────────────────────────────────────────── */}

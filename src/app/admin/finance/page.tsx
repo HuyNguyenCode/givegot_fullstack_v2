@@ -59,10 +59,15 @@ function StatusBadge({ status }: { status: string }) {
     APPROVED: <CheckCircle2 className="w-3 h-3" />,
     REJECTED: <XCircle     className="w-3 h-3" />,
   }
+  const labels: Record<string, string> = {
+    PENDING:  'Đang chờ',
+    APPROVED: 'Đã duyệt',
+    REJECTED: 'Đã từ chối',
+  }
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${styles[status] ?? styles.REJECTED}`}>
       {icons[status]}
-      {status.charAt(0) + status.slice(1).toLowerCase()}
+      {labels[status] ?? status}
     </span>
   )
 }
@@ -91,8 +96,8 @@ export default async function AdminFinancePage() {
               <ShieldCheck className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Finance Dashboard</h1>
-              <p className="text-xs text-gray-500">GiveGot Admin · Withdrawal requests</p>
+              <h1 className="text-lg font-bold text-gray-900">Bảng điều khiển tài chính</h1>
+              <p className="text-xs text-gray-500">Quản trị GiveGot · Yêu cầu rút tiền</p>
             </div>
           </div>
           <ExportPayoutButton pendingRequests={pending} />
@@ -106,30 +111,30 @@ export default async function AdminFinancePage() {
           <StatCard
             icon={<Clock className="w-5 h-5 text-amber-600" />}
             bg="bg-amber-50"
-            label="Pending Requests"
+            label="Yêu cầu đang chờ"
             value={pending.length}
-            sub={formatVND(totalPendingVND) + ' to disburse'}
+            sub={formatVND(totalPendingVND) + ' cần giải ngân'}
           />
           <StatCard
             icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
             bg="bg-emerald-50"
-            label="Approved"
+            label="Đã duyệt"
             value={approved.length}
-            sub={formatVND(totalApprovedVND) + ' paid out'}
+            sub={formatVND(totalApprovedVND) + ' đã thanh toán'}
           />
           <StatCard
             icon={<XCircle className="w-5 h-5 text-red-500" />}
             bg="bg-red-50"
-            label="Rejected"
+            label="Đã từ chối"
             value={rejected.length}
-            sub="Denied requests"
+            sub="Yêu cầu bị từ chối"
           />
           <StatCard
             icon={<Users className="w-5 h-5 text-purple-600" />}
             bg="bg-purple-50"
-            label="Total Requests"
+            label="Tổng yêu cầu"
             value={requests.length}
-            sub="All time"
+            sub="Từ trước đến nay"
           />
         </div>
 
@@ -139,29 +144,29 @@ export default async function AdminFinancePage() {
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Banknote className="w-4 h-4 text-gray-500" />
-              <h2 className="text-sm font-bold text-gray-800">Withdrawal Requests</h2>
+              <h2 className="text-sm font-bold text-gray-800">Yêu cầu rút tiền</h2>
             </div>
             <div className="flex items-center gap-2">
               {pending.length > 0 && (
                 <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full border border-amber-200">
-                  {pending.length} pending
+                  {pending.length} đang chờ
                 </span>
               )}
-              <span className="text-xs text-gray-400">{requests.length} total</span>
+              <span className="text-xs text-gray-400">{requests.length} tổng</span>
             </div>
           </div>
 
           {requests.length === 0 ? (
             <div className="py-16 flex flex-col items-center gap-2 text-gray-400">
               <TrendingDown className="w-10 h-10 text-gray-200" />
-              <p className="text-sm font-medium">No withdrawal requests yet.</p>
+              <p className="text-sm font-medium">Chưa có yêu cầu rút tiền nào.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    {['Date', 'Mentor', 'Points', 'Amount (VND)', 'Bank Details', 'Status', 'Actions'].map(
+                    {['Ngày', 'Người hướng dẫn', 'Điểm', 'Số tiền (VND)', 'Thông tin ngân hàng', 'Trạng thái', 'Hành động'].map(
                       (h) => (
                         <th
                           key={h}
@@ -222,7 +227,7 @@ export default async function AdminFinancePage() {
                           <span className="font-bold text-gray-800">
                             {req.pointsRequested.toLocaleString()}
                           </span>
-                          <span className="text-xs text-gray-400 ml-1">pts</span>
+                          <span className="text-xs text-gray-400 ml-1">điểm</span>
                         </td>
 
                         {/* Amount */}
@@ -251,7 +256,7 @@ export default async function AdminFinancePage() {
                             <WithdrawActionButtons requestId={req.id} />
                           ) : (
                             <span className="text-xs text-gray-400 italic">
-                              {req.status === 'APPROVED' ? 'Transferred' : 'Denied'}
+                              {req.status === 'APPROVED' ? 'Đã chuyển' : 'Đã từ chối'}
                             </span>
                           )}
                         </td>

@@ -40,7 +40,7 @@ export function SignOutButton({ variant = 'default' }: SignOutButtonProps) {
       onClick={handleSignOut}
       disabled={isLoading}
       className={`${baseClasses} ${variantClasses}`}
-      title="Sign out"
+      title="Đăng xuất"
     >
       <svg
         className="w-4 h-4"
@@ -55,7 +55,7 @@ export function SignOutButton({ variant = 'default' }: SignOutButtonProps) {
           d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
         />
       </svg>
-      <span className="text-sm font-medium">{isLoading ? 'Signing out...' : 'Sign out'}</span>
+      <span className="text-sm font-medium">{isLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
     </button>
   )
 }

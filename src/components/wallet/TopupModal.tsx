@@ -19,10 +19,10 @@ interface Package {
 }
 
 const TOPUP_PACKAGES: Package[] = [
-  { points: 1,  label: 'Starter',   badge: null,            highlight: false },
-  { points: 5,  label: 'Basic',     badge: null,            highlight: false },
-  { points: 10, label: 'Popular',   badge: '🔥 Popular',    highlight: true  },
-  { points: 20, label: 'Best Value',badge: '💎 Best Value', highlight: false },
+  { points: 1,  label: 'Cơ bản',   badge: null,            highlight: false },
+  { points: 5,  label: 'Tiêu chuẩn',     badge: null,            highlight: false },
+  { points: 10, label: 'Phổ biến',   badge: '🔥 Phổ biến',    highlight: true  },
+  { points: 20, label: 'Hời nhất',badge: '💎 Hời nhất', highlight: false },
 ]
 
 export default function TopupModal({ isOpen, onClose, userId, currentPoints }: TopupModalProps) {
@@ -39,7 +39,7 @@ export default function TopupModal({ isOpen, onClose, userId, currentPoints }: T
 
   const handleConfirm = async () => {
     if (selected === null) {
-      showToast('Please select a package first.', 'error')
+      showToast('Vui lòng chọn một gói trước.', 'error')
       return
     }
 
@@ -56,15 +56,15 @@ export default function TopupModal({ isOpen, onClose, userId, currentPoints }: T
       const data = await res.json()
 
       if (!res.ok || !data.paymentUrl) {
-        showToast(data.error ?? 'Failed to create payment. Please try again.', 'error')
+        showToast(data.error ?? 'Không thể tạo giao dịch thanh toán. Vui lòng thử lại.', 'error')
         return
       }
 
-      showToast('Redirecting to VNPay...')
+      showToast('Đang chuyển đến VNPay...')
       // Hand off to VNPay checkout — user leaves this page
       window.location.href = data.paymentUrl
     } catch {
-      showToast('Network error. Please check your connection and try again.', 'error')
+      showToast('Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.', 'error')
       setIsLoading(false)
     }
   }
@@ -84,7 +84,7 @@ export default function TopupModal({ isOpen, onClose, userId, currentPoints }: T
                 <Wallet className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold">Top Up GivePoints</h2>
+                <h2 className="text-lg font-bold">Nạp GivePoints</h2>
                 <p className="text-purple-200 text-sm">Nạp điểm vào ví của bạn</p>
               </div>
             </div>
@@ -102,7 +102,7 @@ export default function TopupModal({ isOpen, onClose, userId, currentPoints }: T
           <div className="bg-purple-50 border border-purple-100 rounded-xl p-3.5 mb-5 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-purple-700 font-medium">
               <Zap className="w-4 h-4" />
-              Current Balance
+              Số dư hiện tại
             </div>
             <span className="text-base font-bold text-purple-800">{currentPoints} pts</span>
           </div>
@@ -158,7 +158,7 @@ export default function TopupModal({ isOpen, onClose, userId, currentPoints }: T
               onClick={onClose}
               className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              Hủy
             </button>
             <button
               onClick={handleConfirm}
@@ -168,12 +168,12 @@ export default function TopupModal({ isOpen, onClose, userId, currentPoints }: T
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Redirecting...
+                  Đang chuyển hướng...
                 </span>
               ) : selected !== null ? (
-                `Pay ${(selected * POINTS_TO_VND_RATE).toLocaleString('vi-VN')} ₫`
+                `Thanh toán ${(selected * POINTS_TO_VND_RATE).toLocaleString('vi-VN')} ₫`
               ) : (
-                'Select a Package'
+                'Chọn một gói'
               )}
             </button>
           </div>

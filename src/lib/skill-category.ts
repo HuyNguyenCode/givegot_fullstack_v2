@@ -13,13 +13,13 @@ export const SKILL_CATEGORY_ORDER: SkillCategory[] = [
 
 /** Human-friendly label for each category. */
 export const SKILL_CATEGORY_LABELS: Record<SkillCategory, string> = {
-  [SkillCategory.ACADEMIC]: 'Academic',
-  [SkillCategory.DEVELOPMENT]: 'Development',
-  [SkillCategory.DESIGN]: 'Design',
-  [SkillCategory.BUSINESS]: 'Business',
-  [SkillCategory.LANGUAGE]: 'Language',
-  [SkillCategory.HEALTH]: 'Health',
-  [SkillCategory.OTHER]: 'Other',
+  [SkillCategory.ACADEMIC]: 'Học thuật',
+  [SkillCategory.DEVELOPMENT]: 'Phát triển',
+  [SkillCategory.DESIGN]: 'Thiết kế',
+  [SkillCategory.BUSINESS]: 'Kinh doanh',
+  [SkillCategory.LANGUAGE]: 'Ngoại ngữ',
+  [SkillCategory.HEALTH]: 'Sức khỏe',
+  [SkillCategory.OTHER]: 'Khác',
 }
 
 /** Tailwind badge classes per category, reused across admin + profile UIs. */

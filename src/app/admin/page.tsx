@@ -6,7 +6,7 @@ export default async function AdminDashboard() {
 
   const statCards = [
     {
-      title: 'Total Users',
+      title: 'Tổng số người dùng',
       value: stats.totalUsers,
       icon: Users,
       color: 'bg-blue-500',
@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
       textColor: 'text-blue-600'
     },
     {
-      title: 'Total Bookings',
+      title: 'Tổng số lượt đặt lịch',
       value: stats.totalBookings,
       icon: Calendar,
       color: 'bg-green-500',
@@ -22,7 +22,7 @@ export default async function AdminDashboard() {
       textColor: 'text-green-600'
     },
     {
-      title: 'Circulating GivePoints',
+      title: 'GivePoints đang lưu hành',
       value: stats.totalGivePoints,
       icon: Coins,
       color: 'bg-purple-500',
@@ -30,7 +30,7 @@ export default async function AdminDashboard() {
       textColor: 'text-purple-600'
     },
     {
-      title: 'Pending Skills',
+      title: 'Kỹ năng đang chờ duyệt',
       value: stats.pendingSkills,
       icon: CheckSquare,
       color: 'bg-orange-500',
@@ -38,7 +38,7 @@ export default async function AdminDashboard() {
       textColor: 'text-orange-600'
     },
     {
-      title: 'Pending Reports',
+      title: 'Báo cáo đang chờ xử lý',
       value: stats.pendingReports,
       icon: AlertCircle,
       color: 'bg-red-500',
@@ -50,8 +50,8 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h2>
-        <p className="text-gray-600">Monitor key metrics and platform statistics</p>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Tổng quan Dashboard</h2>
+        <p className="text-gray-600">Theo dõi các số liệu và thống kê quan trọng của nền tảng</p>
       </div>
 
       {/* Stats Grid */}
@@ -80,7 +80,7 @@ export default async function AdminDashboard() {
 
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Thao tác nhanh</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <a
             href="/admin/users"
@@ -89,9 +89,9 @@ export default async function AdminDashboard() {
             <Users className="w-6 h-6 text-gray-600 group-hover:text-blue-600 transition" />
             <div>
               <div className="font-semibold text-gray-900 group-hover:text-blue-600 transition">
-                Manage Users
+                Quản lý người dùng
               </div>
-              <div className="text-sm text-gray-500">View and edit user accounts</div>
+              <div className="text-sm text-gray-500">Xem và chỉnh sửa tài khoản người dùng</div>
             </div>
           </a>
 
@@ -102,12 +102,12 @@ export default async function AdminDashboard() {
             <CheckSquare className="w-6 h-6 text-gray-600 group-hover:text-orange-600 transition" />
             <div>
               <div className="font-semibold text-gray-900 group-hover:text-orange-600 transition">
-                Review Skills
+                Duyệt kỹ năng
               </div>
               <div className="text-sm text-gray-500">
                 {stats.pendingSkills > 0 
-                  ? `${stats.pendingSkills} pending approval` 
-                  : 'All skills reviewed'}
+                  ? `${stats.pendingSkills} đang chờ duyệt` 
+                  : 'Đã duyệt hết kỹ năng'}
               </div>
             </div>
           </a>
@@ -119,12 +119,12 @@ export default async function AdminDashboard() {
             <AlertCircle className="w-6 h-6 text-gray-600 group-hover:text-red-600 transition" />
             <div>
               <div className="font-semibold text-gray-900 group-hover:text-red-600 transition">
-                Handle Reports
+                Xử lý báo cáo
               </div>
               <div className="text-sm text-gray-500">
                 {stats.pendingReports > 0 
-                  ? `${stats.pendingReports} reports pending` 
-                  : 'No pending reports'}
+                  ? `${stats.pendingReports} báo cáo đang chờ xử lý` 
+                  : 'Không có báo cáo nào đang chờ xử lý'}
               </div>
             </div>
           </a>
@@ -136,9 +136,9 @@ export default async function AdminDashboard() {
             <Users className="w-6 h-6 text-gray-600 group-hover:text-purple-600 transition" />
             <div>
               <div className="font-semibold text-gray-900 group-hover:text-purple-600 transition">
-                View as User
+                Xem như người dùng
               </div>
-              <div className="text-sm text-gray-500">Switch to user interface</div>
+              <div className="text-sm text-gray-500">Chuyển sang giao diện người dùng</div>
             </div>
           </a>
         </div>
@@ -151,8 +151,8 @@ export default async function AdminDashboard() {
             <CheckSquare className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900">System Status: Operational</h3>
-            <p className="text-sm text-gray-600">All services running normally</p>
+            <h3 className="text-lg font-bold text-gray-900">Trạng thái hệ thống: Đang hoạt động</h3>
+            <p className="text-sm text-gray-600">Tất cả dịch vụ đang hoạt động bình thường</p>
           </div>
         </div>
       </div>

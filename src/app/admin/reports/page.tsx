@@ -48,7 +48,7 @@ export default function ReportsPage() {
   }
 
   const handleResolve = async (reportId: string) => {
-    if (!confirm('Mark this report as resolved?')) return
+    if (!confirm('Đánh dấu báo cáo này là đã xử lý?')) return
 
     const result = await resolveReport(reportId)
     if (result.success) {
@@ -76,24 +76,24 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Report Management</h2>
-        <p className="text-gray-600">Review and resolve user reports</p>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Quản lý báo cáo</h2>
+        <p className="text-gray-600">Xem xét và xử lý báo cáo từ người dùng</p>
       </div>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Total Reports</div>
+          <div className="text-sm text-gray-600">Tổng số báo cáo</div>
           <div className="text-2xl font-bold text-gray-900">{reports.length}</div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Pending</div>
+          <div className="text-sm text-gray-600">Đang chờ xử lý</div>
           <div className="text-2xl font-bold text-orange-600">
             {reports.filter(r => r.status === 'PENDING').length}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="text-sm text-gray-600">Resolved</div>
+          <div className="text-sm text-gray-600">Đã xử lý</div>
           <div className="text-2xl font-bold text-green-600">
             {reports.filter(r => r.status === 'RESOLVED').length}
           </div>
@@ -111,7 +111,7 @@ export default function ReportsPage() {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            All Reports
+            Tất cả báo cáo
           </button>
           <button
             onClick={() => setFilter('pending')}
@@ -121,7 +121,7 @@ export default function ReportsPage() {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Pending
+            Đang chờ xử lý
           </button>
           <button
             onClick={() => setFilter('resolved')}
@@ -131,7 +131,7 @@ export default function ReportsPage() {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Resolved
+            Đã xử lý
           </button>
         </div>
       </div>
@@ -140,11 +140,11 @@ export default function ReportsPage() {
       {filteredReports.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
           <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Reports Found</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Không tìm thấy báo cáo nào</h3>
           <p className="text-gray-600">
-            {filter === 'pending' && 'No pending reports to review'}
-            {filter === 'resolved' && 'No resolved reports yet'}
-            {filter === 'all' && 'No reports have been filed'}
+            {filter === 'pending' && 'Không có báo cáo nào đang chờ xử lý'}
+            {filter === 'resolved' && 'Chưa có báo cáo nào được xử lý'}
+            {filter === 'all' && 'Chưa có báo cáo nào được gửi'}
           </p>
         </div>
       ) : (
@@ -181,12 +181,12 @@ export default function ReportsPage() {
               <div className="grid md:grid-cols-2 gap-6 mb-4">
                 {/* Reporter */}
                 <div>
-                  <div className="text-xs text-gray-500 mb-2">REPORTED BY</div>
+                  <div className="text-xs text-gray-500 mb-2">NGƯỜI BÁO CÁO</div>
                   <div className="flex items-center gap-3">
                     {report.reporter.avatarUrl && (
                       <Image
                         src={report.reporter.avatarUrl}
-                        alt={report.reporter.name || 'Reporter'}
+                        alt={report.reporter.name || 'Người báo cáo'}
                         width={40}
                         height={40}
                         className="rounded-full"
@@ -194,7 +194,7 @@ export default function ReportsPage() {
                     )}
                     <div>
                       <div className="font-semibold text-gray-900">
-                        {report.reporter.name || 'Anonymous'}
+                        {report.reporter.name || 'Người dùng ẩn danh'}
                       </div>
                       <div className="text-sm text-gray-500">{report.reporter.email}</div>
                     </div>
@@ -203,12 +203,12 @@ export default function ReportsPage() {
 
                 {/* Reported User */}
                 <div>
-                  <div className="text-xs text-gray-500 mb-2">REPORTED USER</div>
+                  <div className="text-xs text-gray-500 mb-2">NGƯỜI BỊ BÁO CÁO</div>
                   <div className="flex items-center gap-3">
                     {report.reportedUser.avatarUrl && (
                       <Image
                         src={report.reportedUser.avatarUrl}
-                        alt={report.reportedUser.name || 'Reported User'}
+                        alt={report.reportedUser.name || 'Người bị báo cáo'}
                         width={40}
                         height={40}
                         className="rounded-full"
@@ -216,7 +216,7 @@ export default function ReportsPage() {
                     )}
                     <div>
                       <div className="font-semibold text-gray-900">
-                        {report.reportedUser.name || 'Anonymous'}
+                        {report.reportedUser.name || 'Người dùng ẩn danh'}
                       </div>
                       <div className="text-sm text-gray-500">{report.reportedUser.email}</div>
                     </div>
@@ -226,7 +226,7 @@ export default function ReportsPage() {
 
               {/* Reason */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <div className="text-xs text-gray-500 mb-2">REASON</div>
+                <div className="text-xs text-gray-500 mb-2">LÝ DO</div>
                 <p className="text-gray-900">{report.reason}</p>
               </div>
 
@@ -237,14 +237,14 @@ export default function ReportsPage() {
                     onClick={() => handleResolve(report.id)}
                     className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
                   >
-                    Mark as Resolved
+                    Đánh dấu đã xử lý
                   </button>
                 </div>
               )}
 
               {report.status === 'RESOLVED' && report.resolvedAt && (
                 <div className="text-sm text-gray-500">
-                  Resolved on {new Date(report.resolvedAt).toLocaleString()}
+                  Đã xử lý vào {new Date(report.resolvedAt).toLocaleString()}
                 </div>
               )}
             </div>

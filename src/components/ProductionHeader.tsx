@@ -31,19 +31,19 @@ export function ProductionHeader() {
             href="/dashboard"
             className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            Dashboard
+            Bảng điều khiển
           </Link>
           <Link
             href="/history"
             className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            History
+            Lịch sử
           </Link>
           <Link
             href="/chat"
             className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            Messages
+            Tin nhắn
           </Link>
 
           {/* Notification Bell */}
@@ -55,11 +55,11 @@ export function ProductionHeader() {
           <Link
             href="/wallet"
             className="group flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-full text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all duration-150"
-            title="My Wallet"
+            title="Ví của Mình"
           >
             <Wallet className="w-3.5 h-3.5 text-purple-500 group-hover:text-purple-700 transition-colors" />
             <span className="text-xs font-bold tabular-nums">
-              {currentUser.givePoints.toLocaleString()} pts
+              {currentUser.givePoints.toLocaleString()} điểm
             </span>
           </Link>
 
@@ -71,7 +71,7 @@ export function ProductionHeader() {
             {currentUser.avatarUrl ? (
               <Image
                 src={currentUser.avatarUrl}
-                alt={currentUser.name || 'User'}
+                alt={currentUser.name || 'Người dùng'}
                 width={26}
                 height={26}
                 className="rounded-full ring-1 ring-gray-200"

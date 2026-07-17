@@ -40,12 +40,12 @@ export default function CashoutModal({
   const validate = () => {
     const errors: { points?: string; bank?: string } = {}
     if (!pointsNum || pointsNum <= 0) {
-      errors.points = 'Enter a valid number of points.'
+      errors.points = 'Vui lòng nhập số điểm hợp lệ.'
     } else if (pointsNum > currentPoints) {
-      errors.points = `Insufficient balance. You only have ${currentPoints} pts.`
+      errors.points = `Số dư không đủ. Bạn chỉ có ${currentPoints} pts.`
     }
     if (!bankDetails.trim()) {
-      errors.bank = 'Bank details are required.'
+      errors.bank = 'Vui lòng nhập thông tin tài khoản ngân hàng.'
     }
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
@@ -57,7 +57,7 @@ export default function CashoutModal({
     try {
       const result = await createWithdrawRequest(userId, pointsNum, bankDetails)
       if (result.success) {
-        showToast('Withdrawal request submitted successfully!')
+        showToast('Yêu cầu rút tiền đã được gửi thành công!')
         setTimeout(() => {
           onSuccess()
           onClose()
@@ -68,7 +68,7 @@ export default function CashoutModal({
         showToast(result.message, 'error')
       }
     } catch {
-      showToast('An unexpected error occurred. Please try again.', 'error')
+      showToast('Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.', 'error')
     } finally {
       setIsLoading(false)
     }
@@ -99,7 +99,7 @@ export default function CashoutModal({
                 <ArrowDownCircle className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold">Cash Out (Rút tiền)</h2>
+                <h2 className="text-lg font-bold">Rút tiền</h2>
                 <p className="text-emerald-100 text-sm">Chuyển GivePoints thành VND</p>
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function CashoutModal({
           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-emerald-700 font-medium">
               <CheckCircle2 className="w-4 h-4" />
-              Available Balance
+              Số dư khả dụng
             </div>
             <span className="text-base font-bold text-emerald-800">{currentPoints} pts</span>
           </div>
@@ -130,7 +130,7 @@ export default function CashoutModal({
           {/* Points input */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Points to Withdraw
+              Số điểm muốn rút
             </label>
             <div className="relative">
               <input
@@ -139,7 +139,7 @@ export default function CashoutModal({
                 max={currentPoints}
                 value={points}
                 onChange={(e) => handlePointsChange(e.target.value)}
-                placeholder={`Max ${currentPoints} pts`}
+                placeholder={`Tối đa ${currentPoints} pts`}
                 className={`w-full border rounded-xl px-4 py-3 text-sm pr-12 focus:outline-none focus:ring-2 transition-colors ${
                   fieldErrors.points
                     ? 'border-red-300 focus:ring-red-200'
@@ -155,7 +155,7 @@ export default function CashoutModal({
             )}
             {isValidAmount && (
               <p className="text-xs text-emerald-600 mt-1.5 font-medium">
-                You will receive ≈ {vndAmount.toLocaleString('vi-VN')} ₫
+                Bạn sẽ nhận được ≈ {vndAmount.toLocaleString('vi-VN')} ₫
               </p>
             )}
           </div>
@@ -163,12 +163,12 @@ export default function CashoutModal({
           {/* Bank details */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Bank Account Details
+              Thông tin tài khoản ngân hàng
             </label>
             <textarea
               value={bankDetails}
               onChange={(e) => handleBankChange(e.target.value)}
-              placeholder="e.g. Vietcombank – 0123456789 – Nguyen Van A"
+              placeholder="VD: Vietcombank – 0123456789 – Nguyen Van A"
               rows={3}
               className={`w-full border rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 transition-colors ${
                 fieldErrors.bank
@@ -185,8 +185,8 @@ export default function CashoutModal({
           <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
             <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-700 leading-relaxed">
-              Points are deducted immediately. Bank transfer will be processed by an admin within{' '}
-              <strong>1–3 business days</strong>.
+              Điểm sẽ bị trừ ngay lập tức. Chuyển khoản sẽ được admin xử lý trong{' '}
+              <strong>1–3 ngày làm việc</strong>.
             </p>
           </div>
 
@@ -196,7 +196,7 @@ export default function CashoutModal({
               onClick={onClose}
               className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              Hủy
             </button>
             <button
               onClick={handleSubmit}
@@ -206,10 +206,10 @@ export default function CashoutModal({
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Submitting...
+                  Đang gửi...
                 </span>
               ) : (
-                'Confirm Withdrawal'
+                'Xác nhận rút tiền'
               )}
             </button>
           </div>

@@ -128,17 +128,17 @@ export default function HistoryPage() {
   const getTransactionTypeLabel = (type: string) => {
     switch (type) {
       case 'BOOKING_CREATED':
-        return 'Booking Created'
+        return 'Đã tạo lịch đặt'
       case 'BOOKING_COMPLETED':
-        return 'Session Completed'
+        return 'Buổi học hoàn thành'
       case 'BOOKING_CANCELLED':
-        return 'Booking Cancelled'
+        return 'Đã hủy lịch đặt'
       case 'BOOKING_DECLINED':
-        return 'Booking Declined'
+        return 'Lịch đặt bị từ chối'
       case 'INITIAL_BONUS':
-        return 'Welcome Bonus'
+        return 'Quà chào mừng'
       case 'ADMIN_ADJUSTMENT':
-        return 'Admin Adjustment'
+        return 'Điều chỉnh bởi Admin'
       default:
         return type
     }
@@ -165,7 +165,7 @@ export default function HistoryPage() {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your history...</p>
+          <p className="text-gray-600">Đang tải lịch sử của bạn...</p>
         </div>
       </div>
     )
@@ -182,10 +182,10 @@ export default function HistoryPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Booking & Transaction History</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Lịch sử Đặt lịch & Giao dịch</h1>
           </div>
           <p className="text-gray-600 ml-14">
-            View all your bookings and GivePoint transactions
+            Xem tất cả lịch đặt và giao dịch GivePoints của bạn
           </p>
         </div>
 
@@ -194,7 +194,7 @@ export default function HistoryPage() {
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-600">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Current Balance</p>
+                <p className="text-sm text-gray-600 mb-1">Số dư hiện tại</p>
                 <p className="text-3xl font-bold text-purple-600">{currentUser.givePoints}</p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
@@ -209,7 +209,7 @@ export default function HistoryPage() {
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Earned</p>
+                <p className="text-sm text-gray-600 mb-1">Tổng đã nhận</p>
                 <p className="text-3xl font-bold text-green-600">+{summary.totalEarned}</p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
@@ -223,7 +223,7 @@ export default function HistoryPage() {
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-600">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Spent</p>
+                <p className="text-sm text-gray-600 mb-1">Tổng đã dùng</p>
                 <p className="text-3xl font-bold text-red-600">-{summary.totalSpent}</p>
               </div>
               <div className="bg-red-100 p-3 rounded-lg">
@@ -237,7 +237,7 @@ export default function HistoryPage() {
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Sessions Done</p>
+                <p className="text-sm text-gray-600 mb-1">Buổi học hoàn thành</p>
                 <p className="text-3xl font-bold text-blue-600">{summary.sessionsCompleted}</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-lg">
@@ -251,7 +251,7 @@ export default function HistoryPage() {
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-600">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Bookings Made</p>
+                <p className="text-sm text-gray-600 mb-1">Lịch đã đặt</p>
                 <p className="text-3xl font-bold text-orange-600">{summary.bookingsCreated}</p>
               </div>
               <div className="bg-orange-100 p-3 rounded-lg">
@@ -279,7 +279,7 @@ export default function HistoryPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span>My Bookings</span>
+                  <span>Lịch đặt của mình</span>
                   <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
                     {bookings.length}
                   </span>
@@ -297,7 +297,7 @@ export default function HistoryPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  <span>GivePoint Ledger</span>
+                  <span>Sổ giao dịch GivePoints</span>
                   <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
                     {transactions.length}
                   </span>
@@ -310,7 +310,7 @@ export default function HistoryPage() {
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading history...</p>
+                <p className="text-gray-600">Đang tải lịch sử...</p>
               </div>
             ) : (
               <>
@@ -320,20 +320,20 @@ export default function HistoryPage() {
                     {bookings.length === 0 ? (
                       <div className="text-center py-12">
                         <div className="text-6xl mb-4">📅</div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">No Bookings Yet</h3>
-                        <p className="text-gray-600 mb-6">Start by discovering mentors or setting your availability!</p>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Chưa có lịch đặt nào</h3>
+                        <p className="text-gray-600 mb-6">Bắt đầu bằng cách tìm mentor hoặc thiết lập thời gian trống của bạn!</p>
                         <div className="flex gap-3 justify-center">
                           <Link
                             href="/discover"
                             className="bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition"
                           >
-                            Discover Mentors
+                            Tìm Mentor
                           </Link>
                           <Link
                             href="/dashboard"
                             className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition"
                           >
-                            Manage Availability
+                            Quản lý thời gian trống
                           </Link>
                         </div>
                       </div>
@@ -342,13 +342,13 @@ export default function HistoryPage() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b-2 border-gray-200">
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Date</th>
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Session Time</th>
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Role</th>
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">With</th>
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Points</th>
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Review</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ngày</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Thời gian buổi học</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Vai trò</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Với</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Trạng thái</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Điểm</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Đánh giá</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -391,7 +391,7 @@ export default function HistoryPage() {
                                       {otherUser.avatarUrl && (
                                         <Image
                                           src={otherUser.avatarUrl}
-                                          alt={otherUser.name || 'User'}
+                                          alt={otherUser.name || 'Người dùng'}
                                           width={32}
                                           height={32}
                                           className="rounded-full"
@@ -399,7 +399,7 @@ export default function HistoryPage() {
                                       )}
                                       <div>
                                         <div className="text-sm font-medium text-gray-900">
-                                          {otherUser.name || 'Unknown'}
+                                          {otherUser.name || 'Không xác định'}
                                         </div>
                                         <div className="text-xs text-gray-500">
                                           {otherUser.email}
@@ -418,7 +418,7 @@ export default function HistoryPage() {
                                       pointImpact.startsWith('-') ? 'text-red-600' :
                                       'text-gray-400'
                                     }`}>
-                                      {pointImpact} pt
+                                      {pointImpact} điểm
                                     </span>
                                   </td>
                                   <td className="py-4 px-4">
@@ -438,7 +438,7 @@ export default function HistoryPage() {
                                         ))}
                                       </div>
                                     ) : (
-                                      <span className="text-xs text-gray-400">No review</span>
+                                      <span className="text-xs text-gray-400">Chưa có đánh giá</span>
                                     )}
                                   </td>
                                 </tr>
@@ -457,13 +457,13 @@ export default function HistoryPage() {
                     {transactions.length === 0 ? (
                       <div className="text-center py-12">
                         <div className="text-6xl mb-4">💰</div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">No Transactions Yet</h3>
-                        <p className="text-gray-600 mb-6">Your GivePoint activity will appear here</p>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Chưa có giao dịch nào</h3>
+                        <p className="text-gray-600 mb-6">Hoạt động GivePoints của bạn sẽ hiển thị ở đây</p>
                         <Link
                           href="/discover"
                           className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition"
                         >
-                          Start Exploring
+                          Bắt đầu khám phá
                         </Link>
                       </div>
                     ) : (
@@ -471,11 +471,11 @@ export default function HistoryPage() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b-2 border-gray-200">
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Date & Time</th>
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Transaction Type</th>
-                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Related To</th>
-                              <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
-                              <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Balance Impact</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ngày & Giờ</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Loại giao dịch</th>
+                              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Liên quan đến</th>
+                              <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Số lượng</th>
+                              <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Ảnh hưởng số dư</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -514,7 +514,7 @@ export default function HistoryPage() {
                                               {otherUser.avatarUrl && (
                                                 <Image
                                                   src={otherUser.avatarUrl}
-                                                  alt={otherUser.name || 'User'}
+                                                  alt={otherUser.name || 'Người dùng'}
                                                   width={24}
                                                   height={24}
                                                   className="rounded-full"
@@ -522,7 +522,7 @@ export default function HistoryPage() {
                                               )}
                                               <div>
                                                 <div className="text-xs font-medium text-gray-900">
-                                                  {otherUser.name || 'Unknown'}
+                                                  {otherUser.name || 'Không xác định'}
                                                 </div>
                                                 <div className="text-xs text-gray-500">
                                                   {format(new Date(transaction.booking.startTime), 'MMM d, h:mm a')}
@@ -545,10 +545,10 @@ export default function HistoryPage() {
                                   </td>
                                   <td className="py-4 px-4 text-right">
                                     <div className="text-sm font-semibold text-gray-900">
-                                      {runningBalance} pts
+                                      {runningBalance} điểm
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      after transaction
+                                      sau giao dịch
                                     </div>
                                   </td>
                                 </tr>
@@ -578,8 +578,8 @@ export default function HistoryPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Go to Dashboard</h3>
-                <p className="text-sm text-gray-600">Manage your bookings and availability</p>
+                <h3 className="font-semibold text-gray-900 mb-1">Đến Dashboard</h3>
+                <p className="text-sm text-gray-600">Quản lý lịch đặt và thời gian trống của bạn</p>
               </div>
             </div>
           </Link>
@@ -595,8 +595,8 @@ export default function HistoryPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Discover Mentors</h3>
-                <p className="text-sm text-gray-600">Find experts to learn from</p>
+                <h3 className="font-semibold text-gray-900 mb-1">Tìm Mentor</h3>
+                <p className="text-sm text-gray-600">Tìm chuyên gia để học hỏi</p>
               </div>
             </div>
           </Link>

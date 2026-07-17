@@ -384,7 +384,7 @@ export default function QuizModal({
                   disabled={selectedAnswers[currentQuestionIndex] === undefined}
                   className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg"
                 >
-                  {currentQuestionIndex < questions.length - 1 ? 'Câu tiếp theo' : 'Done'}
+                  {currentQuestionIndex < questions.length - 1 ? 'Câu tiếp theo' : 'Hoàn tất'}
                 </button>
               </div>
             </>

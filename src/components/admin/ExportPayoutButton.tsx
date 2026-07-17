@@ -57,11 +57,11 @@ export default function ExportPayoutButton({ pendingRequests }: ExportPayoutButt
     <button
       onClick={handleExport}
       disabled={disabled}
-      title={disabled ? 'No pending requests to export' : `Export ${pendingRequests.length} pending payout(s)`}
+      title={disabled ? 'Không có yêu cầu nào để xuất' : `Xuất ${pendingRequests.length} khoản thanh toán đang chờ`}
       className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
     >
       <Download className="w-4 h-4" />
-      Export CSV
+      Xuất CSV
       {!disabled && (
         <span className="bg-white/20 text-white text-xs font-bold px-1.5 py-0.5 rounded-full tabular-nums">
           {pendingRequests.length}

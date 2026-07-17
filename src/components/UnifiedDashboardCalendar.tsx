@@ -87,42 +87,42 @@ function resolveEventStyle(
   // ── Priority 1: Past ─────────────────────────────────────────────────────
   if (isPast) {
     const slate = { bgColor: '#e2e8f0', borderColor: '#94a3b8', textColor: '#475569' }
-    if (!status)                return { ...slate, icon: '✗',   label: 'Past Slot'  }
-    if (status === 'PENDING')   return { ...slate, icon: '⚠️',  label: 'Expired'    }
-    if (status === 'COMPLETED') return { ...slate, icon: '🎓',  label: 'Completed'  }
-    if (status === 'MISSED')    return { ...slate, icon: '⏰',  label: 'Missed'     }
-    if (status === 'DISPUTED')  return { ...slate, icon: '⚖️',  label: 'Disputed'   }
-    if (status === 'CANCELLED') return { ...slate, icon: '✕',   label: 'Cancelled'  }
+    if (!status)                return { ...slate, icon: '✗',   label: 'Khung giờ đã qua'  }
+    if (status === 'PENDING')   return { ...slate, icon: '⚠️',  label: 'Đã hết hạn'    }
+    if (status === 'COMPLETED') return { ...slate, icon: '🎓',  label: 'Đã hoàn thành'  }
+    if (status === 'MISSED')    return { ...slate, icon: '⏰',  label: 'Đã lỡ hẹn'     }
+    if (status === 'DISPUTED')  return { ...slate, icon: '⚖️',  label: 'Tranh chấp'   }
+    if (status === 'CANCELLED') return { ...slate, icon: '✕',   label: 'Đã hủy'  }
     // CONFIRMED past → "Missed / not-yet-reviewed"
-    return { ...slate, icon: '🎓', label: 'Completed' }
+    return { ...slate, icon: '🎓', label: 'Đã hoàn thành' }
   }
 
   // ── Priority 2: Future by role ────────────────────────────────────────────
   if (role === 'owner') {
-    return { bgColor: '#10b981', borderColor: '#059669', textColor: '#fff', icon: '✓', label: 'Available' }
+    return { bgColor: '#10b981', borderColor: '#059669', textColor: '#fff', icon: '✓', label: 'Còn trống' }
   }
 
   if (role === 'mentor') {
     // Teaching palette: Purple → Blue → Teal
     const map: Record<string, EventStyle> = {
-      PENDING:   { bgColor: '#7c3aed', borderColor: '#6d28d9', textColor: '#fff', icon: '⏳', label: 'Pending'   },
-      CONFIRMED: { bgColor: '#3b82f6', borderColor: '#2563eb', textColor: '#fff', icon: '📘', label: 'Teaching'  },
-      COMPLETED: { bgColor: '#0d9488', borderColor: '#0f766e', textColor: '#fff', icon: '🎓', label: 'Done'      },
-      MISSED:    { bgColor: '#0d9488', borderColor: '#0f766e', textColor: '#fff', icon: '🎓', label: 'Done'      },
-      DISPUTED:  { bgColor: '#6366f1', borderColor: '#4f46e5', textColor: '#fff', icon: '⚖️', label: 'Disputed'  },
-      CANCELLED: { bgColor: '#94a3b8', borderColor: '#64748b', textColor: '#fff', icon: '✕', label: 'Cancelled' },
+      PENDING:   { bgColor: '#7c3aed', borderColor: '#6d28d9', textColor: '#fff', icon: '⏳', label: 'Đang chờ'   },
+      CONFIRMED: { bgColor: '#3b82f6', borderColor: '#2563eb', textColor: '#fff', icon: '📘', label: 'Đang dạy'  },
+      COMPLETED: { bgColor: '#0d9488', borderColor: '#0f766e', textColor: '#fff', icon: '🎓', label: 'Hoàn thành'      },
+      MISSED:    { bgColor: '#0d9488', borderColor: '#0f766e', textColor: '#fff', icon: '🎓', label: 'Hoàn thành'      },
+      DISPUTED:  { bgColor: '#6366f1', borderColor: '#4f46e5', textColor: '#fff', icon: '⚖️', label: 'Tranh chấp'  },
+      CANCELLED: { bgColor: '#94a3b8', borderColor: '#64748b', textColor: '#fff', icon: '✕', label: 'Đã hủy' },
     }
     return map[status ?? ''] ?? { bgColor: '#7c3aed', borderColor: '#6d28d9', textColor: '#fff', icon: '?', label: status ?? '' }
   }
 
   // Mentee palette: Amber → Orange → Green
   const map: Record<string, EventStyle> = {
-    PENDING:   { bgColor: '#f59e0b', borderColor: '#d97706', textColor: '#fff', icon: '⏳', label: 'Pending'  },
-    CONFIRMED: { bgColor: '#f97316', borderColor: '#ea580c', textColor: '#fff', icon: '📚', label: 'Learning' },
-    COMPLETED: { bgColor: '#22c55e', borderColor: '#16a34a', textColor: '#fff', icon: '🎓', label: 'Done'     },
-    MISSED:    { bgColor: '#22c55e', borderColor: '#16a34a', textColor: '#fff', icon: '🎓', label: 'Done'     },
-    DISPUTED:  { bgColor: '#f59e0b', borderColor: '#d97706', textColor: '#fff', icon: '⚖️', label: 'Disputed' },
-    CANCELLED: { bgColor: '#94a3b8', borderColor: '#64748b', textColor: '#fff', icon: '✕', label: 'Cancelled'},
+    PENDING:   { bgColor: '#f59e0b', borderColor: '#d97706', textColor: '#fff', icon: '⏳', label: 'Đang chờ'  },
+    CONFIRMED: { bgColor: '#f97316', borderColor: '#ea580c', textColor: '#fff', icon: '📚', label: 'Đang học' },
+    COMPLETED: { bgColor: '#22c55e', borderColor: '#16a34a', textColor: '#fff', icon: '🎓', label: 'Hoàn thành'     },
+    MISSED:    { bgColor: '#22c55e', borderColor: '#16a34a', textColor: '#fff', icon: '🎓', label: 'Hoàn thành'     },
+    DISPUTED:  { bgColor: '#f59e0b', borderColor: '#d97706', textColor: '#fff', icon: '⚖️', label: 'Tranh chấp' },
+    CANCELLED: { bgColor: '#94a3b8', borderColor: '#64748b', textColor: '#fff', icon: '✕', label: 'Đã hủy'},
   }
   return map[status ?? ''] ?? { bgColor: '#f97316', borderColor: '#ea580c', textColor: '#fff', icon: '?', label: status ?? '' }
 }
@@ -278,7 +278,7 @@ export default function UnifiedDashboardCalendar({
   const handleSelect = async (info: DateSelectArg) => {
     if (info.start < now) {
       info.view.calendar.unselect()
-      showToast('Cannot create slots in the past', 'error')
+      showToast('Không thể tạo khung giờ trong quá khứ', 'error')
       return
     }
     setIsSaving(true)
@@ -287,7 +287,7 @@ export default function UnifiedDashboardCalendar({
     ])
     setIsSaving(false)
     if (result.success) {
-      showToast(`Slot created — ${formatTimeRange(info.start, info.end)}`)
+      showToast(`Đã tạo khung giờ — ${formatTimeRange(info.start, info.end)}`)
       await loadData(); onDataChange?.()
     } else {
       showToast(result.message, 'error')
@@ -298,11 +298,11 @@ export default function UnifiedDashboardCalendar({
   const handleEventDrop = async (info: EventDropArg) => {
     const { event, revert } = info
     if (event.extendedProps.eType !== 'available') {
-      revert(); showToast('Booked sessions cannot be moved', 'error'); return
+      revert(); showToast('Không thể di chuyển buổi học đã được đặt', 'error'); return
     }
     if (!event.start || !event.end) { revert(); return }
     if (event.start < now) {
-      revert(); showToast('Cannot move a slot to the past', 'error'); return
+      revert(); showToast('Không thể di chuyển khung giờ về quá khứ', 'error'); return
     }
     setIsSaving(true)
     const r = await updateMentorSlot(
@@ -310,7 +310,7 @@ export default function UnifiedDashboardCalendar({
     )
     setIsSaving(false)
     if (r.success) {
-      showToast(`Slot moved to ${formatTimeRange(event.start, event.end)}`)
+      showToast(`Đã di chuyển khung giờ đến ${formatTimeRange(event.start, event.end)}`)
       await loadData(); onDataChange?.()
     } else {
       revert(); showToast(r.message, 'error')
@@ -326,7 +326,7 @@ export default function UnifiedDashboardCalendar({
     )
     setIsSaving(false)
     if (r.success) {
-      showToast('Slot resized'); await loadData(); onDataChange?.()
+      showToast('Đã thay đổi kích thước khung giờ'); await loadData(); onDataChange?.()
     } else {
       revert(); showToast(r.message, 'error')
     }
@@ -376,7 +376,7 @@ export default function UnifiedDashboardCalendar({
         showToast(r.message, 'error')
       }
     } catch {
-      showToast('An unexpected error occurred.', 'error')
+      showToast('Đã xảy ra lỗi không mong muốn.', 'error')
     } finally {
       setIsActionLoading(false)
     }
@@ -384,24 +384,24 @@ export default function UnifiedDashboardCalendar({
 
   const handleDeleteSlot = () => {
     if (!clickedEvent?.slotId) return
-    if (!window.confirm(`Delete this available slot?\n${clickedEvent.sessionLabel}`)) return
+    if (!window.confirm(`Xóa khung giờ trống này?\n${clickedEvent.sessionLabel}`)) return
     withAction(() => deleteMentorSlot(clickedEvent.slotId!, currentUserId))
   }
 
   const handleAccept   = () => clickedEvent?.bookingId && withAction(() => acceptBooking(clickedEvent.bookingId!, currentUserId))
   const handleDecline  = () => {
     if (!clickedEvent?.bookingId) return
-    if (!window.confirm('Decline this booking? The mentee will be refunded.')) return
+    if (!window.confirm('Từ chối lịch đặt này? Mentee sẽ được hoàn điểm.')) return
     withAction(() => declineBooking(clickedEvent.bookingId!, currentUserId))
   }
   const handleCancel   = () => {
     if (!clickedEvent?.bookingId) return
-    if (!window.confirm('Cancel this booking? Trust Score penalty may apply.')) return
+    if (!window.confirm('Hủy lịch đặt này? Bạn có thể bị trừ Điểm tin cậy.')) return
     withAction(() => cancelBooking(clickedEvent.bookingId!, currentUserId))
   }
   const handleReportNoShow = () => {
     if (!clickedEvent?.bookingId) return
-    if (!window.confirm('Report as no-show? Attendance will be verified via Google Meet API.')) return
+    if (!window.confirm('Báo cáo vắng mặt? Việc tham gia sẽ được xác minh qua Google Meet API.')) return
     withAction(() => reportNoShow(clickedEvent.bookingId!, currentUserId))
   }
 
@@ -440,8 +440,8 @@ export default function UnifiedDashboardCalendar({
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Unified Session Calendar</h2>
-            <p className="text-xs text-gray-400 mt-0.5">All your teaching &amp; learning sessions in one view</p>
+            <h2 className="text-lg font-bold text-gray-900">Lịch buổi học tổng hợp</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Toàn bộ buổi dạy và buổi học của bạn trong một lịch</p>
           </div>
         </div>
         <button
@@ -453,7 +453,7 @@ export default function UnifiedDashboardCalendar({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {isLoading ? 'Loading…' : 'Refresh'}
+          {isLoading ? 'Đang tải…' : 'Làm mới'}
         </button>
       </div>
 
@@ -461,23 +461,23 @@ export default function UnifiedDashboardCalendar({
       <div className="px-6 pt-4 pb-2 space-y-2">
         {/* Future */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-full">Upcoming</span>
-          <LegendDot color="#10b981" label="Available slot" />
-          <LegendDot color="#7c3aed" label="Pending (teaching)" />
-          <LegendDot color="#3b82f6" label="Confirmed (teaching)" />
-          <LegendDot color="#0d9488" label="Done (teaching)" />
-          <LegendDot color="#f59e0b" label="Pending (learning)" />
-          <LegendDot color="#f97316" label="Confirmed (learning)" />
-          <LegendDot color="#22c55e" label="Done (learning)" />
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-full">Sắp tới</span>
+          <LegendDot color="#10b981" label="Khung giờ trống" />
+          <LegendDot color="#7c3aed" label="Đang chờ (dạy)" />
+          <LegendDot color="#3b82f6" label="Đã xác nhận (dạy)" />
+          <LegendDot color="#0d9488" label="Hoàn thành (dạy)" />
+          <LegendDot color="#f59e0b" label="Đang chờ (học)" />
+          <LegendDot color="#f97316" label="Đã xác nhận (học)" />
+          <LegendDot color="#22c55e" label="Hoàn thành (học)" />
         </div>
         {/* Past */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-full">Past (always slate)</span>
-          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Past Slot" />
-          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Expired (pending)" />
-          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Missed (confirmed)" />
-          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Completed" />
-          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Disputed" />
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-full">Đã qua (luôn màu xám)</span>
+          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Khung giờ đã qua" />
+          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Hết hạn (đang chờ)" />
+          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Lỡ hẹn (đã xác nhận)" />
+          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Đã hoàn thành" />
+          <LegendDot color="#e2e8f0" border="#94a3b8" textColor="#475569" label="Tranh chấp" />
         </div>
       </div>
 
@@ -490,7 +490,7 @@ export default function UnifiedDashboardCalendar({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              <span className="text-sm font-semibold text-purple-700">Saving…</span>
+              <span className="text-sm font-semibold text-purple-700">Đang lưu…</span>
             </div>
           </div>
         )}
@@ -501,7 +501,7 @@ export default function UnifiedDashboardCalendar({
             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay,dayGridMonth' }}
-            buttonText={{ today: 'Today', week: 'Week', day: 'Day', month: 'Month' }}
+            buttonText={{ today: 'Hôm nay', week: 'Tuần', day: 'Ngày', month: 'Tháng' }}
             height="auto"
             contentHeight={640}
             slotMinTime="07:00:00"
@@ -533,26 +533,26 @@ export default function UnifiedDashboardCalendar({
               if (p.eType === 'available') {
                 if (isPast) {
                   info.el.style.pointerEvents = 'none'
-                  info.el.setAttribute('title', 'Past slot — no action available')
+                  info.el.setAttribute('title', 'Khung giờ đã qua — không có hành động khả dụng')
                 } else {
-                  info.el.setAttribute('title', 'Click to delete · Drag to move · Resize to adjust')
+                  info.el.setAttribute('title', 'Nhấn để xóa · Kéo để di chuyển · Kéo góc để đổi kích thước')
                 }
               } else {
                 const role   = p.role as string
                 const status = p.bookingStatus as string
                 const who    = p.otherName as string
-                const roleLabel = role === 'mentor' ? 'Teaching' : 'Learning'
+                const roleLabel = role === 'mentor' ? 'Đang dạy' : 'Đang học'
 
                 let action = ''
                 if (isPast) {
-                  if (status === 'CONFIRMED') action = 'Click to view · Report no-show (mentee) or view history'
-                  else if (status === 'PENDING') action = 'Request expired'
-                  else action = 'View history'
+                  if (status === 'CONFIRMED') action = 'Nhấn để xem · Báo cáo vắng mặt (mentee) hoặc xem lịch sử'
+                  else if (status === 'PENDING') action = 'Yêu cầu đã hết hạn'
+                  else action = 'Xem lịch sử'
                 } else {
-                  if (status === 'PENDING' && role === 'mentor')   action = 'Click to Accept / Decline'
-                  if (status === 'PENDING' && role === 'mentee')   action = 'Click to Cancel'
-                  if (status === 'CONFIRMED' && role === 'mentor')  action = 'Click to Cancel / Chat'
-                  if (status === 'CONFIRMED' && role === 'mentee')  action = 'Click to Review / Cancel'
+                  if (status === 'PENDING' && role === 'mentor')   action = 'Nhấn để Chấp nhận / Từ chối'
+                  if (status === 'PENDING' && role === 'mentee')   action = 'Nhấn để Hủy'
+                  if (status === 'CONFIRMED' && role === 'mentor')  action = 'Nhấn để Hủy / Trò chuyện'
+                  if (status === 'CONFIRMED' && role === 'mentee')  action = 'Nhấn để Đánh giá / Hủy'
                 }
                 info.el.setAttribute('title', `${who} · ${roleLabel} · ${action}`)
               }
@@ -655,16 +655,16 @@ function EventDetailPanel({
   onReportNoShow,
 }: EventDetailPanelProps) {
 
-  const roleLabel = ev.role === 'mentor' ? 'Teaching' : ev.role === 'mentee' ? 'Learning' : 'Your Slot'
+  const roleLabel = ev.role === 'mentor' ? 'Đang dạy' : ev.role === 'mentee' ? 'Đang học' : 'Khung giờ của bạn'
   const rolePalette =
     ev.role === 'mentor' ? 'from-purple-600 to-blue-600' :
     ev.role === 'mentee' ? 'from-orange-500 to-amber-500' :
                            'from-emerald-500 to-teal-500'
 
   const statusBadge = ev.type === 'available'
-    ? { label: ev.isPast ? 'Past Slot' : 'Available', color: ev.isPast ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-700' }
+    ? { label: ev.isPast ? 'Khung giờ đã qua' : 'Còn trống', color: ev.isPast ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-700' }
     : ev.isPast
-      ? { label: ev.bookingStatus === 'PENDING' ? 'Expired' : ev.bookingStatus ?? '', color: 'bg-slate-200 text-slate-600' }
+      ? { label: ev.bookingStatus === 'PENDING' ? 'Đã hết hạn' : ev.bookingStatus ?? '', color: 'bg-slate-200 text-slate-600' }
       : {
           label: ev.bookingStatus ?? '',
           color:
@@ -676,8 +676,8 @@ function EventDetailPanel({
         }
 
   const timeBadge = ev.isPast
-    ? { label: 'Past', color: 'bg-slate-100 text-slate-500' }
-    : { label: 'Upcoming', color: 'bg-indigo-50 text-indigo-600' }
+    ? { label: 'Đã qua', color: 'bg-slate-100 text-slate-500' }
+    : { label: 'Sắp tới', color: 'bg-indigo-50 text-indigo-600' }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
@@ -698,8 +698,8 @@ function EventDetailPanel({
               </div>
               <h3 className="text-base font-bold leading-tight">
                 {ev.type === 'available'
-                  ? ev.isPast ? 'Past Available Slot' : 'Available Slot'
-                  : ev.otherPartyName || 'Session'}
+                  ? ev.isPast ? 'Khung giờ trống đã qua' : 'Khung giờ trống'
+                  : ev.otherPartyName || 'Buổi học'}
               </h3>
               {ev.type === 'booking' && (
                 <p className="text-xs opacity-75 mt-0.5">{ev.otherPartyEmail}</p>
@@ -717,14 +717,14 @@ function EventDetailPanel({
           {/* Time + status */}
           <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">When</span>
+              <span className="text-gray-500">Thời gian</span>
               <span className="font-semibold text-gray-800 text-right max-w-[200px]">
                 {ev.sessionLabel}
               </span>
             </div>
             {ev.type === 'booking' && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-500">Status</span>
+                <span className="text-gray-500">Trạng thái</span>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusBadge.color}`}>
                   {statusBadge.label}
                 </span>
@@ -740,14 +740,14 @@ function EventDetailPanel({
           {/* ── Actions — Available slot ──────────────────────────────── */}
           {ev.type === 'available' && (
             ev.isPast ? (
-              <p className="text-sm text-slate-500 text-center py-2">This slot is in the past — no action available.</p>
+              <p className="text-sm text-slate-500 text-center py-2">Khung giờ này đã qua — không có hành động khả dụng.</p>
             ) : (
               <button
                 onClick={onDeleteSlot}
                 disabled={isActionLoading}
                 className="w-full py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-100 transition disabled:opacity-50"
               >
-                {isActionLoading ? 'Deleting…' : 'Delete Slot'}
+                {isActionLoading ? 'Đang xóa…' : 'Xóa khung giờ'}
               </button>
             )
           )}
@@ -760,11 +760,11 @@ function EventDetailPanel({
                 <div className="flex gap-2">
                   <button onClick={onAccept} disabled={isActionLoading}
                     className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition disabled:opacity-50">
-                    {isActionLoading ? '…' : 'Accept'}
+                    {isActionLoading ? '…' : 'Chấp nhận'}
                   </button>
                   <button onClick={onDecline} disabled={isActionLoading}
                     className="flex-1 py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-100 transition disabled:opacity-50">
-                    Decline
+                    Từ chối
                   </button>
                 </div>
               )}
@@ -779,19 +779,19 @@ function EventDetailPanel({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
-                      Join Meeting
+                      Tham gia buổi học
                     </a>
                   )}
                   <div className="flex gap-2">
                     {ev.bookingId && (
                       <Link href={`/chat?bookingId=${ev.bookingId}`}
                         className="flex-1 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-100 transition text-center">
-                        Chat
+                        Trò chuyện
                       </Link>
                     )}
                     <button onClick={onCancel} disabled={isActionLoading}
                       className="flex-1 py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-100 transition disabled:opacity-50">
-                      Cancel
+                      Hủy
                     </button>
                   </div>
                 </>
@@ -800,7 +800,7 @@ function EventDetailPanel({
               {/* Past PENDING → expired info */}
               {ev.isPast && ev.bookingStatus === 'PENDING' && (
                 <p className="text-sm text-slate-500 text-center py-2">
-                  ⚠️ This request expired — the session start has passed.
+                  ⚠️ Yêu cầu này đã hết hạn — thời gian buổi học đã qua.
                 </p>
               )}
 
@@ -808,12 +808,12 @@ function EventDetailPanel({
               {ev.isPast && ev.bookingStatus === 'CONFIRMED' && (
                 <div className="space-y-2">
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-                    ⏰ This confirmed session is in the past. Check if the mentee submitted a review, or contact them via chat.
+                    ⏰ Buổi học đã xác nhận này đã diễn ra trong quá khứ. Kiểm tra xem mentee đã gửi đánh giá chưa, hoặc liên hệ qua trò chuyện.
                   </div>
                   {ev.bookingId && (
                     <Link href={`/chat?bookingId=${ev.bookingId}`}
                       className="block w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition text-center">
-                      View Chat History
+                      Xem lịch sử trò chuyện
                     </Link>
                   )}
                 </div>
@@ -823,14 +823,14 @@ function EventDetailPanel({
               {(ev.bookingStatus === 'COMPLETED' || ev.bookingStatus === 'MISSED') && ev.bookingId && (
                 <Link href={`/chat?bookingId=${ev.bookingId}`}
                   className="block w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition text-center">
-                  🎓 View Chat History
+                  🎓 Xem lịch sử trò chuyện
                 </Link>
               )}
 
               {/* DISPUTED */}
               {ev.bookingStatus === 'DISPUTED' && (
                 <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-xs text-indigo-800">
-                  ⚖️ This session is under admin review. Funds are frozen pending resolution.
+                  ⚖️ Buổi học này đang được quản trị viên xem xét. Điểm sẽ bị tạm giữ cho đến khi có kết quả.
                 </div>
               )}
             </div>
@@ -843,7 +843,7 @@ function EventDetailPanel({
               {!ev.isPast && ev.bookingStatus === 'PENDING' && (
                 <button onClick={onCancel} disabled={isActionLoading}
                   className="w-full py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-100 transition disabled:opacity-50">
-                  {isActionLoading ? '…' : 'Cancel Booking'}
+                  {isActionLoading ? '…' : 'Hủy lịch đặt'}
                 </button>
               )}
 
@@ -857,7 +857,7 @@ function EventDetailPanel({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
-                      Join Meeting
+                      Tham gia buổi học
                     </a>
                   )}
                   {ev.bookingId && (
@@ -870,12 +870,12 @@ function EventDetailPanel({
                     {ev.bookingId && (
                       <Link href={`/chat?bookingId=${ev.bookingId}`}
                         className="flex-1 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-100 transition text-center">
-                        Chat
+                        Trò chuyện
                       </Link>
                     )}
                     <button onClick={onCancel} disabled={isActionLoading}
                       className="flex-1 py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-100 transition disabled:opacity-50">
-                      Cancel
+                      Hủy
                     </button>
                   </div>
                 </>
@@ -887,22 +887,22 @@ function EventDetailPanel({
                   {isWithin48hGrace ? (
                     <>
                       <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-800">
-                        ⚠️ Did your mentor not show up? You can report this within the 48-hour grace period.
+                        ⚠️ Mentor của bạn không xuất hiện? Bạn có thể báo cáo trong vòng 48 giờ.
                       </div>
                       <button onClick={onReportNoShow} disabled={isActionLoading}
                         className="w-full py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition disabled:opacity-50">
-                        {isActionLoading ? 'Verifying…' : '🚨 Report No-Show'}
+                        {isActionLoading ? 'Đang xác minh…' : '🚨 Báo cáo vắng mặt'}
                       </button>
                     </>
                   ) : (
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
-                      The 48-hour reporting window for this session has closed.
+                      Thời hạn báo cáo 48 giờ cho buổi học này đã kết thúc.
                     </div>
                   )}
                   {ev.bookingId && (
                     <Link href={`/chat?bookingId=${ev.bookingId}`}
                       className="block w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition text-center">
-                      View Chat History
+                      Xem lịch sử trò chuyện
                     </Link>
                   )}
                 </div>
@@ -919,7 +919,7 @@ function EventDetailPanel({
                   />
                   <Link href={`/chat?bookingId=${ev.bookingId}`}
                     className="block w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition text-center">
-                    🎓 View Chat History
+                    🎓 Xem lịch sử trò chuyện
                   </Link>
                 </div>
               )}
@@ -928,21 +928,21 @@ function EventDetailPanel({
               {ev.bookingStatus === 'MISSED' && ev.bookingId && (
                 <Link href={`/chat?bookingId=${ev.bookingId}`}
                   className="block w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition text-center">
-                  🎓 View Chat History
+                  🎓 Xem lịch sử trò chuyện
                 </Link>
               )}
 
               {/* DISPUTED */}
               {ev.bookingStatus === 'DISPUTED' && (
                 <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-xs text-indigo-800">
-                  ⚖️ Your dispute is under admin review. Funds are frozen pending resolution.
+                  ⚖️ Khiếu nại của bạn đang được quản trị viên xem xét. Điểm sẽ bị tạm giữ cho đến khi có kết quả.
                 </div>
               )}
 
               {/* Past PENDING */}
               {ev.isPast && ev.bookingStatus === 'PENDING' && (
                 <p className="text-sm text-slate-500 text-center py-2">
-                  ⚠️ This booking request expired — the mentor never responded.
+                  ⚠️ Yêu cầu đặt lịch này đã hết hạn — mentor không phản hồi.
                 </p>
               )}
             </div>
@@ -951,7 +951,7 @@ function EventDetailPanel({
           {/* Close button */}
           <button onClick={onClose}
             className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition font-medium">
-            Close
+            Đóng
           </button>
         </div>
       </div>

@@ -24,10 +24,10 @@ const TYPE_META: Record<NotificationType, { icon: React.ReactNode; color: string
 
 function timeAgo(date: Date): string {
   const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (diff < 60)   return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
+  if (diff < 60)   return 'vừa xong'
+  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`
+  return `${Math.floor(diff / 86400)} ngày trước`
 }
 
 export function NotificationBell({ userId }: Props) {
@@ -93,7 +93,7 @@ export function NotificationBell({ userId }: Props) {
         ref={buttonRef}
         onClick={() => setIsOpen(prev => !prev)}
         className="relative p-2 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1"
-        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+        aria-label={`Thông báo${unreadCount > 0 ? ` (${unreadCount} chưa đọc)` : ''}`}
       >
         <Bell size={20} />
         {unreadCount > 0 && (
@@ -111,14 +111,14 @@ export function NotificationBell({ userId }: Props) {
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Thông báo</h3>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
                 className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors"
               >
                 <CheckCheck size={13} />
-                Mark all read
+                Đánh dấu đã đọc tất cả
               </button>
             )}
           </div>
@@ -132,7 +132,7 @@ export function NotificationBell({ userId }: Props) {
             ) : notifications.length === 0 ? (
               <div className="py-10 text-center">
                 <Bell size={28} className="mx-auto mb-2 text-gray-300" />
-                <p className="text-sm text-gray-400">No notifications yet</p>
+                <p className="text-sm text-gray-400">Chưa có thông báo nào</p>
               </div>
             ) : (
               notifications.map(notification => {
@@ -185,7 +185,7 @@ export function NotificationBell({ userId }: Props) {
           {notifications.length > 0 && (
             <div className="border-t border-gray-100 px-4 py-2">
               <p className="text-[11px] text-gray-400 text-center">
-                Showing latest {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+                Hiển thị {notifications.length} thông báo mới nhất
               </p>
             </div>
           )}

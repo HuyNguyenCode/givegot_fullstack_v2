@@ -27,7 +27,7 @@ function TrustRing({ score }: { score: number }) {
     score >= 80 ? '#d1fae5' : score >= 50 ? '#fef3c7' : '#fee2e2'
 
   const label =
-    score >= 80 ? 'Excellent' : score >= 50 ? 'Good Standing' : 'Needs Attention'
+    score >= 80 ? 'Xuất sắc' : score >= 50 ? 'Tốt' : 'Cần cải thiện'
 
   const labelColor =
     score >= 80
@@ -147,13 +147,13 @@ export default function TrustReputationCard({ data, isOwner }: Props) {
 
   const responseDetail =
     breakdown.avgResponseHours !== null
-      ? `Avg. response: ${breakdown.avgResponseHours < 1 ? '< 1 hr' : `${breakdown.avgResponseHours.toFixed(1)} hrs`}`
-      : 'Not enough data to measure'
+      ? `Thời gian phản hồi TB: ${breakdown.avgResponseHours < 1 ? '< 1 giờ' : `${breakdown.avgResponseHours.toFixed(1)} giờ`}`
+      : 'Chưa đủ dữ liệu để đánh giá'
 
   const ratingDetail =
     breakdown.avgRating > 0
-      ? `${breakdown.avgRating.toFixed(1)} ★ across ${breakdown.completedSessions} session${breakdown.completedSessions !== 1 ? 's' : ''}`
-      : 'No reviews yet'
+      ? `${breakdown.avgRating.toFixed(1)} ★ qua ${breakdown.completedSessions} buổi học`
+      : 'Chưa có đánh giá'
 
   return (
     <div className="px-8 pt-6 pb-2">
@@ -161,11 +161,11 @@ export default function TrustReputationCard({ data, isOwner }: Props) {
         {/* Header */}
         <div className="flex items-center gap-2 px-6 pt-5 pb-4 border-b border-gray-100">
           <ShieldCheck className="w-5 h-5 text-purple-600" />
-          <h2 className="text-lg font-bold text-gray-900">Trust &amp; Reputation</h2>
+          <h2 className="text-lg font-bold text-gray-900">Tín nhiệm &amp; Uy tín</h2>
           {trustScore >= 85 && (
             <span className="ml-auto inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-0.5 rounded-full ring-1 ring-emerald-300">
               <ShieldCheck className="w-3.5 h-3.5" />
-              High Trust
+              Độ tin cậy cao
             </span>
           )}
         </div>
@@ -178,7 +178,7 @@ export default function TrustReputationCard({ data, isOwner }: Props) {
             {/* Session count pill */}
             <div className="text-center">
               <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                Sessions Completed
+                Buổi học đã hoàn thành
               </p>
               <p className="text-2xl font-bold text-gray-900">
                 {breakdown.completedSessions}
@@ -197,7 +197,7 @@ export default function TrustReputationCard({ data, isOwner }: Props) {
               </div>
             ) : (
               <p className="text-xs text-gray-400 italic text-center">
-                Complete sessions to earn badges
+                Hoàn thành buổi học để nhận huy hiệu
               </p>
             )}
           </div>
@@ -208,33 +208,33 @@ export default function TrustReputationCard({ data, isOwner }: Props) {
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="w-4 h-4 text-gray-500" />
                 <p className="text-sm font-semibold text-gray-700">
-                  Score Breakdown
+                  Chi tiết điểm số
                 </p>
               </div>
 
               <PillarBar
-                label="Completion Rate"
+                label="Tỷ lệ hoàn thành"
                 weight="40%"
                 score={breakdown.completionScore}
-                detail={`${completionPct}% of confirmed sessions completed`}
+                detail={`${completionPct}% buổi học đã xác nhận được hoàn thành`}
               />
               <PillarBar
-                label="Average Rating"
+                label="Đánh giá trung bình"
                 weight="30%"
                 score={breakdown.ratingScore}
                 detail={ratingDetail}
               />
               <PillarBar
-                label="Response Time"
+                label="Thời gian phản hồi"
                 weight="20%"
                 score={breakdown.responseTimeScore}
                 detail={responseDetail}
               />
               <PillarBar
-                label="Reliability"
+                label="Độ tin cậy"
                 weight="10%"
                 score={breakdown.cancellationScore}
-                detail={`${cancellationPct}% cancellation rate`}
+                detail={`${cancellationPct}% tỷ lệ hủy`}
               />
 
               {/* Action banner when score < 60 */}
@@ -243,11 +243,11 @@ export default function TrustReputationCard({ data, isOwner }: Props) {
                   <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-amber-800">
-                      Action Needed
+                      Cần hành động
                     </p>
                     <p className="text-sm text-amber-700 mt-0.5">
-                      Complete your next 3 sessions without cancellations to
-                      improve your Trust Score and unlock more bookings.
+                      Hoàn thành 3 buổi học tiếp theo mà không hủy để
+                      cải thiện Điểm tín nhiệm và mở khóa thêm lượt đặt lịch.
                     </p>
                   </div>
                 </div>

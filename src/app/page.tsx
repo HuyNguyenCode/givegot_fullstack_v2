@@ -30,16 +30,16 @@ export default function LandingPage() {
             </Link>
             <div className="flex items-center gap-6">
               <Link href="/discover" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition">
-                Discover
+                Khám phá
               </Link>
               <Link href="/dashboard" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition">
-                Dashboard
+                Bảng điều khiển
               </Link>
               <Link
                 href="/auth/signin"
                 className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 transition shadow-md"
               >
-                Sign In
+                Đăng nhập
               </Link>
             </div>
           </div>
@@ -56,13 +56,13 @@ export default function LandingPage() {
             <div className="space-y-8">
               <div className="space-y-4">
                 <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight leading-tight">
-                  Exchange Skills,
+                  Trao đổi Kỹ năng,
                   <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
-                    Not Money.
+                    Không cần Tiền.
                   </span>
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed max-w-xl">
-                  Join the time-banking revolution. Teach what you know, learn what you need. Every hour you give earns you an hour to receive.
+                  Tham gia cuộc cách mạng time-banking. Dạy điều bạn biết, học điều bạn cần. Mỗi giờ bạn cho đi sẽ đổi lại một giờ bạn nhận được.
                 </p>
               </div>
 
@@ -74,7 +74,7 @@ export default function LandingPage() {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="What do you want to learn today?"
+                    placeholder="Hôm nay bạn muốn học gì?"
                     className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none text-gray-900 placeholder:text-gray-400"
                   />
                 </div>
@@ -82,7 +82,7 @@ export default function LandingPage() {
                   type="submit"
                   className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
                 >
-                  Search
+                  Tìm kiếm
                 </button>
               </form>
 
@@ -92,14 +92,14 @@ export default function LandingPage() {
                   href="/discover"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                 >
-                  Discover Mentors
+                  Khám phá Mentor
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
                   href="/dashboard"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-600 font-semibold rounded-xl border-2 border-purple-600 hover:bg-purple-50 transition-all"
                 >
-                  Get Started Free
+                  Bắt đầu Miễn phí
                 </Link>
               </div>
             </div>
@@ -118,17 +118,17 @@ export default function LandingPage() {
                     {/* Floating Cards */}
                     <div className="absolute top-12 left-8 bg-white/80 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20 hover:-translate-y-2 transition-transform">
                       <Code className="w-8 h-8 text-purple-600 mb-2" />
-                      <p className="text-sm font-semibold text-gray-900">Programming</p>
+                      <p className="text-sm font-semibold text-gray-900">Lập trình</p>
                     </div>
 
                     <div className="absolute top-8 right-12 bg-white/80 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20 hover:-translate-y-2 transition-transform">
                       <Palette className="w-8 h-8 text-blue-600 mb-2" />
-                      <p className="text-sm font-semibold text-gray-900">Design</p>
+                      <p className="text-sm font-semibold text-gray-900">Thiết kế</p>
                     </div>
 
                     <div className="absolute bottom-16 left-16 bg-white/80 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20 hover:-translate-y-2 transition-transform">
                       <Globe className="w-8 h-8 text-green-600 mb-2" />
-                      <p className="text-sm font-semibold text-gray-900">Languages</p>
+                      <p className="text-sm font-semibold text-gray-900">Ngoại ngữ</p>
                     </div>
 
                     <div className="absolute bottom-12 right-8 bg-white/80 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20 hover:-translate-y-2 transition-transform">
@@ -138,12 +138,12 @@ export default function LandingPage() {
 
                     <div className="absolute top-1/2 right-4 bg-white/80 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20 hover:-translate-y-2 transition-transform">
                       <Camera className="w-8 h-8 text-orange-600 mb-2" />
-                      <p className="text-sm font-semibold text-gray-900">Photography</p>
+                      <p className="text-sm font-semibold text-gray-900">Nhiếp ảnh</p>
                     </div>
 
                     <div className="absolute top-1/2 left-4 bg-white/80 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20 hover:-translate-y-2 transition-transform">
                       <Music className="w-8 h-8 text-red-600 mb-2" />
-                      <p className="text-sm font-semibold text-gray-900">Music</p>
+                      <p className="text-sm font-semibold text-gray-900">Âm nhạc</p>
                     </div>
                   </div>
                 </div>
@@ -160,22 +160,22 @@ export default function LandingPage() {
             <div className="flex flex-col items-center gap-3">
               <Sparkles className="w-10 h-10 text-purple-400" />
               <div>
-                <p className="text-2xl font-bold text-white">AI-Powered Matching</p>
-                <p className="text-gray-400 mt-1">Find your perfect mentor instantly</p>
+                <p className="text-2xl font-bold text-white">Ghép đôi bằng AI</p>
+                <p className="text-gray-400 mt-1">Tìm mentor phù hợp ngay lập tức</p>
               </div>
             </div>
             <div className="flex flex-col items-center gap-3">
               <Shield className="w-10 h-10 text-blue-400" />
               <div>
-                <p className="text-2xl font-bold text-white">100% Free</p>
-                <p className="text-gray-400 mt-1">No credit cards, no subscriptions</p>
+                <p className="text-2xl font-bold text-white">100% Miễn phí</p>
+                <p className="text-gray-400 mt-1">Không cần thẻ tín dụng, không phí đăng ký</p>
               </div>
             </div>
             <div className="flex flex-col items-center gap-3">
               <Users className="w-10 h-10 text-green-400" />
               <div>
-                <p className="text-2xl font-bold text-white">Verified Mentors</p>
-                <p className="text-gray-400 mt-1">Trusted community of experts</p>
+                <p className="text-2xl font-bold text-white">Mentor đã xác minh</p>
+                <p className="text-gray-400 mt-1">Cộng đồng chuyên gia đáng tin cậy</p>
               </div>
             </div>
           </div>
@@ -187,10 +187,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 tracking-tight mb-4">
-              How It Works
+              Cách Hoạt Động
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Three simple steps to start your learning journey
+              Ba bước đơn giản để bắt đầu hành trình học tập của bạn
             </p>
           </div>
 
@@ -205,10 +205,10 @@ export default function LandingPage() {
                   <Search className="w-8 h-8 text-purple-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  Offer Your Skills
+                  Chia sẻ Kỹ năng của Bạn
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  Create your profile and list the skills you can teach. From coding to cooking, every skill has value.
+                  Tạo hồ sơ và liệt kê những kỹ năng bạn có thể dạy. Từ lập trình đến nấu ăn, mọi kỹ năng đều có giá trị.
                 </p>
               </div>
             </div>
@@ -223,10 +223,10 @@ export default function LandingPage() {
                   <Clock className="w-8 h-8 text-blue-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  Book Sessions
+                  Đặt Lịch Học
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  Browse mentors and book 1-hour sessions. Each hour you teach earns you points to learn something new.
+                  Tìm mentor và đặt lịch buổi học 1 giờ. Mỗi giờ bạn dạy sẽ giúp bạn kiếm điểm để học điều mới.
                 </p>
               </div>
             </div>
@@ -241,10 +241,10 @@ export default function LandingPage() {
                   <TrendingUp className="w-8 h-8 text-green-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  Grow Together
+                  Cùng Nhau Phát Triển
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  Complete sessions, earn points, and build your skills. Join a community where everyone teaches and learns.
+                  Hoàn thành buổi học, kiếm điểm, và phát triển kỹ năng. Tham gia cộng đồng nơi ai cũng có thể dạy và học.
                 </p>
               </div>
             </div>
@@ -257,23 +257,23 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 tracking-tight mb-4">
-              Popular Categories
+              Danh mục Phổ biến
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Explore thousands of skills across diverse categories
+              Khám phá hàng ngàn kỹ năng trong nhiều danh mục đa dạng
             </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[
-              { name: 'Programming', icon: Code, color: 'purple', count: '2.4k mentors' },
-              { name: 'Design', icon: Palette, color: 'blue', count: '1.8k mentors' },
-              { name: 'Languages', icon: Globe, color: 'green', count: '3.2k mentors' },
-              { name: 'Marketing', icon: MessageSquare, color: 'pink', count: '1.5k mentors' },
-              { name: 'Photography', icon: Camera, color: 'orange', count: '980 mentors' },
-              { name: 'Music', icon: Music, color: 'red', count: '1.2k mentors' },
-              { name: 'Business', icon: TrendingUp, color: 'indigo', count: '2.1k mentors' },
-              { name: 'Writing', icon: MessageSquare, color: 'yellow', count: '1.6k mentors' },
+              { name: 'Lập trình', icon: Code, color: 'purple', count: '2.4k mentor' },
+              { name: 'Thiết kế', icon: Palette, color: 'blue', count: '1.8k mentor' },
+              { name: 'Ngoại ngữ', icon: Globe, color: 'green', count: '3.2k mentor' },
+              { name: 'Marketing', icon: MessageSquare, color: 'pink', count: '1.5k mentor' },
+              { name: 'Nhiếp ảnh', icon: Camera, color: 'orange', count: '980 mentor' },
+              { name: 'Âm nhạc', icon: Music, color: 'red', count: '1.2k mentor' },
+              { name: 'Kinh doanh', icon: TrendingUp, color: 'indigo', count: '2.1k mentor' },
+              { name: 'Viết lách', icon: MessageSquare, color: 'yellow', count: '1.6k mentor' },
             ].map((category) => {
               const Icon = category.icon
               const colorClasses = {
@@ -310,14 +310,14 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm font-medium mb-6">
             <Award className="w-4 h-4" />
-            Join 10,000+ learners today
+            Cùng 10.000+ người học tham gia hôm nay
           </div>
           
           <h2 className="text-4xl lg:text-5xl font-bold text-white tracking-tight mb-6">
-            Ready to Start Your Journey?
+            Sẵn sàng Bắt đầu Hành trình?
           </h2>
           <p className="text-xl text-purple-100 mb-10 max-w-2xl mx-auto">
-            Create your free account and unlock unlimited learning opportunities. No credit card required.
+            Tạo tài khoản miễn phí và mở khóa vô số cơ hội học tập. Không cần thẻ tín dụng.
           </p>
 
           <div className="flex flex-wrap gap-4 justify-center">
@@ -325,29 +325,29 @@ export default function LandingPage() {
               href="/dashboard"
               className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-600 font-bold rounded-xl hover:bg-gray-100 transition-all shadow-2xl hover:shadow-3xl hover:-translate-y-1"
             >
-              Get Started Free
+              Bắt đầu Miễn phí
               <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
               href="/discover"
               className="inline-flex items-center gap-2 px-8 py-4 bg-purple-800/50 backdrop-blur-sm text-white font-bold rounded-xl border-2 border-white/30 hover:bg-purple-800/70 transition-all"
             >
-              Browse Mentors
+              Xem Mentor
             </Link>
           </div>
 
           <div className="mt-12 flex flex-wrap justify-center gap-8 text-purple-100">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              <span>No credit card</span>
+              <span>Không cần thẻ tín dụng</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              <span>100% free forever</span>
+              <span>100% miễn phí mãi mãi</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5" />
-              <span>Cancel anytime</span>
+              <span>Hủy bất cứ lúc nào</span>
             </div>
           </div>
         </div>
@@ -360,36 +360,36 @@ export default function LandingPage() {
             <div>
               <h3 className="text-white font-bold text-xl mb-4">GiveGot</h3>
               <p className="text-sm leading-relaxed">
-                The time-banking platform where skills are currency and everyone can teach and learn.
+                Nền tảng time-banking nơi kỹ năng là tiền tệ và ai cũng có thể dạy và học.
               </p>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-4">Platform</h4>
+              <h4 className="text-white font-semibold mb-4">Nền tảng</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/discover" className="hover:text-white transition">Discover</Link></li>
-                <li><Link href="/dashboard" className="hover:text-white transition">Dashboard</Link></li>
-                <li><Link href="/profile" className="hover:text-white transition">Profile</Link></li>
+                <li><Link href="/discover" className="hover:text-white transition">Khám phá</Link></li>
+                <li><Link href="/dashboard" className="hover:text-white transition">Bảng điều khiển</Link></li>
+                <li><Link href="/profile" className="hover:text-white transition">Hồ sơ</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-4">Company</h4>
+              <h4 className="text-white font-semibold mb-4">Công ty</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition">About</a></li>
+                <li><a href="#" className="hover:text-white transition">Giới thiệu</a></li>
                 <li><a href="#" className="hover:text-white transition">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition">Tuyển dụng</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-4">Support</h4>
+              <h4 className="text-white font-semibold mb-4">Hỗ trợ</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition">Terms</a></li>
-                <li><a href="#" className="hover:text-white transition">Privacy</a></li>
+                <li><a href="#" className="hover:text-white transition">Trung tâm hỗ trợ</a></li>
+                <li><a href="#" className="hover:text-white transition">Điều khoản</a></li>
+                <li><a href="#" className="hover:text-white transition">Quyền riêng tư</a></li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-sm">
-            <p>&copy; 2026 GiveGot. All rights reserved. Built with ❤️ for the learning community.</p>
+            <p>&copy; 2026 GiveGot. Đã đăng ký bản quyền. Được xây dựng bằng ❤️ cho cộng đồng học tập.</p>
           </div>
         </div>
       </footer>

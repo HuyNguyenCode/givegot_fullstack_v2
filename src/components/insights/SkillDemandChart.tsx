@@ -48,7 +48,7 @@ const CustomTooltip = ({
         ))}
         {gap > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-100">
-            <span className="text-xs text-orange-600 font-semibold">Gap: {gap} unmet</span>
+            <span className="text-xs text-orange-600 font-semibold">Thiếu hụt: {gap} chưa đáp ứng</span>
           </div>
         )}
       </div>
@@ -72,7 +72,7 @@ export default function SkillDemandChart({ data, isLoading }: Props) {
         <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <p className="text-sm">No skill data available yet</p>
+        <p className="text-sm">Chưa có dữ liệu kỹ năng</p>
       </div>
     )
   }
