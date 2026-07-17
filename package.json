@@ -27,6 +27,7 @@
     "@fullcalendar/timegrid": "^6.1.20",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
+    "@react-email/components": "^1.0.12",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
@@ -39,7 +40,8 @@
     "pusher-js": "^8.5.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "resend": "^6.17.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

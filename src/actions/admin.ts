@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { UserRole, ReportStatus, SkillStatus, SkillCategory } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
+import { sendEmail, getAppUrl } from '@/lib/email'
+import NewMatchEmail from '@/emails/NewMatchEmail'
 
 // ==========================================
 // ADMIN STATISTICS
@@ -356,6 +358,36 @@ async function notifyMatchingUsers(skillId: string, skillName: string): Promise<
         )
       )
     )
+
+    // ── Transactional email (additive, non-blocking) ────────────────────────
+    // Runs strictly after the in-app notifications above; any failure here is
+    // isolated via Promise.allSettled so it never affects skill approval.
+    try {
+      const matchedUsers = await prisma.user.findMany({
+        where: { id: { in: wantUsers.map((u) => u.userId) } },
+        select: { id: true, name: true, email: true },
+      })
+
+      const discoverUrl = `${getAppUrl()}/discover`
+
+      await Promise.allSettled(
+        matchedUsers
+          .filter((user) => !!user.email)
+          .map((user) =>
+            sendEmail({
+              to: user.email,
+              subject: `Đã có mentor dạy "${skillName}" cho bạn rồi nè! ✨`,
+              react: NewMatchEmail({
+                userName: user.name || user.email,
+                skillName,
+                discoverUrl,
+              }),
+            })
+          )
+      )
+    } catch (emailError) {
+      console.error('[Email] Failed to send NewMatchEmail batch:', emailError)
+    }
   } catch (error) {
     console.error('[Notification] Failed to send matching notifications:', error)
   }

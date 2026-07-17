@@ -6,6 +6,8 @@ import { SkillType, SkillCategory, UserRole } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { generateSkillEmbedding } from '@/lib/gemini'
 import { Prisma } from '@prisma/client'
+import { sendEmail, getAppUrl } from '@/lib/email'
+import NewMatchEmail from '@/emails/NewMatchEmail'
 
 export async function getAllUsers(): Promise<User[]> {
   try {
@@ -258,13 +260,129 @@ async function ensureSkillExists(skillName: string): Promise<string> {
   return skill.id
 }
 
+// ── Real-time Cross-Matching Email Notifications ────────────────────────────
+//
+// Fires organically whenever a user adds a brand-new GIVE or WANT skill to
+// their profile (as opposed to `notifyMatchingUsers` in admin.ts, which fires
+// when an admin approves a pending skill). Entirely additive: it runs strictly
+// AFTER the profile/embedding update has already succeeded, is fully isolated
+// via try/catch + Promise.allSettled, and can never affect the caller's result.
+async function notifyNewSkillCrossMatches(
+  userId: string,
+  newlyAddedGiveSkillIds: string[],
+  newlyAddedWantSkillIds: string[]
+): Promise<void> {
+  if (newlyAddedGiveSkillIds.length === 0 && newlyAddedWantSkillIds.length === 0) return
+
+  try {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    })
+    if (!currentUser) return
+
+    const discoverUrl = `${getAppUrl()}/discover`
+    const emailTasks: Promise<{ success: boolean; error?: string }>[] = []
+
+    // ── Scenario A: newly added GIVE skill → notify every OTHER user who WANTs it ──
+    if (newlyAddedGiveSkillIds.length > 0) {
+      const giveSkills = await prisma.skill.findMany({
+        where: { id: { in: newlyAddedGiveSkillIds } },
+        select: { id: true, name: true },
+      })
+
+      for (const skill of giveSkills) {
+        const wantMatches = await prisma.userSkill.findMany({
+          where: { skillId: skill.id, type: SkillType.WANT, userId: { not: userId } },
+          select: { user: { select: { name: true, email: true } } },
+        })
+
+        for (const { user: matchedUser } of wantMatches) {
+          if (!matchedUser.email) continue
+          emailTasks.push(
+            sendEmail({
+              to: matchedUser.email,
+              subject: `Tin hot: đã có mentor dạy "${skill.name}" bạn đang tìm! ✨`,
+              react: NewMatchEmail({
+                userName: matchedUser.name || matchedUser.email,
+                skillName: skill.name,
+                discoverUrl,
+              }),
+            })
+          )
+        }
+      }
+    }
+
+    // ── Scenario B: newly added WANT skill → if a mentor already exists, notify ME ──
+    if (newlyAddedWantSkillIds.length > 0) {
+      const wantSkills = await prisma.skill.findMany({
+        where: { id: { in: newlyAddedWantSkillIds } },
+        select: { id: true, name: true },
+      })
+
+      for (const skill of wantSkills) {
+        const mentorCount = await prisma.userSkill.count({
+          where: { skillId: skill.id, type: SkillType.GIVE, userId: { not: userId } },
+        })
+        if (mentorCount === 0) continue // No mentor available yet — nothing to notify
+
+        if (!currentUser.email) continue
+        emailTasks.push(
+          sendEmail({
+            to: currentUser.email,
+            subject: `Môn "${skill.name}" bạn muốn học đã có sẵn Mentor, vào đặt lịch ngay! 🚀`,
+            react: NewMatchEmail({
+              userName: currentUser.name || currentUser.email,
+              skillName: skill.name,
+              discoverUrl,
+            }),
+          })
+        )
+      }
+    }
+
+    if (emailTasks.length > 0) {
+      const results = await Promise.allSettled(emailTasks)
+      const failures = results.filter((r) => r.status === 'rejected').length
+      console.log(
+        `[CrossMatch] Sent ${results.length - failures}/${results.length} cross-match emails ` +
+          `for user ${userId} (${newlyAddedGiveSkillIds.length} new GIVE, ${newlyAddedWantSkillIds.length} new WANT)`
+      )
+    }
+  } catch (error) {
+    // Non-fatal by design: cross-match notifications must never affect the
+    // primary updateUserProfile flow that triggered them.
+    console.error('[CrossMatch] Failed to send skill cross-match notifications:', error)
+  }
+}
+
 export async function updateUserProfile(
   userId: string,
   updates: ProfileUpdateData
 ): Promise<ProfileUpdateResult> {
   try {
     console.log('Updating user profile:', userId, updates)
-    
+
+    // ── Skill diffing (for cross-match emails below) ──────────────────────────
+    // Snapshot the user's CURRENT skill ids before anything is deleted/updated,
+    // so we can later tell exactly which GIVE/WANT skills are brand new. This
+    // read-only query never touches embeddings or the profile update itself.
+    const previousSkills = await prisma.userSkill.findMany({
+      where: { userId, type: { in: [SkillType.GIVE, SkillType.WANT] } },
+      select: { skillId: true, type: true },
+    })
+    const previousGiveSkillIds = new Set(
+      previousSkills.filter((s) => s.type === SkillType.GIVE).map((s) => s.skillId)
+    )
+    const previousWantSkillIds = new Set(
+      previousSkills.filter((s) => s.type === SkillType.WANT).map((s) => s.skillId)
+    )
+    // Populated below while resolving the incoming skill lists — used only for
+    // the additive, non-blocking cross-match email step at the end of this function.
+    let newlyAddedGiveSkillIds: string[] = []
+    let newlyAddedWantSkillIds: string[] = []
+
     // Update basic profile fields
     if (updates.name !== undefined || updates.bio !== undefined || updates.avatarUrl !== undefined) {
       await prisma.user.update({
@@ -295,6 +413,10 @@ export async function updateUserProfile(
         const skillIds = await Promise.all(
           updates.teachingSkills.map(skillName => ensureSkillExists(skillName))
         )
+
+        // Diff against the pre-update snapshot: only genuinely new GIVE skills
+        // should trigger a cross-match email — re-saving existing ones must not spam.
+        newlyAddedGiveSkillIds = skillIds.filter((skillId) => !previousGiveSkillIds.has(skillId))
 
         await prisma.userSkill.createMany({
           data: skillIds.map(skillId => ({
@@ -345,6 +467,10 @@ export async function updateUserProfile(
           updates.learningGoals.map(skillName => ensureSkillExists(skillName))
         )
 
+        // Diff against the pre-update snapshot: only genuinely new WANT skills
+        // should trigger a cross-match email — re-saving existing ones must not spam.
+        newlyAddedWantSkillIds = skillIds.filter((skillId) => !previousWantSkillIds.has(skillId))
+
         await prisma.userSkill.createMany({
           data: skillIds.map(skillId => ({
             userId,
@@ -378,6 +504,16 @@ export async function updateUserProfile(
     revalidatePath('/')
     revalidatePath('/discover')
     revalidatePath('/profile')
+
+    // ── Cross-match email notifications (additive, non-blocking) ─────────────
+    // Runs strictly AFTER the profile update + embeddings above have already
+    // succeeded. Wrapped in its own try/catch so a Resend/DB hiccup here can
+    // never turn a successful profile update into a failed response.
+    try {
+      await notifyNewSkillCrossMatches(userId, newlyAddedGiveSkillIds, newlyAddedWantSkillIds)
+    } catch (crossMatchError) {
+      console.error('[CrossMatch] Unexpected error triggering cross-match notifications:', crossMatchError)
+    }
 
     return {
       success: true,
