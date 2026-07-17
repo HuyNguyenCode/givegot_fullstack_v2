@@ -77,10 +77,16 @@ export async function bookAvailableSlot(
     // re-validates under a SELECT FOR UPDATE to close the race-condition window.
     const menteeSnapshot = await prisma.user.findUnique({
       where:  { id: menteeId },
-      select: { givePoints: true },
+      select: { givePoints: true, isSuspended: true, trustScore: true },
     })
     if (!menteeSnapshot || menteeSnapshot.givePoints < 1) {
       return { success: false, message: 'INSUFFICIENT_POINTS' }
+    }
+
+    // ── Anti-Scam Auto-Suspension guard ───────────────────────────────────────
+    // Blocks the booking outright before any transaction lock is acquired.
+    if (menteeSnapshot.isSuspended || menteeSnapshot.trustScore < 30) {
+      return { success: false, message: 'ACCOUNT_SUSPENDED' }
     }
 
     // ── Review Gate: block new bookings if overdue reviews exist ─────────────
@@ -282,7 +288,10 @@ export async function createBooking(
     console.log('Creating booking:', { mentorId, menteeId, startTime, endTime, note })
 
     const [mentee, mentor] = await Promise.all([
-      prisma.user.findUnique({ where: { id: menteeId }, select: { id: true, givePoints: true } }),
+      prisma.user.findUnique({
+        where: { id: menteeId },
+        select: { id: true, givePoints: true, isSuspended: true, trustScore: true },
+      }),
       prisma.user.findUnique({ where: { id: mentorId }, select: { id: true } }),
     ])
 
@@ -292,6 +301,12 @@ export async function createBooking(
 
     if (mentee.givePoints < 1) {
       return { success: false, message: 'INSUFFICIENT_POINTS' }
+    }
+
+    // ── Anti-Scam Auto-Suspension guard ───────────────────────────────────────
+    // Blocks the booking outright before any transaction lock is acquired.
+    if (mentee.isSuspended || mentee.trustScore < 30) {
+      return { success: false, message: 'ACCOUNT_SUSPENDED' }
     }
 
     // Atomic: deduct point + create booking + write audit log — all or nothing

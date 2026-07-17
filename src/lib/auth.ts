@@ -126,6 +126,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: providers,
 
   callbacks: {
+    // Anti-Scam Auto-Suspension: block sign-in entirely for accounts that are
+    // suspended or have fallen below the platform's Trust Score safety floor.
+    // Fails OPEN (allows sign-in) on lookup errors or brand-new/unrecognized
+    // users so a transient DB hiccup can never lock everyone out.
+    async signIn({ user, account }) {
+      // The dev-only "impersonate" provider exists specifically so developers
+      // can test flows (including suspended-user flows) — never block it here.
+      if (account?.provider === 'impersonate') {
+        return true
+      }
+
+      if (!user?.email) {
+        return true
+      }
+
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { isSuspended: true, trustScore: true },
+        })
+
+        if (dbUser && (dbUser.isSuspended || dbUser.trustScore < 30)) {
+          return false
+        }
+      } catch (error) {
+        console.error('[Auth] signIn suspension check failed (failing open):', error)
+      }
+
+      return true
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id

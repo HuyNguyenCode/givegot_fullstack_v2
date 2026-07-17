@@ -225,6 +225,28 @@ export default function DashboardPage() {
           </button>
         </div>
 
+        {/* ── Anti-Scam Early Warning Banner ─────────────────────────────── */}
+        {currentUser.trustScore <= 40 && (
+          <div
+            role="alert"
+            className={`mb-8 rounded-xl border-2 p-4 flex items-start gap-3 shadow-sm ${
+              currentUser.trustScore < 30
+                ? 'bg-red-50 border-red-400'
+                : 'bg-amber-50 border-amber-400'
+            }`}
+          >
+            <span className="text-2xl leading-none">⚠️</span>
+            <p
+              className={`text-sm font-medium leading-relaxed ${
+                currentUser.trustScore < 30 ? 'text-red-800' : 'text-amber-800'
+              }`}
+            >
+              Cảnh báo: Trust Score của bạn đang ở mức nguy hiểm ({currentUser.trustScore}/100).
+              Nếu điểm rớt xuống dưới 30, tài khoản sẽ bị khóa vĩnh viễn!
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-600">
             <div className="flex items-center justify-between">

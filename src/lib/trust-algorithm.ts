@@ -371,6 +371,24 @@ export async function calculateAndUpdateTrustScore(
     ])
   }
 
+  // ── 6. Anti-Scam Auto-Ban Engine ─────────────────────────────────────────
+  //
+  // Additive security enforcement, layered on top of the score logic above
+  // without altering it. Runs regardless of whether the score just changed,
+  // so a user already sitting below the floor stays flagged even on a
+  // no-op recalculation. Wrapped in its own try/catch so a failure to flag
+  // the account can never break the trust-score calculation/return contract.
+  if (finalScore < 30) {
+    try {
+      await prisma.user.updateMany({
+        where: { id: userId, isSuspended: false },
+        data: { isSuspended: true },
+      })
+    } catch (suspendError) {
+      console.error(`[TrustAlgorithm] Failed to auto-suspend user ${userId}:`, suspendError)
+    }
+  }
+
   return {
     userId,
     previousScore,

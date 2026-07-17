@@ -4,6 +4,13 @@ import { NextResponse } from 'next/server'
 // NOTE: Do NOT import `prisma` here. Middleware runs in the Edge Runtime
 // which has no access to Node.js APIs (TCP, crypto, etc.) that Prisma needs.
 // Suspension checks are handled in src/app/layout.tsx (Node.js server component).
+//
+// Anti-Scam Auto-Suspension: this middleware is the "gatekeeper" that
+// intercepts every protected route and forwards the pathname to layout.tsx
+// via the `x-pathname` header (see `withPathname` below). layout.tsx then
+// runs the actual DB check (isSuspended OR trustScore < 30) and redirects to
+// /suspended — deliberately kept out of this Edge-runtime file so a Prisma
+// call here can never crash every request on the platform.
 
 const isDevMode = process.env.NEXT_PUBLIC_SHOW_DEV_BAR === 'true'
 

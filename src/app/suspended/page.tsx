@@ -1,4 +1,5 @@
 import { SignOutButton } from '@/components/SignOutButton'
+import { ForceSignOut } from '@/components/ForceSignOut'
 import { ShieldOff, Mail } from 'lucide-react'
 import type { Metadata } from 'next'
 
@@ -16,6 +17,8 @@ export const metadata: Metadata = {
 export default function SuspendedPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      {/* Clears the NextAuth session client-side while the user reads this page */}
+      <ForceSignOut />
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
 
