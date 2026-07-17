@@ -694,11 +694,14 @@ import { useEffect, useState, Suspense, useRef } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { getAutoMatchedMentors, searchMentorsSemantically } from '@/actions/mentor'
 import { getMentorRating } from '@/actions/booking'
+import { searchUsers, UserSearchResult } from '@/actions/user'
 import { Badge } from '@/lib/badges'
 import { ShieldCheck, Zap, Star } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useDebounce } from '@/hooks/useDebounce'; // Đường dẫn import tới file hook vừa tạo
+
+type SearchMode = 'skill' | 'user'
 
 const BADGE_ICON_MAP = {
   ShieldCheck,
@@ -828,6 +831,11 @@ function DiscoverContent() {
   const debouncedSearchQuery = useDebounce(searchQuery, 800) // Dùng hook thay vì useState
   const [isLoading, setIsLoading] = useState(true)
 
+  // Chế độ tìm kiếm: theo Kỹ năng (AI matching, giữ nguyên logic cũ) hoặc theo Người dùng (tra cứu tên/ID thuần)
+  const [searchMode, setSearchMode] = useState<SearchMode>('skill')
+  const [userResults, setUserResults] = useState<UserSearchResult[]>([])
+  const [isUserSearchLoading, setIsUserSearchLoading] = useState(false)
+
   const isFetchingRef = useRef(false) // Ổ khóa chống spam gọi trùng API
 
   const pathname = usePathname()
@@ -930,6 +938,12 @@ function DiscoverContent() {
     
     async function loadMentors() {
       if (!currentUser) return
+      // Chế độ tìm theo Người dùng có luồng dữ liệu riêng (xem effect searchUsers bên dưới) —
+      // không chạy AI semantic matching/embedding khi đang ở chế độ này.
+      if (searchMode !== 'skill') {
+        setIsLoading(false)
+        return
+      }
 
       // SỬA LỖI CACHE: Chỉ dùng cache khi KHÔNG tìm kiếm, và phải tắt loading thành công!
       if (!debouncedSearchQuery.trim() && cachedDiscoverData) {
@@ -1000,7 +1014,44 @@ function DiscoverContent() {
       isCancelled = true
       isFetchingRef.current = false
     }
-  }, [currentUser, debouncedSearchQuery])
+  }, [currentUser, debouncedSearchQuery, searchMode])
+
+  // Effect riêng cho chế độ "Tìm theo Người dùng" — tra cứu tên/ID thuần qua Prisma,
+  // hoàn toàn độc lập với luồng AI semantic matching phía trên.
+  useEffect(() => {
+    if (searchMode !== 'user' || !currentUser) return
+
+    let isCancelled = false
+
+    async function runUserSearch() {
+      if (!currentUser) return
+      const trimmed = debouncedSearchQuery.trim()
+      if (!trimmed) {
+        if (!isCancelled) {
+          setUserResults([])
+          setIsUserSearchLoading(false)
+        }
+        return
+      }
+
+      if (!isCancelled) setIsUserSearchLoading(true)
+      try {
+        const results = await searchUsers(trimmed, currentUser.id)
+        if (!isCancelled) setUserResults(results)
+      } catch (error) {
+        console.error('User search failed:', error)
+        if (!isCancelled) setUserResults([])
+      } finally {
+        if (!isCancelled) setIsUserSearchLoading(false)
+      }
+    }
+
+    runUserSearch()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [searchMode, debouncedSearchQuery, currentUser])
 
   if (userLoading) {
     return (
@@ -1164,8 +1215,38 @@ function DiscoverContent() {
             <h1 className="text-3xl font-bold text-gray-900">Khám phá Mentor thông minh</h1>
           </div>
           <p className="text-gray-600 ml-14">
-            {isSearching ? `Kết quả tìm kiếm cho "${searchQuery}"` : 'Ghép đôi bằng AI dựa trên mục tiêu học tập của bạn'}
+            {searchMode === 'user'
+              ? 'Tìm kiếm người dùng theo tên hoặc ID'
+              : isSearching
+              ? `Kết quả tìm kiếm cho "${searchQuery}"`
+              : 'Ghép đôi bằng AI dựa trên mục tiêu học tập của bạn'}
           </p>
+
+          {/* Chuyển đổi chế độ tìm kiếm: theo Kỹ năng (AI) hoặc theo Người dùng (tên/ID) */}
+          <div className="mt-4 ml-14 inline-flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setSearchMode('skill')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                searchMode === 'skill'
+                  ? 'bg-white text-purple-700 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Tìm theo Kỹ năng
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchMode('user')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                searchMode === 'user'
+                  ? 'bg-white text-purple-700 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Tìm theo Người dùng
+            </button>
+          </div>
           
           <form onSubmit={(e) => e.preventDefault()} className="mt-4 ml-14 max-w-md">
             <div className="relative">
@@ -1173,7 +1254,11 @@ function DiscoverContent() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm theo kỹ năng (VD: ReactJS, Python)..."
+                placeholder={
+                  searchMode === 'user'
+                    ? 'Tìm theo tên hoặc ID người dùng...'
+                    : 'Tìm theo kỹ năng (VD: ReactJS, Python)...'
+                }
                 className="w-full px-4 py-2 pl-10 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition"
               />
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1212,7 +1297,85 @@ function DiscoverContent() {
           </div>
         </div>
 
-        {isLoading ?(
+        {searchMode === 'user' ? (
+          <section>
+            {isUserSearchLoading ? (
+              <div className="py-20 text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 font-medium">Đang tìm kiếm người dùng...</p>
+              </div>
+            ) : !searchQuery.trim() ? (
+              <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                <div className="text-6xl mb-4">🔎</div>
+                <h2 className="text-xl font-semibold text-gray-800 mb-2">Nhập tên hoặc ID để tìm người dùng</h2>
+                <p className="text-gray-600">Bạn có thể tìm theo tên hiển thị hoặc dán chính xác ID của người dùng.</p>
+              </div>
+            ) : userResults.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                <div className="text-6xl mb-4">🔍</div>
+                <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                  Không tìm thấy người dùng nào cho &quot;{searchQuery}&quot;
+                </h2>
+                <p className="text-gray-600">Hãy thử một tên khác hoặc kiểm tra lại ID.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {userResults.map((user) => (
+                  <div
+                    key={user.id}
+                    className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all p-6 border-2 border-gray-200"
+                  >
+                    <div className="flex items-center gap-4 mb-4">
+                      <Link href={`/profile/${user.id}`} className="flex-shrink-0 group">
+                        {user.avatarUrl ? (
+                          <Image
+                            src={user.avatarUrl}
+                            alt={user.name || 'Người dùng'}
+                            width={56}
+                            height={56}
+                            className="rounded-full ring-2 ring-purple-200 group-hover:ring-purple-400 transition-all group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-lg ring-2 ring-purple-200">
+                            {(user.name || '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/profile/${user.id}`} className="group">
+                          <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
+                            {user.name || 'Người dùng ẩn danh'}
+                          </h3>
+                        </Link>
+                        <p className="text-xs text-gray-400 truncate">ID: {user.id}</p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-3 min-h-[3.75rem]">
+                      {user.bio || 'Người dùng này chưa cập nhật giới thiệu bản thân.'}
+                    </p>
+
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                        Kỹ năng dạy: {user.teachingSkillsCount}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                        Tín nhiệm: {user.trustScore}/100
+                      </span>
+                    </div>
+
+                    <Link
+                      href={`/profile/${user.id}`}
+                      className="block w-full text-white text-center py-2.5 rounded-lg font-medium transition bg-purple-600 hover:bg-purple-700"
+                    >
+                      Xem hồ sơ
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : isLoading ?(
           <div className="py-20 text-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">Đang tìm kiếm Mentor...</p>
@@ -1328,7 +1491,7 @@ function DiscoverContent() {
           </div>
         )}
 
-        {bestMatches.length === 0 && otherMentors.length === 0 && userGoals.length === 0 && (
+        {searchMode === 'skill' && bestMatches.length === 0 && otherMentors.length === 0 && userGoals.length === 0 && (
           <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-dashed border-blue-300 rounded-xl p-8 text-center">
             <div className="text-6xl mb-4">🎯</div>
             <h3 className="text-xl font-semibold text-gray-800 mb-2">Thiết lập mục tiêu học tập</h3>

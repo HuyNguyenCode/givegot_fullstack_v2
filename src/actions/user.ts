@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { User } from '@/types'
-import { SkillType, SkillCategory } from '@prisma/client'
+import { SkillType, SkillCategory, UserRole } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { generateSkillEmbedding } from '@/lib/gemini'
 import { Prisma } from '@prisma/client'
@@ -28,6 +28,64 @@ export async function getUserById(userId: string): Promise<User | null> {
   } catch (error) {
     console.error('Error fetching user:', error)
     return null
+  }
+}
+
+export interface UserSearchResult {
+  id: string
+  name: string | null
+  avatarUrl: string | null
+  bio: string | null
+  role: UserRole
+  trustScore: number
+  teachingSkillsCount: number
+}
+
+// Plain keyword search (name contains, case-insensitive OR exact id match).
+// Intentionally separate from the AI semantic mentor search — does NOT touch
+// embeddings, cosine similarity, or any Time-banking logic.
+export async function searchUsers(query: string, currentUserId?: string): Promise<UserSearchResult[]> {
+  try {
+    const trimmedQuery = query.trim()
+    if (!trimmedQuery) return []
+
+    const users = await prisma.user.findMany({
+      where: {
+        isSuspended: false,
+        ...(currentUserId ? { id: { not: currentUserId } } : {}),
+        OR: [
+          { name: { contains: trimmedQuery, mode: 'insensitive' } },
+          { id: trimmedQuery },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        bio: true,
+        role: true,
+        trustScore: true,
+        skills: {
+          where: { type: SkillType.GIVE },
+          select: { id: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+      take: 30,
+    })
+
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      role: user.role,
+      trustScore: user.trustScore,
+      teachingSkillsCount: user.skills.length,
+    }))
+  } catch (error) {
+    console.error('Error searching users:', error)
+    return []
   }
 }
 
