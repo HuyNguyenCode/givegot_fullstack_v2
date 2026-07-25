@@ -139,6 +139,12 @@ export default function HistoryPage() {
         return 'Quà chào mừng'
       case 'ADMIN_ADJUSTMENT':
         return 'Điều chỉnh bởi Admin'
+      case 'ADMIN_RESOLVED_MENTEE_ABSENT':
+        return 'Admin: Mentee vắng mặt'
+      case 'ADMIN_RESOLVED_MENTOR_ABSENT':
+        return 'Admin: Mentor vắng mặt'
+      case 'ADMIN_RESOLVED_SYSTEM_ERROR':
+        return 'Admin: Hoàn điểm (lỗi hệ thống)'
       default:
         return type
     }
@@ -155,6 +161,11 @@ export default function HistoryPage() {
         return 'text-blue-600'
       case 'INITIAL_BONUS':
         return 'text-purple-600'
+      case 'ADMIN_RESOLVED_MENTEE_ABSENT':
+      case 'ADMIN_RESOLVED_MENTOR_ABSENT':
+        return 'text-orange-600'
+      case 'ADMIN_RESOLVED_SYSTEM_ERROR':
+        return 'text-blue-600'
       default:
         return 'text-gray-600'
     }

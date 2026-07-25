@@ -179,6 +179,17 @@ model Booking {
   // Two-way Blind Review (Twin Table Strategy — kept separate from `Review` to avoid breaking changes)
   mentorReview     MentorReview?
   isReviewRevealed Boolean       @default(false) // true once BOTH Review (mentee) and MentorReview (mentor) exist
+
+  // Mentor-side Absence Report (Twin Field Strategy — kept fully independent from the
+  // Mentee's automated `reportNoShow` attendance-verdict engine. This is a manual flag
+  // that only feeds the admin `Report` review queue; it never touches GivePoints,
+  // Trust Score, or `status` on its own, so it cannot collide with the Mentee flow.)
+  mentorReportedAbsence   Boolean   @default(false)
+  mentorAbsenceReportedAt DateTime?
+
+  // Reverse side of Report.booking — a booking may accumulate multiple
+  // reports (e.g. mentee's no-show dispute AND mentor's absence report).
+  reports Report[]
 }
 
 // 5. Bảng Review
@@ -288,6 +299,9 @@ enum TransactionType {
   CASHOUT                   // Points → Fiat (cash-out / withdrawal request)
   REFUND_NO_SHOW            // +1 point to mentee (mentor confirmed absent by API)
   FRAUD_DETECTION           // +1 point to mentor (mentee's no-show report proved fraudulent)
+  ADMIN_RESOLVED_MENTEE_ABSENT // +1 point to mentor (admin manually confirmed mentee no-show)
+  ADMIN_RESOLVED_MENTOR_ABSENT // +1 point to mentee (admin manually confirmed mentor no-show)
+  ADMIN_RESOLVED_SYSTEM_ERROR  // +1 point to mentee (admin ruled no-fault dispute — full refund)
 }
 
 enum TransactionStatus {
@@ -318,7 +332,17 @@ model Report {
   reportedUserId String
   reason         String       @db.Text
   status         ReportStatus @default(PENDING)
-  
+
+  // Optional link back to the disputed session — nullable so generic,
+  // non-booking reports (e.g. profile abuse reports via `createReport`)
+  // keep working exactly as before. Populated by the no-show/absence
+  // report flows so an admin can act on GivePoints/Trust Score directly
+  // from this ticket via `resolveAbsenceReport`.
+  bookingId      String?
+  booking        Booking?             @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  resolutionType ReportResolutionType?
+  adminNotes     String?              @db.Text
+
   reporter       User         @relation("ReportCreator", fields: [reporterId], references: [id], onDelete: Cascade)
   reportedUser   User         @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
   
@@ -326,12 +350,20 @@ model Report {
   resolvedAt     DateTime?
   
   @@index([status, createdAt])
+  @@index([bookingId])
 }
 
 // Admin: Report Status Enum
 enum ReportStatus {
   PENDING
   RESOLVED
+}
+
+// Admin: How a booking-linked absence Report was ultimately resolved by an admin
+enum ReportResolutionType {
+  MENTEE_ABSENT
+  MENTOR_ABSENT
+  SYSTEM_ERROR
 }
 
 // 10. Notification Model (NEW: In-app notification system)

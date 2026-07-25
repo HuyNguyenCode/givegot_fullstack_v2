@@ -9,12 +9,13 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import {
   acceptBooking,
   declineBooking,
   cancelBooking,
   reportNoShow,
+  reportMentorAbsence,
 } from '@/actions/booking'
 import { deleteMentorSlot } from '@/actions/slots'
 import BlindReviewSection from '@/components/reviews/BlindReviewSection'
@@ -32,6 +33,9 @@ export interface SessionInfo {
   bookingStatus?: string
   meetingUrl?: string | null
   note?: string | null
+  /** Independent twin of the mentee's no-show report — set once the mentor has
+   *  already filed an absence report against the mentee for this booking. */
+  mentorReportedAbsence?: boolean
   isPast: boolean
   partner: {
     name: string | null
@@ -86,6 +90,11 @@ export default function SessionDetailDialog({
 }: SessionDetailDialogProps) {
   const [isLoading, setIsLoading]               = useState(false)
   const [feedback, setFeedback]                 = useState<{ ok: boolean; msg: string } | null>(null)
+
+  // Isolated pending state for the Mentor Absence Report button — kept on its
+  // own `useTransition` instead of the shared `isLoading`/`run()` helper below,
+  // so it can never interfere with any existing mentor/mentee action.
+  const [isReportingAbsence, startReportAbsence] = useTransition()
 
   // Reset internal state whenever a new session is shown
   useEffect(() => {
@@ -146,6 +155,19 @@ export default function SessionDetailDialog({
   const handleReportNoShow = () => {
     if (!window.confirm('Báo cáo vắng mặt? Hệ thống sẽ xác minh qua Google Meet API.')) return
     run(() => reportNoShow(s.bookingId!, currentUserId))
+  }
+  const handleReportMentorAbsence = () => {
+    if (!window.confirm('Báo cáo Mentee vắng mặt? Admin sẽ xem xét trường hợp này.')) return
+    setFeedback(null)
+    startReportAbsence(async () => {
+      try {
+        const r = await reportMentorAbsence(s.bookingId!, currentUserId)
+        if (r.success) { setFeedback({ ok: true, msg: r.message }); onMutate(); onClose() }
+        else             setFeedback({ ok: false, msg: r.message })
+      } catch {
+        setFeedback({ ok: false, msg: 'Đã có lỗi xảy ra. Vui lòng thử lại.' })
+      }
+    })
   }
   const handleDeleteSlot  = ()  => {
     if (!window.confirm(`Xóa khung giờ này?\n${s.sessionLabel}`)) return
@@ -325,6 +347,19 @@ export default function SessionDetailDialog({
                           booking={{ id: s.bookingId }}
                           currentUserId={currentUserId}
                         />
+                      )}
+                      {/* Mentor Absence Report — independent twin of the mentee's
+                          "Report No-Show" button below; own state, own action. */}
+                      {s.mentorReportedAbsence ? (
+                        <Info icon="🚨">Bạn đã báo cáo Mentee vắng mặt cho buổi học này. Admin sẽ xem xét.</Info>
+                      ) : (
+                        <DangerButton
+                          onClick={handleReportMentorAbsence}
+                          loading={isReportingAbsence}
+                          className="!bg-red-600 hover:!bg-red-700 text-white"
+                        >
+                          🚨 Báo cáo Mentee vắng mặt
+                        </DangerButton>
                       )}
                       {s.bookingId && <ChatLink bookingId={s.bookingId} />}
                     </>
@@ -555,7 +590,8 @@ function DangerButton({
       onClick={onClick}
       disabled={loading}
       className={`py-2.5 text-sm font-semibold rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition disabled:opacity-50 ${className}`}
-    >
+      style={{ width: "100%"}}
+>
       {loading ? '…' : children}
     </button>
   )

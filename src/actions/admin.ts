@@ -1,7 +1,15 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { UserRole, ReportStatus, SkillStatus, SkillCategory } from '@prisma/client'
+import {
+  UserRole,
+  ReportStatus,
+  SkillStatus,
+  SkillCategory,
+  BookingStatus,
+  TransactionType,
+  ReportResolutionType,
+} from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 
@@ -231,7 +239,18 @@ export async function getAllReports() {
             name: true,
             avatarUrl: true
           }
-        }
+        },
+        // NEW: booking context — lets the UI show 3 financial resolution
+        // buttons instead of the generic "mark resolved" button whenever
+        // a report is linked to a disputed session.
+        booking: {
+          select: {
+            id: true,
+            status: true,
+            startTime: true,
+            endTime: true,
+          },
+        },
       },
       orderBy: [
         { status: 'asc' }, // PENDING first
@@ -261,6 +280,238 @@ export async function resolveReport(reportId: string) {
   } catch (error) {
     console.error('Failed to resolve report:', error)
     return { success: false, message: 'Failed to resolve report' }
+  }
+}
+
+// ==========================================
+// ABSENCE REPORT RESOLUTION (Financial + Trust Score)
+// ==========================================
+//
+// Unlike `resolveReport` above (which only flips the ticket to RESOLVED),
+// this actually settles the underlying dispute: it moves the escrowed
+// GivePoint to the correct party and applies a Trust Score penalty where
+// appropriate, then marks the Report resolved in the SAME transaction so
+// the two can never drift out of sync. Fully additive — `resolveReport`
+// is untouched and still used for generic (non-booking) reports.
+
+export type AbsenceResolutionType =
+  | 'RESOLVE_MENTEE_ABSENT'
+  | 'RESOLVE_MENTOR_ABSENT'
+  | 'RESOLVE_SYSTEM_ERROR'
+
+interface ResolveAbsenceReportInput {
+  reportId: string
+  bookingId: string
+  resolutionType: AbsenceResolutionType
+  adminNotes?: string
+}
+
+interface ResolveAbsenceReportResult {
+  success: boolean
+  message: string
+}
+
+/** Trust Score penalty applied to whichever party the admin confirms was absent. */
+const ADMIN_ABSENCE_TRUST_PENALTY = 20
+
+const RESOLUTION_TYPE_MAP: Record<AbsenceResolutionType, ReportResolutionType> = {
+  RESOLVE_MENTEE_ABSENT: ReportResolutionType.MENTEE_ABSENT,
+  RESOLVE_MENTOR_ABSENT: ReportResolutionType.MENTOR_ABSENT,
+  RESOLVE_SYSTEM_ERROR:  ReportResolutionType.SYSTEM_ERROR,
+}
+
+const TERMINAL_BOOKING_STATUSES: BookingStatus[] = [
+  BookingStatus.MISSED,
+  BookingStatus.CANCELLED,
+  BookingStatus.COMPLETED,
+]
+
+export async function resolveAbsenceReport({
+  reportId,
+  bookingId,
+  resolutionType,
+  adminNotes,
+}: ResolveAbsenceReportInput): Promise<ResolveAbsenceReportResult> {
+  try {
+    // ── 1. Fetch report + booking (with both parties) ─────────────────────
+    const [report, booking] = await Promise.all([
+      prisma.report.findUnique({ where: { id: reportId } }),
+      prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          mentor: { select: { id: true, name: true, email: true } },
+          mentee: { select: { id: true, name: true, email: true } },
+        },
+      }),
+    ])
+
+    if (!report) {
+      return { success: false, message: 'Không tìm thấy báo cáo.' }
+    }
+    if (report.status === ReportStatus.RESOLVED) {
+      return { success: false, message: 'Báo cáo này đã được xử lý trước đó.' }
+    }
+    if (!booking) {
+      return { success: false, message: 'Không tìm thấy buổi học liên quan đến báo cáo này.' }
+    }
+    if (TERMINAL_BOOKING_STATUSES.includes(booking.status)) {
+      return {
+        success: false,
+        message: `Buổi học đã ở trạng thái cuối (${booking.status}) — không thể xử lý tài chính lại để tránh hoàn/trừ điểm trùng lặp.`,
+      }
+    }
+
+    const newBookingStatus: BookingStatus =
+      resolutionType === 'RESOLVE_SYSTEM_ERROR' ? BookingStatus.CANCELLED : BookingStatus.MISSED
+
+    // ── 2. Atomic transaction — GivePoints + Trust Score + status + ticket ──
+    await prisma.$transaction(async (tx) => {
+      if (resolutionType === 'RESOLVE_MENTEE_ABSENT') {
+        // Mentee confirmed absent → release the escrowed GivePoint to the mentor.
+        await tx.user.update({
+          where: { id: booking.mentorId },
+          data: { givePoints: { increment: 1 } },
+        })
+        await tx.transactionLog.create({
+          data: { userId: booking.mentorId, amount: 1, type: TransactionType.ADMIN_RESOLVED_MENTEE_ABSENT, bookingId },
+        })
+
+        // Re-read trust score inside the transaction to avoid stale reads.
+        const latestMentee = await tx.user.findUnique({ where: { id: booking.menteeId }, select: { trustScore: true } })
+        if (!latestMentee) throw new Error('Mentee record missing inside transaction')
+        const newTrust = Math.max(0, latestMentee.trustScore - ADMIN_ABSENCE_TRUST_PENALTY)
+        await tx.user.update({ where: { id: booking.menteeId }, data: { trustScore: newTrust } })
+        await tx.trustHistory.create({
+          data: {
+            userId: booking.menteeId,
+            previousScore: latestMentee.trustScore,
+            newScore: newTrust,
+            reason:
+              `Admin xác nhận Mentee vắng mặt (buổi học ${bookingId}). GivePoint đã chuyển cho Mentor.` +
+              (adminNotes ? ` Ghi chú admin: ${adminNotes}` : ''),
+          },
+        })
+      } else if (resolutionType === 'RESOLVE_MENTOR_ABSENT') {
+        // Mentor confirmed absent → refund 100% of the GivePoint to the mentee.
+        await tx.user.update({
+          where: { id: booking.menteeId },
+          data: { givePoints: { increment: 1 } },
+        })
+        await tx.transactionLog.create({
+          data: { userId: booking.menteeId, amount: 1, type: TransactionType.ADMIN_RESOLVED_MENTOR_ABSENT, bookingId },
+        })
+
+        const latestMentor = await tx.user.findUnique({ where: { id: booking.mentorId }, select: { trustScore: true } })
+        if (!latestMentor) throw new Error('Mentor record missing inside transaction')
+        const newTrust = Math.max(0, latestMentor.trustScore - ADMIN_ABSENCE_TRUST_PENALTY)
+        await tx.user.update({ where: { id: booking.mentorId }, data: { trustScore: newTrust } })
+        await tx.trustHistory.create({
+          data: {
+            userId: booking.mentorId,
+            previousScore: latestMentor.trustScore,
+            newScore: newTrust,
+            reason:
+              `Admin xác nhận Mentor vắng mặt (buổi học ${bookingId}). Mentee đã được hoàn 100% GivePoint.` +
+              (adminNotes ? ` Ghi chú admin: ${adminNotes}` : ''),
+          },
+        })
+      } else {
+        // RESOLVE_SYSTEM_ERROR — no one's fault: full refund, zero Trust Score change.
+        await tx.user.update({
+          where: { id: booking.menteeId },
+          data: { givePoints: { increment: 1 } },
+        })
+        await tx.transactionLog.create({
+          data: { userId: booking.menteeId, amount: 1, type: TransactionType.ADMIN_RESOLVED_SYSTEM_ERROR, bookingId },
+        })
+      }
+
+      await tx.booking.update({ where: { id: bookingId }, data: { status: newBookingStatus } })
+
+      await tx.report.update({
+        where: { id: reportId },
+        data: {
+          status: ReportStatus.RESOLVED,
+          resolvedAt: new Date(),
+          resolutionType: RESOLUTION_TYPE_MAP[resolutionType],
+          adminNotes: adminNotes?.trim() || null,
+        },
+      })
+    })
+
+    // ── 3. Best-effort notifications (never block the response) ────────────
+    try {
+      if (resolutionType === 'RESOLVE_MENTEE_ABSENT') {
+        await Promise.all([
+          createNotification(
+            booking.mentorId,
+            'Tranh chấp đã được giải quyết',
+            'Admin xác nhận Mentee vắng mặt trong buổi học. Bạn đã nhận được +1 GivePoint.',
+            'POINTS',
+            '/dashboard',
+          ),
+          createNotification(
+            booking.menteeId,
+            'Tranh chấp đã được giải quyết',
+            `Admin xác nhận bạn đã vắng mặt buổi học. −${ADMIN_ABSENCE_TRUST_PENALTY} Trust Score đã được áp dụng.`,
+            'SYSTEM',
+            '/dashboard',
+          ),
+        ])
+      } else if (resolutionType === 'RESOLVE_MENTOR_ABSENT') {
+        await Promise.all([
+          createNotification(
+            booking.menteeId,
+            'Tranh chấp đã được giải quyết',
+            'Admin xác nhận Mentor vắng mặt trong buổi học. Bạn đã được hoàn 100% GivePoint.',
+            'POINTS',
+            '/dashboard',
+          ),
+          createNotification(
+            booking.mentorId,
+            'Tranh chấp đã được giải quyết',
+            `Admin xác nhận bạn đã vắng mặt buổi học. −${ADMIN_ABSENCE_TRUST_PENALTY} Trust Score đã được áp dụng.`,
+            'SYSTEM',
+            '/dashboard',
+          ),
+        ])
+      } else {
+        await Promise.all([
+          createNotification(
+            booking.menteeId,
+            'Tranh chấp đã được giải quyết',
+            'Admin xác định đây là lỗi hệ thống — không ai vắng mặt. Bạn đã được hoàn 100% GivePoint.',
+            'POINTS',
+            '/dashboard',
+          ),
+          createNotification(
+            booking.mentorId,
+            'Tranh chấp đã được giải quyết',
+            'Admin xác định buổi học này là lỗi hệ thống. Không có hình phạt nào được áp dụng cho bạn.',
+            'SYSTEM',
+            '/dashboard',
+          ),
+        ])
+      }
+    } catch (notifyError) {
+      console.error('[resolveAbsenceReport] Failed to notify users:', notifyError)
+    }
+
+    // ── 4. Revalidate affected pages ─────────────────────────────────────────
+    revalidatePath('/admin/reports')
+    revalidatePath('/dashboard')
+    revalidatePath('/history')
+
+    const messages: Record<AbsenceResolutionType, string> = {
+      RESOLVE_MENTEE_ABSENT: `Đã xác nhận Mentee vắng mặt. 1 GivePoint chuyển cho Mentor, −${ADMIN_ABSENCE_TRUST_PENALTY} Trust Score cho Mentee.`,
+      RESOLVE_MENTOR_ABSENT: `Đã xác nhận Mentor vắng mặt. 1 GivePoint hoàn cho Mentee, −${ADMIN_ABSENCE_TRUST_PENALTY} Trust Score cho Mentor.`,
+      RESOLVE_SYSTEM_ERROR:  'Đã hoàn 100% GivePoint cho Mentee do lỗi hệ thống. Không ai bị trừ Trust Score.',
+    }
+
+    return { success: true, message: messages[resolutionType] }
+  } catch (error) {
+    console.error('[resolveAbsenceReport] Error:', error)
+    return { success: false, message: 'Không thể xử lý báo cáo. Vui lòng thử lại.' }
   }
 }
 

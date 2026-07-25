@@ -1427,6 +1427,7 @@ export async function reportNoShow(
         data: {
           reporterId:     booking.menteeId,
           reportedUserId: booking.mentorId,
+          bookingId,
           reason:
             `[AUTO] No-show dispute for booking ${bookingId}. ` +
             `Attendance data was inconclusive ` +
@@ -1528,5 +1529,127 @@ export async function reportNoShow(
   } catch (error) {
     console.error('[reportNoShow] Error:', error)
     return { success: false, message: 'Failed to process no-show report. Please try again.' }
+  }
+}
+
+// ── Mentor Absence Report (Twin Feature) ──────────────────────────────────────
+//
+// Fully isolated counterpart to `reportNoShow` above, for the reverse direction:
+// a Mentor flagging that their Mentee never showed up. Deliberately NOT wired
+// into the automated attendance-verdict engine (no GivePoints movement, no Trust
+// Score change, no `status` mutation) — it only sets the new, independent
+// `mentorReportedAbsence` field and files an admin `Report` for manual review.
+// This guarantees zero regression risk for the existing Mentee no-show flow.
+
+/** Mentor may file an absence report within this many hours of the session end. */
+const MENTOR_ABSENCE_GRACE_PERIOD_HOURS = 48
+
+export async function reportMentorAbsence(
+  bookingId: string,
+  mentorId: string,
+): Promise<BookingResult> {
+  try {
+    // ── 1. Fetch booking with both parties ───────────────────────────────────
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        mentor: { select: { id: true, name: true, email: true } },
+        mentee: { select: { id: true, name: true, email: true } },
+      },
+    })
+
+    if (!booking) {
+      return { success: false, message: 'Không tìm thấy buổi học.' }
+    }
+
+    // ── 2. Authorization & eligibility guards ────────────────────────────────
+    if (booking.mentorId !== mentorId) {
+      return { success: false, message: 'Bạn không phải mentor của buổi học này.' }
+    }
+
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      return {
+        success: false,
+        message: `Chỉ có thể báo cáo vắng mặt cho buổi học đã CONFIRMED (trạng thái hiện tại: ${booking.status}).`,
+      }
+    }
+
+    const now = Date.now()
+    const sessionEndMs = new Date(booking.endTime).getTime()
+
+    if (now <= sessionEndMs) {
+      return { success: false, message: 'Buổi học chưa kết thúc.' }
+    }
+
+    const gracePeriodMs = MENTOR_ABSENCE_GRACE_PERIOD_HOURS * 60 * 60 * 1000
+    if (now > sessionEndMs + gracePeriodMs) {
+      return {
+        success: false,
+        message: `Thời hạn báo cáo ${MENTOR_ABSENCE_GRACE_PERIOD_HOURS} giờ đã kết thúc.`,
+      }
+    }
+
+    if (booking.mentorReportedAbsence) {
+      return { success: false, message: 'Bạn đã báo cáo vắng mặt cho buổi học này rồi.' }
+    }
+
+    // ── 3. Persist the independent flag (own transaction, own fields) ───────
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        mentorReportedAbsence: true,
+        mentorAbsenceReportedAt: new Date(),
+      },
+    })
+
+    // ── 4. File an admin Report so a human can resolve the dispute ──────────
+    // Uses the existing generic `Report` model — shared infra with other report
+    // flows in the app, but this call site is brand new and touches no code
+    // shared with `reportNoShow`.
+    try {
+      await prisma.report.create({
+        data: {
+          reporterId: booking.mentorId,
+          reportedUserId: booking.menteeId,
+          bookingId,
+          reason:
+            `[MENTOR_REPORTED_ABSENCE] Mentor báo cáo Mentee vắng mặt buổi học ${bookingId} ` +
+            `(${booking.startTime.toISOString()} → ${booking.endTime.toISOString()}). ` +
+            `Cần admin xem xét thủ công (không tự động hoàn điểm / trừ Trust Score).`,
+        },
+      })
+    } catch (reportError) {
+      // Non-fatal: the flag on the booking is already persisted either way.
+      console.error('[reportMentorAbsence] Failed to create admin report:', reportError)
+    }
+
+    // ── 5. Revalidate pages ───────────────────────────────────────────────────
+    revalidatePath('/dashboard')
+    revalidatePath('/history')
+
+    // ── 6. Notify the mentee (best-effort, never blocks the response) ───────
+    const mentorName = booking.mentor.name ?? booking.mentor.email ?? 'Mentor'
+    try {
+      await createNotification(
+        booking.menteeId,
+        'Báo cáo vắng mặt',
+        `${mentorName} đã báo cáo bạn vắng mặt trong buổi học ngày ` +
+          `${new Date(booking.startTime).toLocaleDateString('vi-VN')}. ` +
+          `Admin sẽ xem xét và liên hệ nếu cần.`,
+        'SYSTEM',
+        '/dashboard',
+      )
+    } catch (notifyError) {
+      console.error('[reportMentorAbsence] Failed to notify mentee:', notifyError)
+    }
+
+    return {
+      success: true,
+      message: 'Đã ghi nhận báo cáo vắng mặt. Admin sẽ xem xét trong thời gian sớm nhất.',
+      bookingId,
+    }
+  } catch (error) {
+    console.error('[reportMentorAbsence] Error:', error)
+    return { success: false, message: 'Không thể gửi báo cáo. Vui lòng thử lại.' }
   }
 }

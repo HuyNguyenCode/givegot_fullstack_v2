@@ -38,6 +38,7 @@ interface ExistingSlot {
     status: string
     meetingUrl: string | null
     note: string | null
+    mentorReportedAbsence?: boolean
     mentee: {
       id: string
       name: string | null
@@ -177,6 +178,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
           bookingStatus: status,
           meetingUrl:    slot.booking.meetingUrl,
           note:          slot.booking.note,
+          mentorReportedAbsence: slot.booking.mentorReportedAbsence ?? false,
           mentee:        slot.booking.mentee,
           startTime:     slot.startTime,
           endTime:       slot.endTime,
@@ -312,6 +314,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
       bookingStatus: p.bookingStatus as string,
       meetingUrl:    p.meetingUrl as string | null,
       note:          p.note as string | null,
+      mentorReportedAbsence: p.mentorReportedAbsence as boolean | undefined,
       isPast,
       partner: {
         name:      mentee?.name ?? null,
