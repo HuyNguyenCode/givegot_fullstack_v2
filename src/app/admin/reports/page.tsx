@@ -3,9 +3,11 @@
 import { useEffect, useState, useTransition } from 'react'
 import {
   getAllReports,
+  getAttendanceEvidence,
   resolveReport,
   resolveAbsenceReport,
   type AbsenceResolutionType,
+  type AttendanceEvidenceResult,
 } from '@/actions/admin'
 import { ReportStatus } from '@prisma/client'
 import Image from 'next/image'
@@ -169,10 +171,41 @@ function ReportCard({ report, onResolved }: { report: ReportData; onResolved: ()
   const [isPending, startTransition] = useTransition()
   const [pendingAction, setPendingAction] = useState<AbsenceResolutionType | 'GENERIC' | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
+  const [attendanceEvidence, setAttendanceEvidence] = useState<AttendanceEvidenceResult | null>(null)
+  const [isEvidenceLoading, setIsEvidenceLoading] = useState(false)
 
   const isBookingLinked = !!report.bookingId
   const isBookingTerminal = !!report.booking && TERMINAL_BOOKING_STATUSES.includes(report.booking.status)
   const canResolveFinancially = isBookingLinked && !isBookingTerminal
+
+  useEffect(() => {
+    if (!report.bookingId) return
+
+    let isCancelled = false
+    setIsEvidenceLoading(true)
+    setAttendanceEvidence(null)
+
+    getAttendanceEvidence(report.bookingId)
+      .then((result) => {
+        if (!isCancelled) setAttendanceEvidence(result)
+      })
+      .catch((error) => {
+        console.error('Failed to load attendance evidence:', error)
+        if (!isCancelled) {
+          setAttendanceEvidence({
+            success: false,
+            message: 'Failed to fetch attendance evidence.',
+          })
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) setIsEvidenceLoading(false)
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [report.bookingId])
 
   const runAbsenceResolution = (resolutionType: AbsenceResolutionType, confirmMessage: string) => {
     if (!confirm(confirmMessage)) return
@@ -297,6 +330,36 @@ function ReportCard({ report, onResolved }: { report: ReportData; onResolved: ()
         <p className="text-gray-900 whitespace-pre-wrap">{report.reason}</p>
       </div>
 
+      {/* Objective attendance evidence is loaded independently per card. */}
+      {isBookingLinked && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h4 className="text-sm font-semibold text-blue-950">Attendance Evidence</h4>
+            {attendanceEvidence?.success && (
+              <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                Source: {attendanceEvidence.source === 'api' ? 'Google Meet' : 'Mock data'}
+              </span>
+            )}
+          </div>
+
+          {isEvidenceLoading ? (
+            <div className="flex items-center gap-2 text-sm text-blue-700" role="status">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+              Loading attendance evidence...
+            </div>
+          ) : attendanceEvidence?.success ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <AttendanceMetric label="Mentor" minutes={attendanceEvidence.mentorMinutes} />
+              <AttendanceMetric label="Mentee" minutes={attendanceEvidence.menteeMinutes} />
+            </div>
+          ) : (
+            <p className="text-sm font-medium text-red-700" role="alert">
+              {attendanceEvidence?.message ?? 'Attendance evidence is unavailable.'}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       {report.status === 'PENDING' && (
         canResolveFinancially ? (
@@ -391,6 +454,22 @@ function ReportCard({ report, onResolved }: { report: ReportData; onResolved: ()
           Đã xử lý vào {new Date(report.resolvedAt).toLocaleString()}
         </div>
       )}
+    </div>
+  )
+}
+function AttendanceMetric({ label, minutes }: { label: 'Mentor' | 'Mentee'; minutes: number }) {
+  const attended = minutes > 0
+
+  return (
+    <div
+      className={
+        'rounded-md border px-3 py-3 ' +
+        (attended
+          ? 'border-green-200 bg-green-50 text-green-800'
+          : 'border-red-200 bg-red-50 text-red-800')
+      }
+    >
+      <span className="font-semibold">{label}:</span> {minutes} minutes joined
     </div>
   )
 }

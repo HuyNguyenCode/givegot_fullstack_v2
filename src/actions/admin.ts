@@ -12,6 +12,8 @@ import {
 } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
+import { verifyMeetingAttendance } from '@/lib/google-meet'
+import { isAdmin } from '@/lib/admin'
 
 // ==========================================
 // ADMIN STATISTICS
@@ -262,6 +264,83 @@ export async function getAllReports() {
   } catch (error) {
     console.error('Failed to get reports:', error)
     throw new Error('Failed to fetch reports')
+  }
+}
+
+export type AttendanceEvidenceResult =
+  | {
+      success: true
+      mentorMinutes: number
+      menteeMinutes: number
+      source: 'api' | 'mock'
+    }
+  | {
+      success: false
+      message: string
+    }
+
+/**
+ * Fetches objective Google Meet attendance evidence for an admin reviewing a
+ * booking-linked report. Keeping this separate from the reports query prevents
+ * the external attendance lookup from blocking the initial page render.
+ */
+export async function getAttendanceEvidence(
+  bookingId: string,
+): Promise<AttendanceEvidenceResult> {
+  try {
+    if (!(await isAdmin())) {
+      return { success: false, message: 'Unauthorized.' }
+    }
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        meetingUrl: true,
+        startTime: true,
+        endTime: true,
+        mentor: { select: { email: true } },
+        mentee: { select: { email: true } },
+      },
+    })
+
+    if (!booking) {
+      return { success: false, message: 'Booking not found.' }
+    }
+
+    if (!booking.meetingUrl) {
+      return {
+        success: false,
+        message: 'No Google Meet link is stored for this booking.',
+      }
+    }
+
+    const attendance = await verifyMeetingAttendance(
+      booking.meetingUrl,
+      booking.mentor.email,
+      booking.mentee.email,
+      new Date(booking.startTime),
+      new Date(booking.endTime),
+    )
+
+    if (!attendance) {
+      return {
+        success: false,
+        message: 'Attendance data is currently unavailable.',
+      }
+    }
+
+    return {
+      success: true,
+      mentorMinutes: attendance.mentorMinutes,
+      menteeMinutes: attendance.menteeMinutes,
+      source: attendance.source,
+    }
+  } catch (error) {
+    console.error('[getAttendanceEvidence] Error:', error)
+    return {
+      success: false,
+      message: 'Failed to fetch attendance evidence.',
+    }
   }
 }
 
