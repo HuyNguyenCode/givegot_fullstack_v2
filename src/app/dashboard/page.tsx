@@ -16,11 +16,18 @@ import MentorLeaderboard from '@/components/insights/MentorLeaderboard'
 import Image from 'next/image'
 import { BookingStatus } from '@prisma/client'
 import Link from 'next/link'
+import { signOut } from 'next-auth/react'
 import CancelBookingDialog from '@/components/CancelBookingDialog'
 import BlindReviewSection from '@/components/reviews/BlindReviewSection'
 
 export default function DashboardPage() {
   const { currentUser, refreshUser, isLoading: userLoading } = useUser()
+
+  useEffect(() => {
+    if (currentUser && (currentUser.trustScore < 30 || currentUser.isSuspended === true)) {
+      signOut({ callbackUrl: '/suspended' })
+    }
+  }, [currentUser?.trustScore, currentUser?.isSuspended])
   const [mentoringBookings, setMentoringBookings] = useState<BookingWithDetails[]>([])
   const [learningBookings, setLearningBookings] = useState<BookingWithDetails[]>([])
   const [learningSkillsWithRoadmap, setLearningSkillsWithRoadmap] = useState<Array<{ id: string; name: string; roadmap: RoadmapStep[] | null }>>([])
@@ -224,6 +231,28 @@ export default function DashboardPage() {
             {isLoading ? 'Đang làm mới...' : 'Làm mới'}
           </button>
         </div>
+
+        {/* ── Anti-Scam Early Warning Banner ─────────────────────────────── */}
+        {currentUser.trustScore <= 40 && (
+          <div
+            role="alert"
+            className={`mb-8 rounded-xl border-2 p-4 flex items-start gap-3 shadow-sm ${
+              currentUser.trustScore < 30
+                ? 'bg-red-50 border-red-400'
+                : 'bg-amber-50 border-amber-400'
+            }`}
+          >
+            <span className="text-2xl leading-none">⚠️</span>
+            <p
+              className={`text-sm font-medium leading-relaxed ${
+                currentUser.trustScore < 30 ? 'text-red-800' : 'text-amber-800'
+              }`}
+            >
+              Cảnh báo: Trust Score của bạn đang ở mức nguy hiểm ({currentUser.trustScore}/100).
+              Nếu điểm rớt xuống dưới 30, tài khoản sẽ bị khóa vĩnh viễn!
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-600">

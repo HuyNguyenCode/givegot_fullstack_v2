@@ -76,6 +76,9 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
       await refreshUser()
       alert(`${result.message}`)
       router.push('/dashboard')
+    } else if (result.message === 'ACCOUNT_SUSPENDED') {
+      // Anti-Scam Auto-Suspension guard tripped server-side.
+      setError('Tài khoản của bạn đã bị hạn chế do Trust Score quá thấp. Vui lòng liên hệ hỗ trợ.')
     } else {
       setError(result.message)
     }

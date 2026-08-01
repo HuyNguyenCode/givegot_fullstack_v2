@@ -123,6 +123,12 @@ export default function MenteeBookingCalendar({
       setShowErrorToast(true)
       setTimeout(() => setShowErrorToast(false), 5000)
       // Modal stays open — do NOT call setIsModalOpen(false)
+    } else if (result.message === 'ACCOUNT_SUSPENDED') {
+      // Anti-Scam Auto-Suspension guard tripped server-side.
+      setErrorMessage('Tài khoản của bạn đã bị hạn chế do Trust Score quá thấp. Vui lòng liên hệ hỗ trợ.')
+      setShowErrorToast(true)
+      setTimeout(() => setShowErrorToast(false), 5000)
+      setIsModalOpen(false)
     } else {
       // All other errors (slot taken, review gate, network, …)
       setErrorMessage(result.message)

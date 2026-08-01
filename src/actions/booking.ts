@@ -77,10 +77,16 @@ export async function bookAvailableSlot(
     // re-validates under a SELECT FOR UPDATE to close the race-condition window.
     const menteeSnapshot = await prisma.user.findUnique({
       where:  { id: menteeId },
-      select: { givePoints: true },
+      select: { givePoints: true, isSuspended: true, trustScore: true },
     })
     if (!menteeSnapshot || menteeSnapshot.givePoints < 1) {
       return { success: false, message: 'INSUFFICIENT_POINTS' }
+    }
+
+    // ── Anti-Scam Auto-Suspension guard ───────────────────────────────────────
+    // Blocks the booking outright before any transaction lock is acquired.
+    if (menteeSnapshot.isSuspended || menteeSnapshot.trustScore < 30) {
+      return { success: false, message: 'ACCOUNT_SUSPENDED' }
     }
 
     // ── Review Gate: block new bookings if overdue reviews exist ─────────────
@@ -282,7 +288,10 @@ export async function createBooking(
     console.log('Creating booking:', { mentorId, menteeId, startTime, endTime, note })
 
     const [mentee, mentor] = await Promise.all([
-      prisma.user.findUnique({ where: { id: menteeId }, select: { id: true, givePoints: true } }),
+      prisma.user.findUnique({
+        where: { id: menteeId },
+        select: { id: true, givePoints: true, isSuspended: true, trustScore: true },
+      }),
       prisma.user.findUnique({ where: { id: mentorId }, select: { id: true } }),
     ])
 
@@ -292,6 +301,12 @@ export async function createBooking(
 
     if (mentee.givePoints < 1) {
       return { success: false, message: 'INSUFFICIENT_POINTS' }
+    }
+
+    // ── Anti-Scam Auto-Suspension guard ───────────────────────────────────────
+    // Blocks the booking outright before any transaction lock is acquired.
+    if (mentee.isSuspended || mentee.trustScore < 30) {
+      return { success: false, message: 'ACCOUNT_SUSPENDED' }
     }
 
     // Atomic: deduct point + create booking + write audit log — all or nothing
@@ -914,7 +929,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
 
           await tx.user.update({
             where: { id: booking.menteeId },
-            data: { givePoints: { increment: 1 }, trustScore: newTrust },
+            data: { givePoints: { increment: 1 }, trustScore: newTrust, isSuspended: newTrust < 30 },
           })
           await tx.transactionLog.create({
             data: { userId: booking.menteeId, amount: 1, type: TransactionType.BOOKING_CANCELLED, bookingId },
@@ -942,7 +957,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
           })
           await tx.user.update({
             where: { id: booking.menteeId },
-            data: { trustScore: newTrust },
+            data: { trustScore: newTrust, isSuspended: newTrust < 30 },
           })
           await tx.trustHistory.create({
             data: {
@@ -969,7 +984,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
         })
         await tx.user.update({
           where: { id: booking.mentorId },
-          data: { trustScore: newTrust },
+          data: { trustScore: newTrust, isSuspended: newTrust < 30 },
         })
         await tx.trustHistory.create({
           data: {
@@ -1362,7 +1377,7 @@ export async function reportNoShow(
         const newMentorTrust = Math.max(0, latestMentor.trustScore - 20)
         await tx.user.update({
           where: { id: booking.mentorId },
-          data: { trustScore: newMentorTrust },
+          data: { trustScore: newMentorTrust, isSuspended: newMentorTrust < 30 },
         })
         await tx.trustHistory.create({
           data: {
@@ -1398,7 +1413,7 @@ export async function reportNoShow(
         const newMenteeTrust = Math.max(0, latestMentee.trustScore - 30)
         await tx.user.update({
           where: { id: booking.menteeId },
-          data: { trustScore: newMenteeTrust },
+          data: { trustScore: newMenteeTrust, isSuspended: newMenteeTrust < 30 },
         })
         await tx.trustHistory.create({
           data: {

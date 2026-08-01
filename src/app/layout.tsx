@@ -56,10 +56,12 @@ export default async function RootLayout({
       if (session?.user?.email) {
         const user = await prisma.user.findUnique({
           where: { email: session.user.email },
-          select: { isSuspended: true },
+          select: { isSuspended: true, trustScore: true },
         })
 
-        if (user?.isSuspended) {
+        // Anti-Scam Auto-Suspension: block access if explicitly suspended OR
+        // if the Trust Score has fallen below the platform's safety floor.
+        if (user?.isSuspended || (user && user.trustScore < 30)) {
           redirect('/suspended')
         }
       }
