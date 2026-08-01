@@ -929,7 +929,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
 
           await tx.user.update({
             where: { id: booking.menteeId },
-            data: { givePoints: { increment: 1 }, trustScore: newTrust },
+            data: { givePoints: { increment: 1 }, trustScore: newTrust, isSuspended: newTrust < 30 },
           })
           await tx.transactionLog.create({
             data: { userId: booking.menteeId, amount: 1, type: TransactionType.BOOKING_CANCELLED, bookingId },
@@ -957,7 +957,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
           })
           await tx.user.update({
             where: { id: booking.menteeId },
-            data: { trustScore: newTrust },
+            data: { trustScore: newTrust, isSuspended: newTrust < 30 },
           })
           await tx.trustHistory.create({
             data: {
@@ -984,7 +984,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
         })
         await tx.user.update({
           where: { id: booking.mentorId },
-          data: { trustScore: newTrust },
+          data: { trustScore: newTrust, isSuspended: newTrust < 30 },
         })
         await tx.trustHistory.create({
           data: {
@@ -1377,7 +1377,7 @@ export async function reportNoShow(
         const newMentorTrust = Math.max(0, latestMentor.trustScore - 20)
         await tx.user.update({
           where: { id: booking.mentorId },
-          data: { trustScore: newMentorTrust },
+          data: { trustScore: newMentorTrust, isSuspended: newMentorTrust < 30 },
         })
         await tx.trustHistory.create({
           data: {
@@ -1413,7 +1413,7 @@ export async function reportNoShow(
         const newMenteeTrust = Math.max(0, latestMentee.trustScore - 30)
         await tx.user.update({
           where: { id: booking.menteeId },
-          data: { trustScore: newMenteeTrust },
+          data: { trustScore: newMenteeTrust, isSuspended: newMenteeTrust < 30 },
         })
         await tx.trustHistory.create({
           data: {

@@ -16,11 +16,18 @@ import MentorLeaderboard from '@/components/insights/MentorLeaderboard'
 import Image from 'next/image'
 import { BookingStatus } from '@prisma/client'
 import Link from 'next/link'
+import { signOut } from 'next-auth/react'
 import CancelBookingDialog from '@/components/CancelBookingDialog'
 import BlindReviewSection from '@/components/reviews/BlindReviewSection'
 
 export default function DashboardPage() {
   const { currentUser, refreshUser, isLoading: userLoading } = useUser()
+
+  useEffect(() => {
+    if (currentUser && (currentUser.trustScore < 30 || currentUser.isSuspended === true)) {
+      signOut({ callbackUrl: '/suspended' })
+    }
+  }, [currentUser?.trustScore, currentUser?.isSuspended])
   const [mentoringBookings, setMentoringBookings] = useState<BookingWithDetails[]>([])
   const [learningBookings, setLearningBookings] = useState<BookingWithDetails[]>([])
   const [learningSkillsWithRoadmap, setLearningSkillsWithRoadmap] = useState<Array<{ id: string; name: string; roadmap: RoadmapStep[] | null }>>([])
