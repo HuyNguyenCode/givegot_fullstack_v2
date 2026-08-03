@@ -148,7 +148,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         })
 
         if (dbUser && (dbUser.isSuspended || dbUser.trustScore < 30)) {
-          return false
+          // return false
+          return '/suspended'; // Hoặc '/auth/signin?error=suspended' tùy bạn setup router
         }
       } catch (error) {
         console.error('[Auth] signIn suspension check failed (failing open):', error)
