@@ -7,6 +7,12 @@ import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 import { calculateAndUpdateTrustScore } from '@/lib/trust-algorithm'
 import { createGoogleMeetLink, verifyMeetingAttendance } from '@/lib/google-meet'
+import { sendEmail, getAppUrl, formatEmailDateTime } from '@/lib/email'
+import BookingRequestedEmail from '@/emails/BookingRequestedEmail'
+import BookingConfirmedEmail from '@/emails/BookingConfirmedEmail'
+import BookingCancelledEmail from '@/emails/BookingCancelledEmail'
+import NoShowReportEmail from '@/emails/NoShowReportEmail'
+import NewBookingEmail from '@/emails/NewBookingEmail'
 
 // ── Cancellation Policy Constants ─────────────────────────────────────────────
 const CANCELLATION_THRESHOLD_HOURS = 12
@@ -211,7 +217,10 @@ export async function bookAvailableSlot(
     revalidatePath(`/book/${result.mentorId}`)
 
     // Notify the mentor about the new booking request
-    const mentee = await prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } })
+    const mentee = await prisma.user.findUnique({
+      where: { id: menteeId },
+      select: { name: true, email: true },
+    })
     const menteeName = mentee?.name || mentee?.email || 'A mentee'
     await createNotification(
       result.mentorId,
@@ -229,6 +238,31 @@ export async function bookAvailableSlot(
       'POINTS',
       '/dashboard'
     )
+
+    // ── Transactional email (additive, non-blocking) ────────────────────────
+    // Failures here must never break the booking flow above — already committed.
+    try {
+      const mentorForEmail = await prisma.user.findUnique({
+        where: { id: result.mentorId },
+        select: { name: true, email: true },
+      })
+
+      if (mentorForEmail?.email) {
+        await sendEmail({
+          to: mentorForEmail.email,
+          subject: `${menteeName} vừa gửi yêu cầu đặt lịch trên GiveGot! 🔔`,
+          react: BookingRequestedEmail({
+            mentorName: mentorForEmail.name || mentorForEmail.email,
+            menteeName,
+            startTimeFormatted: formatEmailDateTime(result.startTime),
+            note: result.note,
+            dashboardUrl: `${getAppUrl()}/dashboard`,
+          }),
+        })
+      }
+    } catch (emailError) {
+      console.error('[Email] Failed to send BookingRequestedEmail:', emailError)
+    }
 
     return {
       success: true,
@@ -346,7 +380,10 @@ export async function createBooking(
     revalidatePath('/dashboard')
 
     // Notify mentor about new booking request
-    const menteeUser = await prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } })
+    const [menteeUser, mentorUser] = await Promise.all([
+      prisma.user.findUnique({ where: { id: menteeId }, select: { name: true, email: true } }),
+      prisma.user.findUnique({ where: { id: mentorId }, select: { name: true, email: true } }),
+    ])
     const menteeName = menteeUser?.name || menteeUser?.email || 'A mentee'
     await createNotification(
       mentorId,
@@ -355,6 +392,25 @@ export async function createBooking(
       'BOOKING',
       '/dashboard'
     )
+
+    // ── Transactional email (additive, non-blocking) ────────────────────────
+    if (mentorUser?.email) {
+      try {
+        await sendEmail({
+          to: mentorUser.email,
+          subject: `${menteeName} vừa gửi yêu cầu đặt lịch trên GiveGot! 🔔`,
+          react: NewBookingEmail({
+            mentorName: mentorUser.name || mentorUser.email,
+            menteeName,
+            startTimeFormatted: formatEmailDateTime(booking.startTime),
+            note: booking.note,
+            dashboardUrl: `${getAppUrl()}/dashboard`,
+          }),
+        })
+      } catch (emailError) {
+        console.error('[Email] Failed to send NewBookingEmail:', emailError)
+      }
+    }
 
     return {
       success: true,
@@ -458,6 +514,25 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
       '/dashboard'
     )
 
+    // ── Transactional email (additive, non-blocking) ────────────────────────
+    if (mentee?.email) {
+      try {
+        await sendEmail({
+          to: mentee.email,
+          subject: `${mentorName} đã xác nhận buổi học của bạn trên GiveGot! 🎉`,
+          react: BookingConfirmedEmail({
+            menteeName: mentee.name || mentee.email,
+            mentorName,
+            startTimeFormatted: formatEmailDateTime(booking.startTime),
+            meetingUrl,
+            dashboardUrl: `${getAppUrl()}/dashboard`,
+          }),
+        })
+      } catch (emailError) {
+        console.error('[Email] Failed to send BookingConfirmedEmail:', emailError)
+      }
+    }
+
     return {
       success: true,
       message: meetingUrl
@@ -547,6 +622,31 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
       'POINTS',
       '/history'
     )
+
+    // ── Transactional email (additive, non-blocking) ────────────────────────
+    try {
+      const declinedMentee = await prisma.user.findUnique({
+        where: { id: booking.menteeId },
+        select: { name: true, email: true },
+      })
+
+      if (declinedMentee?.email) {
+        await sendEmail({
+          to: declinedMentee.email,
+          subject: `${decliningMentorName} không thể nhận buổi học của bạn 😥`,
+          react: BookingCancelledEmail({
+            recipientName: declinedMentee.name || declinedMentee.email,
+            cancellerName: decliningMentorName,
+            kind: 'DECLINED',
+            startTimeFormatted: formatEmailDateTime(booking.startTime),
+            detailMessage: '1 GivePoint đã được hoàn lại vào ví của bạn.',
+            actionUrl: `${getAppUrl()}/discover`,
+          }),
+        })
+      }
+    } catch (emailError) {
+      console.error('[Email] Failed to send BookingCancelledEmail (DECLINED):', emailError)
+    }
 
     return {
       success: true,
@@ -1072,6 +1172,29 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
       pusherServer.trigger(`user-${notifyRecipientId}`, 'booking-cancelled', pusherPayload),
     ])
 
+    // ── Transactional email (additive, non-blocking) ────────────────────────
+    // Notify only the other party — never email the person who cancelled.
+    try {
+      const emailRecipient = isMenteeCancelling ? booking.mentor : booking.mentee
+
+      if (emailRecipient.email) {
+        await sendEmail({
+          to: emailRecipient.email,
+          subject: 'Buổi học của bạn trên GiveGot vừa bị hủy 📅',
+          react: BookingCancelledEmail({
+            recipientName: emailRecipient.name || emailRecipient.email,
+            cancellerName,
+            kind: 'CANCELLED',
+            startTimeFormatted: formatEmailDateTime(booking.startTime),
+            detailMessage: recipientNotifMessage,
+            actionUrl: `${getAppUrl()}/history`,
+          }),
+        })
+      }
+    } catch (emailError) {
+      console.error('[Email] Failed to send BookingCancelledEmail (CANCELLED):', emailError)
+    }
+
     const successMessage = summary.timing === 'late' && isMenteeCancelling
       ? 'Booking cancelled. 1 GivePoint forfeited to mentor. −10 Trust Score.'
       : summary.timing === 'late' && !isMenteeCancelling
@@ -1523,6 +1646,44 @@ export async function reportNoShow(
         ),
       ])
     }
+    // ── Transactional email (post-commit, failure-isolated) ─────────────────
+    try {
+      const emailSubject = verdict === 'MENTOR_NO_SHOW'
+        ? 'Báo cáo no-show đã được xác minh trên GiveGot'
+        : verdict === 'FRAUD_DETECTED'
+          ? 'Kết quả xác minh báo cáo no-show trên GiveGot'
+          : 'Báo cáo no-show đang được GiveGot xem xét'
+
+      await Promise.allSettled([
+        sendEmail({
+          to: booking.mentor.email,
+          subject: emailSubject,
+          react: NoShowReportEmail({
+            recipientName: mentorName,
+            otherPartyName: menteeName,
+            recipientRole: 'MENTOR',
+            verdict,
+            sessionTimeFormatted: formatEmailDateTime(booking.startTime),
+            dashboardUrl: `${getAppUrl()}/dashboard`,
+          }),
+        }),
+        sendEmail({
+          to: booking.mentee.email,
+          subject: emailSubject,
+          react: NoShowReportEmail({
+            recipientName: menteeName,
+            otherPartyName: mentorName,
+            recipientRole: 'MENTEE',
+            verdict,
+            sessionTimeFormatted: formatEmailDateTime(booking.startTime),
+            dashboardUrl: `${getAppUrl()}/dashboard`,
+          }),
+        }),
+      ])
+    } catch (emailError) {
+      console.error('[Email] Failed to send NoShowReportEmail:', emailError)
+    }
+
 
     // ── 9. Build user-facing result ──────────────────────────────────────────
     const messages: Record<NoShowVerdict, string> = {
