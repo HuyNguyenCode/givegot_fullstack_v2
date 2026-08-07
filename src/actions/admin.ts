@@ -14,8 +14,9 @@ import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 import { verifyMeetingAttendance } from '@/lib/google-meet'
 import { isAdmin } from '@/lib/admin'
-import { sendEmail, getAppUrl } from '@/lib/email'
+import { sendEmail, getAppUrl, formatEmailDateTime } from '@/lib/email'
 import NewMatchEmail from '@/emails/NewMatchEmail'
+import ReportResolutionEmail from '@/emails/ReportResolutionEmail'
 
 // ==========================================
 // ADMIN STATISTICS
@@ -587,6 +588,48 @@ export async function resolveAbsenceReport({
       RESOLVE_MENTEE_ABSENT: `Đã xác nhận Mentee vắng mặt. 1 GivePoint chuyển cho Mentor, −${ADMIN_ABSENCE_TRUST_PENALTY} Trust Score cho Mentee.`,
       RESOLVE_MENTOR_ABSENT: `Đã xác nhận Mentor vắng mặt. 1 GivePoint hoàn cho Mentee, −${ADMIN_ABSENCE_TRUST_PENALTY} Trust Score cho Mentor.`,
       RESOLVE_SYSTEM_ERROR:  'Đã hoàn 100% GivePoint cho Mentee do lỗi hệ thống. Không ai bị trừ Trust Score.',
+    }
+    // ── Transactional email (post-commit, failure-isolated) ────────────────
+    try {
+      const decision = RESOLUTION_TYPE_MAP[resolutionType]
+      const emailSubject = resolutionType === 'RESOLVE_MENTEE_ABSENT'
+        ? 'Quyết định cuối cùng: Mentee vắng mặt'
+        : resolutionType === 'RESOLVE_MENTOR_ABSENT'
+          ? 'Quyết định cuối cùng: Mentor vắng mặt'
+          : 'Quyết định cuối cùng: Lỗi hệ thống'
+
+      await Promise.allSettled([
+        sendEmail({
+          to: booking.mentor.email,
+          subject: emailSubject,
+          react: ReportResolutionEmail({
+            recipientName: booking.mentor.name || booking.mentor.email,
+            otherPartyName: booking.mentee.name || booking.mentee.email,
+            recipientRole: 'MENTOR',
+            decision,
+            trustPenalty: ADMIN_ABSENCE_TRUST_PENALTY,
+            sessionTimeFormatted: formatEmailDateTime(booking.startTime),
+            adminNotes: adminNotes?.trim() || null,
+            dashboardUrl: `${getAppUrl()}/dashboard`,
+          }),
+        }),
+        sendEmail({
+          to: booking.mentee.email,
+          subject: emailSubject,
+          react: ReportResolutionEmail({
+            recipientName: booking.mentee.name || booking.mentee.email,
+            otherPartyName: booking.mentor.name || booking.mentor.email,
+            recipientRole: 'MENTEE',
+            decision,
+            trustPenalty: ADMIN_ABSENCE_TRUST_PENALTY,
+            sessionTimeFormatted: formatEmailDateTime(booking.startTime),
+            adminNotes: adminNotes?.trim() || null,
+            dashboardUrl: `${getAppUrl()}/dashboard`,
+          }),
+        }),
+      ])
+    } catch (emailError) {
+      console.error('[resolveAbsenceReport] Failed to send resolution emails:', emailError)
     }
 
     return { success: true, message: messages[resolutionType] }
