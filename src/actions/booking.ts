@@ -6,7 +6,8 @@ import { pusherServer } from '@/lib/pusher'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 import { calculateAndUpdateTrustScore } from '@/lib/trust-algorithm'
-import { createGoogleMeetLink, verifyMeetingAttendance } from '@/lib/google-meet'
+import { verifyMeetingAttendance } from '@/lib/google-meet'
+import { createGoogleMeetForMentor } from '@/lib/gcal'
 import { sendEmail, getAppUrl, formatEmailDateTime } from '@/lib/email'
 import BookingRequestedEmail from '@/emails/BookingRequestedEmail'
 import BookingConfirmedEmail from '@/emails/BookingConfirmedEmail'
@@ -480,11 +481,12 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
     
     if (mentor?.email && mentee?.email) {
       console.log("✅ Cả 2 đều có email! Bắt đầu gọi Google API...");
-      meetingUrl = await createGoogleMeetLink(
+      meetingUrl = await createGoogleMeetForMentor(
+        mentorId,          // Truyền đúng ID của mentor để hàm tự động quét lấy refresh_token của họ trong DB
+        mentor.email,      // Email mentor (làm organizer)
+        mentee.email,      // Email mentee (làm attendee)
         booking.startTime,
-        booking.endTime,
-        mentee.email,
-        mentor.email
+        booking.endTime
       )
       console.log("✅ Kết quả Google trả về:", meetingUrl);
     } else {

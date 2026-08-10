@@ -38,6 +38,14 @@ const providers = [
   GoogleProvider({
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+    authorization: {
+      params: {
+        access_type: 'offline',
+        prompt: 'consent',
+        scope:
+          'openid email profile https://www.googleapis.com/auth/calendar.events',
+      },
+    },
     allowDangerousEmailAccountLinking: true, // Link Google account to existing User with same email
   }),
   CredentialsProvider({
