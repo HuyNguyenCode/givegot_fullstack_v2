@@ -408,7 +408,7 @@ export default function UnifiedDashboardCalendar({
   // Derived timing flags for the currently clicked event
   const ce = clickedEvent
   const isNearSession = ce
-    ? Date.now() >= new Date(ce.startTime).getTime() - 10 * 60 * 1000 &&
+    ? Date.now() >= new Date(ce.startTime).getTime() - 15 * 60 * 1000 &&
       Date.now() <= new Date(ce.endTime).getTime()
     : false
   const isWithin48hGrace = ce?.isPast

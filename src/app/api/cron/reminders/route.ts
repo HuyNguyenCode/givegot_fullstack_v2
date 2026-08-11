@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/actions/notifications'
+import { sendEmail, getAppUrl } from '@/lib/email'
+import SessionReminderEmail from '@/emails/SessionReminderEmail'
 
 /**
  * GET /api/cron/reminders
@@ -36,10 +38,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // ── Time window: sessions starting within the next 15-30 minutes ─────────
+  // ── Time window: sessions starting within the next 10-15 minutes ─────────
   const now = new Date()
-  const windowStart = new Date(now.getTime() + 15 * 60 * 1000) // now + 15 min
-  const windowEnd   = new Date(now.getTime() + 30 * 60 * 1000) // now + 30 min
+  const windowStart = new Date(now.getTime() + 10 * 60 * 1000) // now + 10 min
+  const windowEnd   = new Date(now.getTime() + 15 * 60 * 1000) // now + 15 min
 
   try {
     const upcomingBookings = await prisma.booking.findMany({
@@ -66,14 +68,14 @@ export async function GET(req: NextRequest) {
       const startFormatted = booking.startTime.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
-        timeZone: 'UTC',
+        timeZone: 'Asia/Ho_Chi_Minh',
       })
 
       // ── In-app notification: Mentee ───────────────────────────────────────
       await createNotification(
         booking.menteeId,
         'Your session starts soon!',
-        `Your session with ${booking.mentor.name || booking.mentor.email} starts at ${startFormatted} UTC. Make sure you're ready!`,
+        `Your session with ${booking.mentor.name || booking.mentor.email} starts at ${startFormatted} GMT+7. Make sure you're ready!`,
         'SYSTEM',
         '/history'
       )
@@ -82,34 +84,43 @@ export async function GET(req: NextRequest) {
       await createNotification(
         booking.mentorId,
         'Upcoming session reminder',
-        `You have a session with ${booking.mentee.name || booking.mentee.email} starting at ${startFormatted} UTC.`,
+        `You have a session with ${booking.mentee.name || booking.mentee.email} starting at ${startFormatted} GMT+7.`,
         'SYSTEM',
         '/dashboard'
       )
 
       notificationsSent += 2
 
-      // ────────────────────────────────────────────────────────────────────────
-      // TODO: Email Reminders (Phase 5 — integrate Resend or Nodemailer here)
-      //
-      // Example with Resend:
-      //   import { Resend } from 'resend'
-      //   const resend = new Resend(process.env.RESEND_API_KEY)
-      //
-      //   await resend.emails.send({
-      //     from: 'GiveGot <noreply@givegot.app>',
-      //     to: booking.mentee.email,
-      //     subject: 'Your GiveGot session starts in 15 minutes!',
-      //     html: `<p>Hi ${booking.mentee.name},<br/>Your session with ${booking.mentor.name} starts at ${startFormatted}.</p>`,
-      //   })
-      //
-      //   await resend.emails.send({
-      //     from: 'GiveGot <noreply@givegot.app>',
-      //     to: booking.mentor.email,
-      //     subject: 'Reminder: You have an upcoming session on GiveGot',
-      //     html: `<p>Hi ${booking.mentor.name},<br/>You have a session with ${booking.mentee.name} starting at ${startFormatted}.</p>`,
-      //   })
-      // ────────────────────────────────────────────────────────────────────────
+      // ── Transactional email: both participants (failure-isolated) ─────────
+      try {
+        
+        await Promise.allSettled([
+          sendEmail({
+            to: booking.mentee.email,
+            subject: '⏰ Buổi học GiveGot của bạn sắp bắt đầu!',
+            react: SessionReminderEmail({
+              recipientName: booking.mentee.name || booking.mentee.email,
+              otherPartyName: booking.mentor.name || booking.mentor.email,
+              startTimeFormatted: `${startFormatted} GMT+7`,
+              meetingUrl: booking.meetingUrl,
+              dashboardUrl: `${getAppUrl()}/history`,
+            }),
+          }),
+          sendEmail({
+            to: booking.mentor.email,
+            subject: '⏰ Buổi học GiveGot của bạn sắp bắt đầu!',
+            react: SessionReminderEmail({
+              recipientName: booking.mentor.name || booking.mentor.email,
+              otherPartyName: booking.mentee.name || booking.mentee.email,
+              startTimeFormatted: `${startFormatted} GMT+7`,
+              meetingUrl: booking.meetingUrl,
+              dashboardUrl: `${getAppUrl()}/dashboard`,
+            }),
+          }),
+        ])
+      } catch (emailError) {
+        console.error(`[Cron] Failed to send reminder emails for booking ${booking.id}:`, emailError)
+      }
     }
 
     return NextResponse.json({
