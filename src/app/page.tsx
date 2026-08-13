@@ -26,7 +26,7 @@ export default function LandingPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900">GiveGot</span>
+              <h1 className="text-xl font-bold text-gray-900">GiveGot</h1>
             </Link>
             <div className="flex items-center gap-6">
               <Link href="/discover" className="text-sm font-medium text-gray-700 hover:text-purple-600 transition">
@@ -62,7 +62,7 @@ export default function LandingPage() {
                   </span>
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed max-w-xl">
-                  Join the time-banking revolution. Teach what you know, learn what you need. Every hour you give earns you an hour to receive.
+                  Welcome to GiveGot. Join the time-banking revolution. Teach what you know, learn what you need. Every hour you give earns you an hour to receive.
                 </p>
               </div>
 
