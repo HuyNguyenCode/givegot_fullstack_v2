@@ -687,16 +687,38 @@ export async function getPendingSkills() {
 
 export async function approveSkill(skillId: string) {
   try {
-    const skill = await prisma.skill.update({
-      where: { id: skillId },
+    // Atomic state transition: concurrent/repeated approval requests cannot
+    // send duplicate notifications for the same skill.
+    const result = await prisma.skill.updateMany({
+      where: {
+        id: skillId,
+        status: SkillStatus.PENDING,
+      },
       data: { status: SkillStatus.APPROVED },
     })
+
+    if (result.count === 0) {
+      return {
+        success: false,
+        message: 'Skill không tồn tại hoặc đã được xử lý trước đó.',
+      }
+    }
+
+    const skill = await prisma.skill.findUnique({
+      where: { id: skillId },
+      select: { id: true, name: true },
+    })
+
+    if (!skill) {
+      return { success: false, message: 'Không tìm thấy skill sau khi duyệt.' }
+    }
 
     // Matching notification: find users who WANT this skill and notify them
     await notifyMatchingUsers(skill.id, skill.name)
 
     revalidatePath('/admin/skills')
     revalidatePath('/discover')
+    revalidatePath('/profile')
     return { success: true, message: 'Skill approved successfully' }
   } catch (error) {
     console.error('Failed to approve skill:', error)

@@ -2,10 +2,9 @@
 
 import { prisma } from '@/lib/prisma'
 import { User } from '@/types'
-import { SkillType, SkillCategory, UserRole } from '@prisma/client'
+import { SkillType, SkillCategory, UserRole, SkillStatus } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { generateSkillEmbedding } from '@/lib/gemini'
-import { Prisma } from '@prisma/client'
 import { sendEmail, getAppUrl } from '@/lib/email'
 import NewMatchEmail from '@/emails/NewMatchEmail'
 
@@ -166,6 +165,7 @@ export async function getUserTeachingSkills(userId: string): Promise<Array<{ id:
 export async function getAllAvailableSkills() {
   try {
     const skills = await prisma.skill.findMany({
+      where: { status: SkillStatus.APPROVED },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
       select: { id: true, name: true, slug: true, category: true, status: true },
     })
@@ -200,8 +200,27 @@ function generateSlug(name: string): string {
     .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
 }
 
-// Helper function to ensure skill exists (create if not) and generate embedding
-async function ensureSkillExists(skillName: string): Promise<string> {
+class PendingSkillUnavailableError extends Error {
+  constructor(skillName: string) {
+    super(`Kỹ năng "${skillName}" đã được đề xuất và đang chờ Admin duyệt.`)
+    this.name = 'PendingSkillUnavailableError'
+  }
+}
+
+class RejectedSkillUnavailableError extends Error {
+  constructor(skillName: string) {
+    super(`Kỹ năng "${skillName}" đã bị từ chối và hiện không thể sử dụng.`)
+    this.name = 'RejectedSkillUnavailableError'
+  }
+}
+
+// Helper function to ensure skill exists (create if not) and generate embedding.
+// Pending skills remain usable only by users who were already linked to them,
+// including the user who created one earlier in the same profile update.
+async function ensureSkillExists(
+  skillName: string,
+  allowedPendingSkillIds: Set<string>
+): Promise<string> {
   const trimmedName = skillName.trim()
 
   // Check if skill already exists (case-insensitive)
@@ -213,6 +232,16 @@ async function ensureSkillExists(skillName: string): Promise<string> {
       },
     },
   })
+
+  if (skill) {
+    if (skill.status === SkillStatus.APPROVED || allowedPendingSkillIds.has(skill.id)) {
+      return skill.id
+    }
+    if (skill.status === SkillStatus.REJECTED) {
+      throw new RejectedSkillUnavailableError(skill.name)
+    }
+    throw new PendingSkillUnavailableError(skill.name)
+  }
 
   // If skill doesn't exist, create it WITH embedding
   if (!skill) {
@@ -233,7 +262,7 @@ async function ensureSkillExists(skillName: string): Promise<string> {
         name: trimmedName,
         slug: finalSlug,
         category: SkillCategory.OTHER,
-        status: 'PENDING', // NEW: All custom skills require admin approval
+        status: SkillStatus.PENDING, // NEW: All custom skills require admin approval
       },
     })
 
@@ -255,6 +284,10 @@ async function ensureSkillExists(skillName: string): Promise<string> {
       // Non-fatal: skill is still created; embedding can be backfilled later.
       console.error(`Failed to auto-generate embedding for "${trimmedName}":`, embeddingError)
     }
+
+    // Allows the same newly-created pending skill to be used as both GIVE and
+    // WANT within this one profile update, preserving the existing profile flow.
+    allowedPendingSkillIds.add(skill.id)
   }
 
   return skill.id
@@ -287,7 +320,10 @@ async function notifyNewSkillCrossMatches(
     // ── Scenario A: newly added GIVE skill → notify every OTHER user who WANTs it ──
     if (newlyAddedGiveSkillIds.length > 0) {
       const giveSkills = await prisma.skill.findMany({
-        where: { id: { in: newlyAddedGiveSkillIds } },
+        where: {
+          id: { in: newlyAddedGiveSkillIds },
+          status: SkillStatus.APPROVED,
+        },
         select: { id: true, name: true },
       })
 
@@ -317,7 +353,10 @@ async function notifyNewSkillCrossMatches(
     // ── Scenario B: newly added WANT skill → if a mentor already exists, notify ME ──
     if (newlyAddedWantSkillIds.length > 0) {
       const wantSkills = await prisma.skill.findMany({
-        where: { id: { in: newlyAddedWantSkillIds } },
+        where: {
+          id: { in: newlyAddedWantSkillIds },
+          status: SkillStatus.APPROVED,
+        },
         select: { id: true, name: true },
       })
 
@@ -378,6 +417,25 @@ export async function updateUserProfile(
     const previousWantSkillIds = new Set(
       previousSkills.filter((s) => s.type === SkillType.WANT).map((s) => s.skillId)
     )
+
+    // Resolve and validate every requested skill before deleting any existing
+    // UserSkill rows. This prevents a pending/rejected skill from causing a
+    // partially-cleared profile when the update is rejected.
+    const allowedPendingSkillIds = new Set(previousSkills.map((s) => s.skillId))
+    const resolvedTeachingSkillIds = updates.teachingSkills
+      ? await Promise.all(
+          updates.teachingSkills.map((skillName) =>
+            ensureSkillExists(skillName, allowedPendingSkillIds)
+          )
+        )
+      : undefined
+    const resolvedLearningGoalIds = updates.learningGoals
+      ? await Promise.all(
+          updates.learningGoals.map((skillName) =>
+            ensureSkillExists(skillName, allowedPendingSkillIds)
+          )
+        )
+      : undefined
     // Populated below while resolving the incoming skill lists — used only for
     // the additive, non-blocking cross-match email step at the end of this function.
     let newlyAddedGiveSkillIds: string[] = []
@@ -409,10 +467,7 @@ export async function updateUserProfile(
 
       // Add new teaching skills
       if (updates.teachingSkills.length > 0) {
-        // Ensure all skills exist (create custom ones if needed)
-        const skillIds = await Promise.all(
-          updates.teachingSkills.map(skillName => ensureSkillExists(skillName))
-        )
+        const skillIds = resolvedTeachingSkillIds!
 
         // Diff against the pre-update snapshot: only genuinely new GIVE skills
         // should trigger a cross-match email — re-saving existing ones must not spam.
@@ -462,10 +517,7 @@ export async function updateUserProfile(
 
       // Add new learning goals
       if (updates.learningGoals.length > 0) {
-        // Ensure all skills exist (create custom ones if needed)
-        const skillIds = await Promise.all(
-          updates.learningGoals.map(skillName => ensureSkillExists(skillName))
-        )
+        const skillIds = resolvedLearningGoalIds!
 
         // Diff against the pre-update snapshot: only genuinely new WANT skills
         // should trigger a cross-match email — re-saving existing ones must not spam.
@@ -523,7 +575,10 @@ export async function updateUserProfile(
     console.error('Error updating profile:', error)
     return {
       success: false,
-      message: 'Failed to update profile. Please try again.',
+      message:
+        error instanceof PendingSkillUnavailableError || error instanceof RejectedSkillUnavailableError
+          ? error.message
+          : 'Failed to update profile. Please try again.',
     }
   }
 }

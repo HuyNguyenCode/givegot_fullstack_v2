@@ -59,6 +59,9 @@ export async function getAutoMatchedMentors(currentUserId: string) {
       where: {
         userId: currentUserId,
         type: SkillType.WANT,
+        skill: {
+          status: 'APPROVED'
+        }
       },
       include: {
         skill: true,
@@ -242,6 +245,9 @@ export async function getAutoMatchedMentors(currentUserId: string) {
         where: {
           userId: currentUserId,
           type: SkillType.WANT,
+            skill: {
+              status: 'APPROVED'
+            }
         },
         include: {
           skill: true,
@@ -265,6 +271,9 @@ export async function getAutoMatchedMentors(currentUserId: string) {
             some: {
               type: SkillType.GIVE,
             },
+            skill: {
+              status: 'APPROVED'
+            }
           },
         },
         select: {
@@ -350,6 +359,9 @@ export async function getMentors(excludeUserId?: string) {
           some: {
             type: SkillType.GIVE,
           },
+          skill: {
+            status: 'APPROVED'
+          }
         },
       },
       select: {
