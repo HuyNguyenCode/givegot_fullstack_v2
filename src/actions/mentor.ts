@@ -245,11 +245,9 @@ export async function getAutoMatchedMentors(currentUserId: string) {
         where: {
           userId: currentUserId,
           type: SkillType.WANT,
-          some: {
-              skill: {
-                  status: 'APPROVED'
-              }
-          }
+            skill: {
+                status: 'APPROVED'
+            }
         },
         include: {
           skill: true,
