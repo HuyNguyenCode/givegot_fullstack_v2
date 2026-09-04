@@ -38,19 +38,19 @@ export interface ReviewGateStatus {
 
 // ── Review Gate ───────────────────────────────────────────────────────────────
 //
-// A mentee must review any session that ended > 24 h ago before they can book
+// A mentee must review any session that ended > 48 h ago before they can book
 // a new one. This keeps the review dataset healthy and enforces community norms.
 
 export async function checkReviewGate(menteeId: string): Promise<ReviewGateStatus> {
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000)
 
-  // CONFIRMED + endTime in the past by > 24 h means: the session happened but
+  // CONFIRMED + endTime in the past by > 48 h means: the session happened but
   // the mentee never submitted their review to mark it COMPLETED.
   const overdueConfirmed = await prisma.booking.findMany({
     where: {
       menteeId,
       status: BookingStatus.CONFIRMED,
-      endTime: { lt: twentyFourHoursAgo },
+      endTime: { lt: fortyEightHoursAgo },
     },
     select: {
       id: true,

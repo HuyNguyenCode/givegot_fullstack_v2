@@ -325,7 +325,7 @@ export default async function PublicProfilePage({
                             <strong>
                               {reviewGate.pendingCount} buổi học
                             </strong>{' '}
-                            đã kết thúc hơn 24 giờ trước mà chưa được đánh giá.
+                            đã kết thúc hơn 48 giờ trước mà chưa được đánh giá.
                           </p>
                           <ul className="space-y-1 mb-4">
                             {reviewGate.sessions.map((s) => (

@@ -127,7 +127,7 @@ export default function MentorLeaderboard({ data, isLoading }: Props) {
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold cursor-default ${
                   mentor.trustScore >= 85
                     ? 'bg-emerald-100 text-emerald-700'
-                    : mentor.trustScore >= 50
+                    : mentor.trustScore >= 45
                     ? 'bg-amber-100 text-amber-700'
                     : 'bg-red-100 text-red-600'
                 }`}
@@ -136,7 +136,7 @@ export default function MentorLeaderboard({ data, isLoading }: Props) {
                   className={`w-3 h-3 flex-shrink-0 ${
                     mentor.trustScore >= 85
                       ? 'text-emerald-500'
-                      : mentor.trustScore >= 50
+                      : mentor.trustScore >= 45
                       ? 'text-amber-500'
                       : 'text-red-400'
                   }`}

@@ -17,22 +17,22 @@ function TrustRing({ score }: { score: number }) {
   const offset = CIRCUMFERENCE * (1 - score / 100)
 
   const ringColor =
-    score >= 80
+    score >= 85
       ? '#10b981' // emerald-500
-      : score >= 50
+      : score >= 45
       ? '#f59e0b' // amber-500
       : '#ef4444' // red-500
 
   const bgRingColor =
-    score >= 80 ? '#d1fae5' : score >= 50 ? '#fef3c7' : '#fee2e2'
+    score >= 85 ? '#d1fae5' : score >= 45 ? '#fef3c7' : '#fee2e2'
 
   const label =
-    score >= 80 ? 'Xuất sắc' : score >= 50 ? 'Tốt' : 'Cần cải thiện'
+    score >= 85 ? 'Xuất sắc' : score >= 45 ? 'An toàn' : 'Cần cải thiện'
 
   const labelColor =
-    score >= 80
+    score >= 85
       ? 'text-emerald-700'
-      : score >= 50
+      : score >= 45
       ? 'text-amber-700'
       : 'text-red-700'
 
@@ -111,9 +111,9 @@ function PillarBar({
   detail: string
 }) {
   const barColor =
-    score >= 80
+    score >= 85
       ? 'bg-emerald-500'
-      : score >= 50
+      : score >= 45
       ? 'bg-amber-400'
       : 'bg-red-400'
 
@@ -237,15 +237,15 @@ export default function TrustReputationCard({ data, isOwner }: Props) {
                 detail={`${cancellationPct}% tỷ lệ hủy`}
               />
 
-              {/* Action banner when score < 60 */}
-              {trustScore < 60 && (
-                <div className="mt-1 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              {/* Action banner only below the safe threshold of 45 */}
+              {trustScore < 45 && (
+                <div className="mt-1 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
+                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-amber-800">
+                    <p className="text-sm font-semibold text-red-800">
                       Cần hành động
                     </p>
-                    <p className="text-sm text-amber-700 mt-0.5">
+                    <p className="text-sm text-red-700 mt-0.5">
                       Hoàn thành 3 buổi học tiếp theo mà không hủy để
                       cải thiện Điểm tín nhiệm và mở khóa thêm lượt đặt lịch.
                     </p>
