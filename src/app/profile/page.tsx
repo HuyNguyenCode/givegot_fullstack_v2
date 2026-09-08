@@ -531,36 +531,58 @@ export default function ProfilePage() {
                   <div className="flex flex-wrap gap-2 mb-3">
                     {selectedTeachingSkills.map((skill) => {
                       const isVerified = verifiedSkills[skill]
+                      const publicationState = publication.find(item => item.name === skill)
+                      const isPublished = publicationState
+                        ? publicationState.status === 'APPROVED' && publicationState.embeddingStatus === 'READY'
+                        : availableSkills.some(item => item.name === skill)
+                      const showVerified = Boolean(isVerified && isPublished)
+                      const unavailableLabel = !publicationState
+                        ? 'Lưu để gửi duyệt'
+                        : publicationState.status === 'PENDING'
+                          ? 'Chờ Admin duyệt'
+                          : publicationState.status === 'REJECTED'
+                            ? 'Đã từ chối'
+                            : publicationState.embeddingStatus === 'FAILED'
+                              ? 'Cần Admin xử lý'
+                              : 'Đang chuẩn bị'
                       return (
                         <div
                           key={skill}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm ${
-                            isVerified 
+                            showVerified
                               ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white ring-2 ring-green-400' 
                               : 'bg-green-600 text-white'
                           }`}
                         >
-                          {isVerified && (
+                          {showVerified && (
                             <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           )}
                           <span>{skill}</span>
-                          {isVerified && (
+                          {showVerified && (
                             <span className="text-xs bg-yellow-300 text-green-800 px-1.5 py-0.5 rounded font-bold">
                               Đã xác thực
                             </span>
                           )}
-                          {!isVerified && (
+                          {!showVerified && isPublished && (
                             <button
                               type="button"
                               onClick={() => handleVerifySkill(skill)}
                               disabled={isLoadingQuiz}
                               className="text-xs bg-white text-green-700 px-2 py-0.5 rounded font-semibold hover:bg-green-100 transition disabled:opacity-50"
-                              title="Xác thực kỹ năng"
+                              title="Làm bài xác thực kỹ năng"
                             >
-                              {isLoadingQuiz ? '...' : 'Xác thực'}
+                              {isLoadingQuiz ? '...' : 'Làm bài xác thực'}
                             </button>
+                          )}
+                          {!isPublished && (
+                            <span
+                              className="text-xs bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-semibold"
+                              title={publicationState ? skillPublicationLabel(publicationState) : 'Lưu hồ sơ để gửi kỹ năng cho Admin duyệt'}
+                            >
+                              {unavailableLabel}
+                            </span>
                           )}
                           <button
                             type="button"

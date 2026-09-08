@@ -23,14 +23,14 @@ Ngày: 2026-09-04. Trạng thái: code/migration được chuẩn bị; CHƯA á
 - src/actions/mentor.ts: SQL semantic, keyword, fallback và mảng skill trả về cùng lọc published; không đổi trọng số/công thức similarity.
 - src/actions/analytics.ts: thống kê skill và top-skill không lộ skill chưa công bố; không đổi công thức Trust Score hoặc thứ tự xếp hạng Mentor.
 - src/app/admin/skills/page.tsx: hiển thị readiness/attempts/error, nút retry; form edit gửi version đã tải.
-- src/app/profile/page.tsx: mục owner-only các skill chưa công bố; refresh sau lưu; không thay flow quiz.
+- src/app/profile/page.tsx: mục owner-only các skill chưa công bố; refresh sau lưu. Flow quiz sau đó được harden riêng ở mục Option 1 bên dưới.
 - prisma/backfill-skill-embeddings.ts: dùng chung worker có claim/version/token; không tự chạy; không gửi matching email hàng loạt.
 - prisma/backfill-embeddings.ts: chỉ lấy published skills; xóa vector tổng hợp khi không còn published skill. Chạy maintenance khi đã tạm dừng ghi.
 - scripts/test-skill-approval.cjs: test module TypeScript thật bằng mock DB/AI/auth/email; không gửi dữ liệu hay email ra ngoài.
 - BR11-TEST-GUIDE.md: quy trình staging, SQL đối soát, checklist chức năng, rollout/rollback.
 
 ## Các chức năng không sửa nghiệp vụ
-Booking/cancel/review, ví/VNPay/rút tiền, Trust Score, đình chỉ, chat/Meet, quiz và roadmap API.
+Booking/cancel/review, ví/VNPay/rút tiền, Trust Score, đình chỉ, chat/Meet và roadmap API không bị thay đổi bởi phần BR-11 ban đầu. Quiz chỉ được harden theo mục Option 1 bên dưới.
 Giữ UserSkill ID còn dùng để không mất verification/roadmap khi lưu profile.
 Các thay đổi 48h và màu Trust đã chốt trước không bị chỉnh lại.
 
@@ -60,3 +60,11 @@ Các thay đổi 48h và màu Trust đã chốt trước không bị chỉnh l�
 - Việt hóa message create/update/reject liên quan; từ chối trả thông báo rõ skill không xuất hiện trong tìm kiếm.
 - Thêm regression test cho cả approval và create APPROVED khi embedding throw sau commit: response vẫn thành công/persisted, publication outcome chưa hoàn tất, DB mock vẫn APPROVED/FAILED.
 - Test sau hardening: ba nhóm BR-11 PASS; TypeScript noEmit PASS; ESLint các file admin/embedding PASS; diff check PASS (chỉ cảnh báo line ending).
+
+## Option 1 — chặn xác thực skill chưa công bố
+- `src/app/profile/page.tsx`: chỉ hiển thị nút làm bài khi skill đạt `APPROVED + READY`; hiển thị nhãn riêng cho chưa lưu, chờ duyệt, bị từ chối, đang chuẩn bị và lỗi cần Admin xử lý. Huy hiệu xác thực cũ được giữ trong DB nhưng chỉ hiển thị khi skill đang được công bố.
+- `src/actions/quiz.ts`: yêu cầu đăng nhập; chỉ chủ sở hữu của `UserSkill` loại GIVE và skill `APPROVED + READY` được tạo quiz hoặc lưu `isVerified`; dùng conditional `updateMany` để kiểm tra lại nguyên tử tại thời điểm ghi, kể cả khi Admin đổi trạng thái lúc quiz đang mở; lookup chi tiết skill chỉ cho chính chủ.
+- `src/components/QuizModal.tsx`: không báo đã lưu huy hiệu trước khi server xác nhận; hiển thị lỗi partial-success rõ ràng và khóa nút đóng trong lúc đang ghi.
+- `scripts/test-quiz-publication.cjs`: regression test offline cho unauthenticated, unpublished/wrong-owner, published owner và final conditional write.
+- Không thay schema, không migration, không xóa `isVerified`, không đổi flow lưu profile/roadmap/booking/matching.
+- Giới hạn được giữ theo lựa chọn Option 1: đáp án và chấm điểm quiz vẫn nằm phía client; chuyển toàn bộ attempt/scoring sang server là Option 2 riêng, chưa thực hiện.

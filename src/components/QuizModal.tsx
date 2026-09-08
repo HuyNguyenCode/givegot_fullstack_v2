@@ -29,6 +29,8 @@ export default function QuizModal({
   const [score, setScore] = useState(0)
   const [passed, setPassed] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [verificationSaved, setVerificationSaved] = useState(false)
+  const [verificationError, setVerificationError] = useState('')
   const [tabSwitchDetected, setTabSwitchDetected] = useState(false)
   
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -146,17 +148,31 @@ export default function QuizModal({
     // If passed, verify the skill
     if (hasPassed) {
       setIsSubmitting(true)
-      const result = await verifyUserSkill(userSkillId)
-      setIsSubmitting(false)
-      
-      if (result.success) {
-        console.log('🎉 Skill verified!')
-        onVerified()
+      setVerificationSaved(false)
+      setVerificationError('')
+
+      try {
+        const result = await verifyUserSkill(userSkillId)
+
+        if (result.success) {
+          console.log('🎉 Skill verified!')
+          setVerificationSaved(true)
+          onVerified()
+        } else {
+          setVerificationError(result.message)
+        }
+      } catch (error) {
+        console.error('Error saving skill verification:', error)
+        setVerificationError('Không thể lưu huy hiệu xác thực. Vui lòng thử lại sau.')
+      } finally {
+        setIsSubmitting(false)
       }
     }
   }
 
   const handleClose = () => {
+    if (isSubmitting) return
+
     if (timerRef.current) {
       clearInterval(timerRef.current)
     }
@@ -168,6 +184,8 @@ export default function QuizModal({
     setQuizCompleted(false)
     setScore(0)
     setPassed(false)
+    setVerificationSaved(false)
+    setVerificationError('')
     setTabSwitchDetected(false)
     onClose()
   }
@@ -254,25 +272,36 @@ export default function QuizModal({
                       Điểm số của bạn
                     </div>
                   </div>
-                  <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-green-800 font-medium">
-                      ✓ Kỹ năng của bạn đã được xác thực bằng AI
-                    </p>
-                    <p className="text-xs text-green-700 mt-1">
-                      Huy hiệu "Verified" sẽ hiển thị trên hồ sơ của bạn
-                    </p>
-                  </div>
                   {isSubmitting && (
                     <div className="mb-4">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
                       <p className="text-sm text-gray-600 mt-2">Đang cập nhật hồ sơ...</p>
                     </div>
                   )}
+                  {verificationSaved && (
+                    <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-4 mb-6">
+                      <p className="text-sm text-green-800 font-medium">
+                        ✓ Kỹ năng của bạn đã được xác thực bằng AI
+                      </p>
+                      <p className="text-xs text-green-700 mt-1">
+                        Huy hiệu &quot;Verified&quot; đã được lưu vào hồ sơ của bạn
+                      </p>
+                    </div>
+                  )}
+                  {verificationError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                      <p className="text-sm text-red-800 font-medium">
+                        Bạn đã vượt qua bài kiểm tra nhưng huy hiệu chưa được lưu.
+                      </p>
+                      <p className="text-xs text-red-700 mt-1">{verificationError}</p>
+                    </div>
+                  )}
                   <button
                     onClick={handleClose}
-                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition shadow-lg"
+                    disabled={isSubmitting}
+                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Hoàn tất
+                    {isSubmitting ? 'Đang lưu...' : 'Hoàn tất'}
                   </button>
                 </>
               ) : (
