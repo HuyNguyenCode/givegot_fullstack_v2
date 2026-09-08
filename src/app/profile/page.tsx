@@ -4,6 +4,7 @@ import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState, useRef } from 'react'
 import {
   getAllAvailableSkills,
+  getMySkillPublication,
   getUserLearningGoals,
   getUserTeachingSkills,
   updateUserProfile,
@@ -16,6 +17,7 @@ import TrustReputationCard from '@/components/TrustReputationCard'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { SkillCategory } from '@prisma/client'
+import { skillPublicationLabel } from '@/lib/skill-publication'
 import {
   SKILL_CATEGORY_ORDER,
   SKILL_CATEGORY_LABELS,
@@ -38,6 +40,7 @@ export default function ProfilePage() {
   const [bio, setBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([])
+  const [publication, setPublication] = useState<Awaited<ReturnType<typeof getMySkillPublication>>>([])
   const [selectedTeachingSkills, setSelectedTeachingSkills] = useState<string[]>([])
   const [selectedLearningGoals, setSelectedLearningGoals] = useState<string[]>([])
   const [verifiedSkills, setVerifiedSkills] = useState<Record<string, boolean>>({})
@@ -80,14 +83,16 @@ export default function ProfilePage() {
       setAvatarUrl(currentUser.avatarUrl || '')
 
       // Run all 4 independent data fetches in parallel — eliminates sequential waterfall
-      const [skills, rawTeachingSkills, rawLearningGoals, trustDashboard] = await Promise.all([
+      const [skills, rawTeachingSkills, rawLearningGoals, trustDashboard, skillPublication] = await Promise.all([
         getAllAvailableSkills(),
         getUserTeachingSkills(currentUser.id),
         getUserLearningGoals(currentUser.id),
         getUserTrustDashboard(currentUser.id),
+        getMySkillPublication(),
       ])
 
       setAvailableSkills(skills)
+      setPublication(skillPublication)
 
       const teachingSkills = rawTeachingSkills.map((s: any) => typeof s === 'string' ? s : s.name)
       setSelectedTeachingSkills(teachingSkills)
@@ -319,6 +324,7 @@ export default function ProfilePage() {
 
     if (result.success) {
       await refreshUser()
+      setPublication(await getMySkillPublication())
       setShowSuccessToast(true)
       setTimeout(() => setShowSuccessToast(false), 4000)
     } else {
@@ -661,6 +667,19 @@ export default function ProfilePage() {
             </section>
 
             <div className="border-t border-gray-200"></div>
+
+            {/* BR-11: owner-only readiness; separate from quiz verification badges. */}
+            {publication.some(skill => skill.status !== 'APPROVED' || skill.embeddingStatus !== 'READY') && (
+              <section className="rounded-xl border border-amber-200 bg-amber-50 p-4" aria-label="Trạng thái kỹ năng">
+                <h3 className="font-semibold text-amber-900">Kỹ năng chưa xuất hiện trong tìm kiếm</h3>
+                <ul className="mt-2 space-y-2 text-sm text-amber-800">
+                  {publication.filter(skill => skill.status !== 'APPROVED' || skill.embeddingStatus !== 'READY').map(skill => (
+                    <li key={skill.id}><strong>{skill.name}</strong>: {skillPublicationLabel(skill)}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-amber-800">Các kỹ năng khác đã sẵn sàng vẫn hoạt động bình thường. Trạng thái này khác với xác thực năng lực qua bài quiz.</p>
+              </section>
+            )}
 
             {/* Learning Goals - Creatable Multi-Select */}
             <section>

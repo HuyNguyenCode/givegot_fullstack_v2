@@ -5,6 +5,10 @@ import { User } from '@/types'
 import { SkillType, SkillCategory, UserRole, SkillStatus } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { generateSkillEmbedding } from '@/lib/gemini'
+import { getPublishedSkillNames } from '@/lib/skill-embedding'
+import { PUBLISHED_SKILL_WHERE } from '@/lib/skill-publication'
+import { auth } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { sendEmail, getAppUrl } from '@/lib/email'
 import NewMatchEmail from '@/emails/NewMatchEmail'
 
@@ -92,10 +96,13 @@ export async function searchUsers(query: string, currentUserId?: string): Promis
 
 export async function getUserWithSkills(userId: string) {
   try {
+    const session = await auth()
+    const canSeePrivate = session?.user?.id === userId || await isAdmin()
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
         skills: {
+          ...(canSeePrivate ? {} : { where: { skill: PUBLISHED_SKILL_WHERE } }),
           include: {
             skill: true,
           },
@@ -111,10 +118,14 @@ export async function getUserWithSkills(userId: string) {
 
 export async function getUserLearningGoals(userId: string): Promise<Array<{ id: string; name: string; roadmap: any | null }>> {
   try {
+    const session = await auth()
+    const canSeePrivate = session?.user?.id === userId
+      || await isAdmin()
     const userSkills = await prisma.userSkill.findMany({
       where: {
         userId,
         type: SkillType.WANT,
+        ...(canSeePrivate ? {} : { skill: PUBLISHED_SKILL_WHERE }),
       },
       select: {
         id: true,
@@ -136,10 +147,14 @@ export async function getUserLearningGoals(userId: string): Promise<Array<{ id: 
 
 export async function getUserTeachingSkills(userId: string): Promise<Array<{ id: string; name: string; slug: string; isVerified: boolean }>> {
   try {
+    const session = await auth()
+    const canSeePrivate = session?.user?.id === userId
+      || await isAdmin()
     const userSkills = await prisma.userSkill.findMany({
       where: {
         userId,
         type: SkillType.GIVE,
+        ...(canSeePrivate ? {} : { skill: PUBLISHED_SKILL_WHERE }),
       },
       select: {
         isVerified: true,
@@ -165,7 +180,7 @@ export async function getUserTeachingSkills(userId: string): Promise<Array<{ id:
 export async function getAllAvailableSkills() {
   try {
     const skills = await prisma.skill.findMany({
-      where: { status: SkillStatus.APPROVED },
+      where: PUBLISHED_SKILL_WHERE,
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
       select: { id: true, name: true, slug: true, category: true, status: true },
     })
@@ -214,7 +229,17 @@ class RejectedSkillUnavailableError extends Error {
   }
 }
 
-// Helper function to ensure skill exists (create if not) and generate embedding.
+class SkillNotReadyError extends Error {
+  constructor(skillName: string, embeddingStatus: string) {
+    const detail = embeddingStatus === 'FAILED'
+      ? 'Hệ thống chưa thể chuẩn bị kỹ năng này cho tìm kiếm. Admin cần kiểm tra và thử lại.'
+      : 'Hệ thống đang chuẩn bị kỹ năng này cho tìm kiếm. Vui lòng thử lại sau.'
+    super(`Kỹ năng "${skillName}" đã được Admin duyệt. ${detail}`)
+    this.name = 'SkillNotReadyError'
+  }
+}
+
+// BR-11: create pending skills without embedding; admin approval generates it.
 // Pending skills remain usable only by users who were already linked to them,
 // including the user who created one earlier in the same profile update.
 async function ensureSkillExists(
@@ -234,16 +259,19 @@ async function ensureSkillExists(
   })
 
   if (skill) {
-    if (skill.status === SkillStatus.APPROVED || allowedPendingSkillIds.has(skill.id)) {
+    if ((skill.status === SkillStatus.APPROVED && skill.embeddingStatus === 'READY') || allowedPendingSkillIds.has(skill.id)) {
       return skill.id
     }
     if (skill.status === SkillStatus.REJECTED) {
       throw new RejectedSkillUnavailableError(skill.name)
     }
+    if (skill.status === SkillStatus.APPROVED) {
+      throw new SkillNotReadyError(skill.name, skill.embeddingStatus)
+    }
     throw new PendingSkillUnavailableError(skill.name)
   }
 
-  // If skill doesn't exist, create it WITH embedding
+  // New skills remain PENDING with no embedding until admin approval.
   if (!skill) {
     const slug = generateSlug(trimmedName)
 
@@ -265,25 +293,6 @@ async function ensureSkillExists(
         status: SkillStatus.PENDING, // NEW: All custom skills require admin approval
       },
     })
-
-    // Auto-embed: generate and persist the vector immediately so the new skill
-    // is searchable as soon as an admin approves it (no manual backfill needed).
-    try {
-      console.log(`Auto-generating embedding for new skill: "${trimmedName}"`)
-      const embedding = await generateSkillEmbedding([trimmedName])
-      if (embedding.length > 0) {
-        const vectorString = `[${embedding.join(',')}]`
-        await prisma.$executeRaw`
-          UPDATE "Skill"
-          SET embedding = ${vectorString}::vector
-          WHERE id = ${skill.id}
-        `
-        console.log(`Embedding saved for new skill "${trimmedName}"`)
-      }
-    } catch (embeddingError) {
-      // Non-fatal: skill is still created; embedding can be backfilled later.
-      console.error(`Failed to auto-generate embedding for "${trimmedName}":`, embeddingError)
-    }
 
     // Allows the same newly-created pending skill to be used as both GIVE and
     // WANT within this one profile update, preserving the existing profile flow.
@@ -322,7 +331,7 @@ async function notifyNewSkillCrossMatches(
       const giveSkills = await prisma.skill.findMany({
         where: {
           id: { in: newlyAddedGiveSkillIds },
-          status: SkillStatus.APPROVED,
+          ...PUBLISHED_SKILL_WHERE,
         },
         select: { id: true, name: true },
       })
@@ -355,7 +364,7 @@ async function notifyNewSkillCrossMatches(
       const wantSkills = await prisma.skill.findMany({
         where: {
           id: { in: newlyAddedWantSkillIds },
-          status: SkillStatus.APPROVED,
+          ...PUBLISHED_SKILL_WHERE,
         },
         select: { id: true, name: true },
       })
@@ -457,11 +466,12 @@ export async function updateUserProfile(
     if (updates.teachingSkills !== undefined) {
       console.log('🎓 Updating teaching skills:', updates.teachingSkills)
       
-      // Remove old teaching skills
+      // Preserve retained UserSkill IDs, quiz verification and metadata.
       await prisma.userSkill.deleteMany({
         where: {
           userId,
           type: SkillType.GIVE,
+          skillId: { notIn: resolvedTeachingSkillIds! },
         },
       })
 
@@ -474,7 +484,7 @@ export async function updateUserProfile(
         newlyAddedGiveSkillIds = skillIds.filter((skillId) => !previousGiveSkillIds.has(skillId))
 
         await prisma.userSkill.createMany({
-          data: skillIds.map(skillId => ({
+          data: skillIds.filter(skillId => !previousGiveSkillIds.has(skillId)).map(skillId => ({
             userId,
             skillId,
             type: SkillType.GIVE,
@@ -483,8 +493,13 @@ export async function updateUserProfile(
 
         // Generate and save teaching embedding
         console.log('Generating teaching embedding...')
-        const teachingEmbedding = await generateSkillEmbedding(updates.teachingSkills)
-        const vectorString = `[${teachingEmbedding.join(',')}]`
+        const approvedNames = await getPublishedSkillNames(resolvedTeachingSkillIds!)
+        const teachingEmbedding = approvedNames.length > 0
+          ? await generateSkillEmbedding(approvedNames)
+          : null
+        const vectorString = teachingEmbedding?.length === 768
+          && teachingEmbedding.every(Number.isFinite) && teachingEmbedding.some(value => value !== 0)
+          ? `[${teachingEmbedding.join(',')}]` : null
         
         await prisma.$executeRaw`
           UPDATE "User" 
@@ -507,11 +522,12 @@ export async function updateUserProfile(
     if (updates.learningGoals !== undefined) {
       console.log('Updating learning goals:', updates.learningGoals)
       
-      // Remove old learning goals
+      // Preserve retained UserSkill IDs and saved roadmaps.
       await prisma.userSkill.deleteMany({
         where: {
           userId,
           type: SkillType.WANT,
+          skillId: { notIn: resolvedLearningGoalIds! },
         },
       })
 
@@ -524,7 +540,7 @@ export async function updateUserProfile(
         newlyAddedWantSkillIds = skillIds.filter((skillId) => !previousWantSkillIds.has(skillId))
 
         await prisma.userSkill.createMany({
-          data: skillIds.map(skillId => ({
+          data: skillIds.filter(skillId => !previousWantSkillIds.has(skillId)).map(skillId => ({
             userId,
             skillId,
             type: SkillType.WANT,
@@ -533,8 +549,13 @@ export async function updateUserProfile(
 
         // Generate and save learning embedding
         console.log('Generating learning embedding...')
-        const learningEmbedding = await generateSkillEmbedding(updates.learningGoals)
-        const vectorString = `[${learningEmbedding.join(',')}]`
+        const approvedNames = await getPublishedSkillNames(resolvedLearningGoalIds!)
+        const learningEmbedding = approvedNames.length > 0
+          ? await generateSkillEmbedding(approvedNames)
+          : null
+        const vectorString = learningEmbedding?.length === 768
+          && learningEmbedding.every(Number.isFinite) && learningEmbedding.some(value => value !== 0)
+          ? `[${learningEmbedding.join(',')}]` : null
         
         await prisma.$executeRaw`
           UPDATE "User" 
@@ -576,9 +597,22 @@ export async function updateUserProfile(
     return {
       success: false,
       message:
-        error instanceof PendingSkillUnavailableError || error instanceof RejectedSkillUnavailableError
+        error instanceof PendingSkillUnavailableError
+          || error instanceof SkillNotReadyError
+          || error instanceof RejectedSkillUnavailableError
           ? error.message
           : 'Failed to update profile. Please try again.',
     }
   }
+}
+
+/** Owner-only moderation/readiness details; not a replacement for quiz verification. */
+export async function getMySkillPublication() {
+  const session = await auth()
+  if (!session?.user?.id) return []
+  const links = await prisma.userSkill.findMany({
+    where: { userId: session.user.id },
+    select: { skill: { select: { id: true, name: true, status: true, embeddingStatus: true } } },
+  })
+  return Array.from(new Map(links.map(link => [link.skill.id, link.skill])).values())
 }

@@ -34,6 +34,7 @@ async function main() {
   const users = await prisma.user.findMany({
     include: {
       skills: {
+        where: { skill: { status: 'APPROVED', embeddingStatus: 'READY' } },
         include: {
           skill: true,
         },
@@ -84,7 +85,7 @@ async function main() {
         console.log(`Teaching embedding saved (768 dimensions)`)
         teachingUpdated = true
       } else {
-        console.log(`    No teaching skills - skipping teaching embedding`)
+        await prisma.$executeRaw`UPDATE "User" SET "teachingEmbedding" = NULL WHERE id = ${user.id}`
       }
 
       // Generate and save learning embedding
@@ -102,7 +103,7 @@ async function main() {
         console.log(`Learning embedding saved (768 dimensions)`)
         learningUpdated = true
       } else {
-        console.log(`    No learning goals - skipping learning embedding`)
+        await prisma.$executeRaw`UPDATE "User" SET "learningEmbedding" = NULL WHERE id = ${user.id}`
       }
 
       if (teachingUpdated || learningUpdated) {

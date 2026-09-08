@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getAllSkills, approveSkill, rejectSkill, createSkill, updateSkill, deleteSkill } from '@/actions/admin'
+import { getAllSkills, approveSkill, rejectSkill, createSkill, updateSkill, deleteSkill, retrySkillEmbedding } from '@/actions/admin'
+import { skillPublicationLabel } from '@/lib/skill-publication'
 import { SkillStatus, SkillCategory } from '@prisma/client'
 import { CheckCircle, XCircle, Clock, Users, Plus, Edit, Trash2, Search } from 'lucide-react'
 import { SKILL_CATEGORY_ORDER, SKILL_CATEGORY_LABELS, SKILL_CATEGORY_BADGE_CLASSES } from '@/lib/skill-category'
@@ -12,6 +13,10 @@ interface SkillData {
   slug: string
   category: SkillCategory
   status: SkillStatus
+  embeddingStatus: string
+  embeddingVersion: number
+  embeddingAttempts: number
+  embeddingError: string | null
   createdAt: Date
   _count: {
     users: number
@@ -104,7 +109,7 @@ export default function SkillsPage() {
       name: editForm.name.trim(),
       category: editForm.category,
       status: editForm.status
-    })
+    }, editingSkill.embeddingVersion)
 
     if (result.success) {
       alert(result.message)
@@ -146,7 +151,7 @@ export default function SkillsPage() {
     if (!confirm('Bạn có chắc chắn muốn từ chối kỹ năng này?')) return
 
     setProcessingId(skillId)
-    const result = await rejectSkill(skillId)
+    const result = await rejectSkill(skillId, skills.find(skill => skill.id === skillId)?.embeddingVersion)
     if (result.success) {
       alert(result.message)
       loadSkills()
@@ -154,6 +159,17 @@ export default function SkillsPage() {
       alert(result.message)
     }
     setProcessingId(null)
+  }
+
+  const handleRetryEmbedding = async (skillId: string) => {
+    setProcessingId(skillId)
+    try {
+      const result = await retrySkillEmbedding(skillId)
+      alert(result.message)
+      await loadSkills()
+    } finally {
+      setProcessingId(null)
+    }
   }
 
   // Filter skills
@@ -309,6 +325,12 @@ export default function SkillsPage() {
                   <tr key={skill.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-semibold text-gray-900">{skill.name}</div>
+                      <div className="text-xs text-gray-600 whitespace-normal max-w-xs mt-1">
+                        {skillPublicationLabel(skill)}
+                        {skill.status === 'APPROVED' && skill.embeddingStatus !== 'READY' && (
+                          <p>Lượt tạo: {skill.embeddingAttempts}/3. {skill.embeddingError}</p>
+                        )}
+                      </div>
                       <div className="text-sm text-gray-500">{skill.slug}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -374,6 +396,16 @@ export default function SkillsPage() {
                               <XCircle className="w-4 h-4" />
                             </button>
                           </>
+                        )}
+                        {skill.status === 'APPROVED' && skill.embeddingStatus !== 'READY' && (
+                          <button
+                            onClick={() => handleRetryEmbedding(skill.id)}
+                            disabled={processingId === skill.id || skill.embeddingAttempts >= 3}
+                            className="text-purple-700 disabled:opacity-40 px-2"
+                            title="Tối đa 3 lượt mỗi phiên bản. Nếu tác vụ đang xử lý, chỉ nhận lại sau 5 phút."
+                          >
+                            Thử tạo embedding
+                          </button>
                         )}
                         <button
                           onClick={() => openEditModal(skill)}

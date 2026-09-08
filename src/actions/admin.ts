@@ -14,6 +14,7 @@ import { revalidatePath } from 'next/cache'
 import { createNotification } from './notifications'
 import { verifyMeetingAttendance } from '@/lib/google-meet'
 import { isAdmin } from '@/lib/admin'
+import { refreshApprovedSkillEmbedding } from '@/lib/skill-embedding'
 import { sendEmail, getAppUrl, formatEmailDateTime } from '@/lib/email'
 import NewMatchEmail from '@/emails/NewMatchEmail'
 import ReportResolutionEmail from '@/emails/ReportResolutionEmail'
@@ -662,6 +663,7 @@ export async function createReport(reporterId: string, reportedUserId: string, r
 
 export async function getPendingSkills() {
   try {
+    if (!(await isAdmin())) return []
     const skills = await prisma.skill.findMany({
       where: {
         status: SkillStatus.PENDING
@@ -685,41 +687,50 @@ export async function getPendingSkills() {
   }
 }
 
-export async function approveSkill(skillId: string) {
+// BR-11: one entry point for publication and matching notifications.
+// A READY write winner alone emits the existing matching notification.
+async function prepareSkillForSearch(skillId: string) {
+  // The moderation/create transaction has already committed before this runs.
+  // Never turn that durable success into a misleading failure just because a
+  // post-commit embedding, notification, or cache refresh step has a problem.
+  let result = { ready: false, published: false } as Awaited<ReturnType<typeof refreshApprovedSkillEmbedding>>
   try {
-    // Atomic state transition: concurrent/repeated approval requests cannot
-    // send duplicate notifications for the same skill.
-    const result = await prisma.skill.updateMany({
-      where: {
-        id: skillId,
-        status: SkillStatus.PENDING,
-      },
-      data: { status: SkillStatus.APPROVED },
-    })
-
-    if (result.count === 0) {
-      return {
-        success: false,
-        message: 'Skill không tồn tại hoặc đã được xử lý trước đó.',
-      }
-    }
-
-    const skill = await prisma.skill.findUnique({
-      where: { id: skillId },
-      select: { id: true, name: true },
-    })
-
-    if (!skill) {
-      return { success: false, message: 'Không tìm thấy skill sau khi duyệt.' }
-    }
-
-    // Matching notification: find users who WANT this skill and notify them
-    await notifyMatchingUsers(skill.id, skill.name)
-
+    result = await refreshApprovedSkillEmbedding(skillId)
+    if (result.published && result.name) await notifyMatchingUsers(skillId, result.name)
+  } catch (error) {
+    console.error('[BR-11] Post-commit publication preparation failed:', error)
+  }
+  try {
     revalidatePath('/admin/skills')
     revalidatePath('/discover')
     revalidatePath('/profile')
-    return { success: true, message: 'Skill approved successfully' }
+    revalidatePath('/profile/[id]', 'page')
+  } catch (error) {
+    console.error('[BR-11] Post-commit cache refresh failed:', error)
+  }
+  return {
+    success: true,
+    persisted: true,
+    publicationOutcome: result.ready ? 'PUBLISHED' as const : 'SAVED_NOT_PUBLISHED' as const,
+    message: result.ready
+      ? 'Skill đã duyệt và sẵn sàng tìm kiếm.'
+      : 'Đã lưu thành công trạng thái Đã duyệt, nhưng skill chưa được công bố. Hãy xem trạng thái embedding và thử lại nếu lỗi (tối đa 3 lần mỗi phiên bản).',
+  }
+}
+
+export async function retrySkillEmbedding(skillId: string) {
+  if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
+  return prepareSkillForSearch(skillId)
+}
+
+export async function approveSkill(skillId: string) {
+  try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
+    const skill = await prisma.skill.findUnique({ where: { id: skillId } })
+    if (!skill || skill.status !== SkillStatus.PENDING) {
+      return { success: false, message: 'Skill không tồn tại hoặc đã được xử lý trước đó.' }
+    }
+    return updateSkill(skillId, { status: SkillStatus.APPROVED }, skill.embeddingVersion)
   } catch (error) {
     console.error('Failed to approve skill:', error)
     return { success: false, message: 'Failed to approve skill' }
@@ -732,6 +743,11 @@ export async function approveSkill(skillId: string) {
  */
 async function notifyMatchingUsers(skillId: string, skillName: string): Promise<void> {
   try {
+    const published = await prisma.skill.findFirst({
+      where: { id: skillId, status: 'APPROVED', embeddingStatus: 'READY' },
+      select: { id: true },
+    })
+    if (!published) return
     // Users who want to learn this skill
     const wantUsers = await prisma.userSkill.findMany({
       where: { skillId, type: 'WANT' },
@@ -788,25 +804,13 @@ async function notifyMatchingUsers(skillId: string, skillName: string): Promise<
   }
 }
 
-export async function rejectSkill(skillId: string) {
-  try {
-    await prisma.skill.update({
-      where: { id: skillId },
-      data: {
-        status: SkillStatus.REJECTED
-      }
-    })
-
-    revalidatePath('/admin/skills')
-    return { success: true, message: 'Skill rejected' }
-  } catch (error) {
-    console.error('Failed to reject skill:', error)
-    return { success: false, message: 'Failed to reject skill' }
-  }
+export async function rejectSkill(skillId: string, expectedVersion?: number) {
+  return updateSkill(skillId, { status: SkillStatus.REJECTED }, expectedVersion)
 }
 
 export async function getAllSkills() {
   try {
+    if (!(await isAdmin())) return []
     const skills = await prisma.skill.findMany({
       include: {
         _count: {
@@ -834,6 +838,7 @@ export async function createSkill(data: {
   status?: SkillStatus
 }) {
   try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
     // Generate slug
     const slug = data.name
       .toLowerCase()
@@ -858,7 +863,7 @@ export async function createSkill(data: {
     }
 
     // Create skill
-    await prisma.skill.create({
+    const skill = await prisma.skill.create({
       data: {
         name: data.name.trim(),
         slug,
@@ -867,9 +872,11 @@ export async function createSkill(data: {
       }
     })
 
+    if (skill.status === SkillStatus.APPROVED) return prepareSkillForSearch(skill.id)
+
     revalidatePath('/admin/skills')
     revalidatePath('/discover')
-    return { success: true, message: 'Skill created successfully' }
+    return { success: true, persisted: true, publicationOutcome: 'NOT_APPLICABLE' as const, message: 'Đã tạo kỹ năng thành công.' }
   } catch (error) {
     console.error('Failed to create skill:', error)
     return { success: false, message: 'Failed to create skill' }
@@ -880,31 +887,53 @@ export async function updateSkill(skillId: string, data: {
   name?: string
   category?: SkillCategory
   status?: SkillStatus
-}) {
+}, expectedVersion?: number) {
   try {
-    // If name is being updated, regenerate slug
-    let updateData: any = { ...data }
-    
-    if (data.name) {
-      const slug = data.name
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-      
-      updateData.slug = slug
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
+    const previous = await prisma.skill.findUnique({ where: { id: skillId } })
+    if (!previous) return { success: false, message: 'Skill not found' }
+    if (expectedVersion !== undefined && previous.embeddingVersion !== expectedVersion) {
+      return { success: false, message: 'Skill vừa được thay đổi. Hãy tải lại trước khi lưu.' }
     }
-
-    await prisma.skill.update({
-      where: { id: skillId },
-      data: updateData
+    const name = data.name === undefined ? previous.name : data.name.trim()
+    if (!name) return { success: false, message: 'Tên kỹ năng không được để trống.' }
+    const status = data.status ?? previous.status
+    const changed = name !== previous.name || status !== previous.status
+    const slug = data.name === undefined ? previous.slug : name.toLowerCase()
+      .replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '')
+    const saved = await prisma.$transaction(async tx => {
+      const result = await tx.skill.updateMany({
+        where: { id: skillId, embeddingVersion: previous.embeddingVersion,
+          status: previous.status, name: previous.name },
+        data: {
+          name, slug, status, ...(data.category === undefined ? {} : { category: data.category }),
+          ...(changed ? {
+            embeddingVersion: { increment: 1 }, embeddingStatus: 'NOT_STARTED',
+            embeddingAttempts: 0, embeddingToken: null, embeddingStartedAt: null, embeddingError: null,
+          } : {}),
+        },
+      })
+      if (result.count === 0) return false
+      if (changed) {
+        // Atomic invalidation: old worker tokens cannot publish after this revision.
+        await tx.$executeRaw`UPDATE "Skill" SET embedding = NULL WHERE id = ${skillId}`
+      }
+      return true
     })
-
+    if (!saved) return { success: false, message: 'Skill vừa được thay đổi. Hãy tải lại và thử lại.' }
+    if (status === SkillStatus.APPROVED) return prepareSkillForSearch(skillId)
     revalidatePath('/admin/skills')
     revalidatePath('/discover')
-    return { success: true, message: 'Skill updated successfully' }
+    revalidatePath('/profile')
+    revalidatePath('/profile/[id]', 'page')
+    return {
+      success: true,
+      persisted: true,
+      publicationOutcome: 'NOT_APPLICABLE' as const,
+      message: status === SkillStatus.REJECTED
+        ? 'Đã từ chối kỹ năng. Kỹ năng sẽ không xuất hiện trong tìm kiếm.'
+        : 'Đã cập nhật kỹ năng thành công.',
+    }
   } catch (error) {
     console.error('Failed to update skill:', error)
     return { success: false, message: 'Failed to update skill' }

@@ -1,5 +1,7 @@
 'use server'
 
+import { PUBLISHED_SKILL_WHERE } from '@/lib/skill-publication'
+
 import { prisma } from '@/lib/prisma'
 import { SkillType, Prisma } from '@prisma/client'
 import { generateEmbedding } from '@/lib/gemini'
@@ -60,7 +62,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
         userId: currentUserId,
         type: SkillType.WANT,
           skill: {
-              status: 'APPROVED'
+              ...PUBLISHED_SKILL_WHERE
           }
       },
       include: {
@@ -112,7 +114,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
        ) as "hasKeywordMatch"
      FROM "User" u
     INNER JOIN "UserSkill" us_give ON us_give."userId" = u.id AND us_give.type = 'GIVE'
-    INNER JOIN "Skill" s_give ON s_give.id = us_give."skillId" AND s_give.status = 'APPROVED'
+    INNER JOIN "Skill" s_give ON s_give.id = us_give."skillId" AND s_give.status = 'APPROVED' AND s_give."embeddingStatus" = 'READY'
     -- CROSS JOIN: Compare against ALL of the current user's WANT skills
     CROSS JOIN (
       SELECT s.embedding, s.name
@@ -121,7 +123,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
       WHERE us."userId" = ${currentUserId} 
         AND us.type = 'WANT' 
         AND s.embedding IS NOT NULL
-        AND s.status = 'APPROVED'
+        AND s.status = 'APPROVED' AND s."embeddingStatus" = 'READY'
     ) s_want
     WHERE u.id != ${currentUserId}
       AND s_give.embedding IS NOT NULL
@@ -151,7 +153,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
       where: {
         userId: { in: mentorIds },
         type: SkillType.GIVE,
-        skill: { status: 'APPROVED' },
+        skill: { ...PUBLISHED_SKILL_WHERE },
       },
       select: {
         userId: true,
@@ -246,7 +248,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
           userId: currentUserId,
           type: SkillType.WANT,
             skill: {
-                status: 'APPROVED'
+                ...PUBLISHED_SKILL_WHERE
             }
         },
         include: {
@@ -271,7 +273,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
             some: {
               type: SkillType.GIVE,
               skill: {
-                status: 'APPROVED'
+                ...PUBLISHED_SKILL_WHERE
               }
             },
           },
@@ -287,7 +289,7 @@ export async function getAutoMatchedMentors(currentUserId: string) {
           createdAt: true,
           updatedAt: true,
           skills: {
-            where: { type: SkillType.GIVE },
+            where: { type: SkillType.GIVE, skill: PUBLISHED_SKILL_WHERE },
             select: {
               isVerified: true,
               skill: { select: { id: true, name: true, slug: true } },
@@ -359,7 +361,7 @@ export async function getMentors(excludeUserId?: string) {
           some: {
             type: SkillType.GIVE,
             skill: {
-              status: 'APPROVED'
+              ...PUBLISHED_SKILL_WHERE
             }
           },
         },
@@ -375,7 +377,7 @@ export async function getMentors(excludeUserId?: string) {
         createdAt: true,
         updatedAt: true,
         skills: {
-          where: { type: SkillType.GIVE },
+          where: { type: SkillType.GIVE, skill: PUBLISHED_SKILL_WHERE },
           select: {
             isVerified: true,
             skill: { select: { id: true, name: true, slug: true, category: true, status: true } },
@@ -412,7 +414,7 @@ export async function getMentorById(mentorId: string) {
         createdAt: true,
         updatedAt: true,
         skills: {
-          where: { type: SkillType.GIVE },
+          where: { type: SkillType.GIVE, skill: PUBLISHED_SKILL_WHERE },
           select: {
             isVerified: true,
             skill: { select: { id: true, name: true, slug: true, category: true, status: true } },
@@ -501,7 +503,7 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
         ) as "hasKeywordMatch"
       FROM "User" u
       INNER JOIN "UserSkill" us ON us."userId" = u.id AND us.type = 'GIVE'
-      INNER JOIN "Skill" s ON s.id = us."skillId" AND s.status = 'APPROVED'
+      INNER JOIN "Skill" s ON s.id = us."skillId" AND s.status = 'APPROVED' AND s."embeddingStatus" = 'READY'
       WHERE u.id != ${currentUserId}
       GROUP BY u.id, u.email, u.name, u."avatarUrl", u.bio, u."givePoints", u."trustScore", u."createdAt", u."updatedAt"
       HAVING 
@@ -541,7 +543,7 @@ export async function searchMentorsSemantically(query: string, currentUserId: st
       where: {
         userId: { in: searchMentorIds },
         type: SkillType.GIVE,
-        skill: { status: 'APPROVED' },
+        skill: { ...PUBLISHED_SKILL_WHERE },
       },
       select: {
         userId: true,

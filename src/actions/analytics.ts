@@ -1,5 +1,7 @@
 'use server'
 
+import { PUBLISHED_SKILL_WHERE } from '@/lib/skill-publication'
+
 import { prisma } from '@/lib/prisma'
 import { SkillType, BookingStatus, TransactionType } from '@prisma/client'
 import { subDays, format, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns'
@@ -106,7 +108,7 @@ export async function getTopRequestedSkills(): Promise<SkillDemandEntry[]> {
     // Aggregate WANT counts per skill
     const wantCounts = await prisma.userSkill.groupBy({
       by: ['skillId'],
-      where: { type: SkillType.WANT },
+      where: { type: SkillType.WANT, skill: PUBLISHED_SKILL_WHERE },
       _count: { skillId: true },
       orderBy: { _count: { skillId: 'desc' } },
       take: 8,
@@ -125,14 +127,14 @@ export async function getTopRequestedSkills(): Promise<SkillDemandEntry[]> {
 
     // Fetch skill names
     const skills = await prisma.skill.findMany({
-      where: { id: { in: topSkillIds } },
+      where: { id: { in: topSkillIds }, ...PUBLISHED_SKILL_WHERE },
       select: { id: true, name: true },
     })
 
     const skillMap = new Map(skills.map((s) => [s.id, s.name]))
     const giveMap = new Map(giveCounts.map((g) => [g.skillId, g._count.skillId]))
 
-    return wantCounts.map((w) => {
+    return wantCounts.filter(w => skillMap.has(w.skillId)).map((w) => {
       const demand = w._count.skillId
       const supply = giveMap.get(w.skillId) ?? 0
       return {
@@ -179,7 +181,7 @@ export async function getPopularMentors(): Promise<PopularMentor[]> {
           avatarUrl: true,
           trustScore: true,
           skills: {
-            where: { type: SkillType.GIVE },
+            where: { type: SkillType.GIVE, skill: PUBLISHED_SKILL_WHERE },
             include: { skill: { select: { name: true } } },
             take: 1,
           },

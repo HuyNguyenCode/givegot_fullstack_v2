@@ -85,12 +85,25 @@ model Skill {
   slug      String        @unique 
   category  SkillCategory @default(OTHER) // NEW: was String, now a fixed enum (see migration below)
   embedding Unsupported("vector(768)")? // NEW: Granular skill-level embedding
-  status    SkillStatus   @default(PENDING) // NEW: Admin approval shadow - all new skills require review
+  status    SkillStatus   @default(PENDING) // Moderation, independent from AI readiness
+  embeddingStatus SkillEmbeddingStatus @default(NOT_STARTED)
+  embeddingVersion Int @default(0)
+  embeddingAttempts Int @default(0)
+  embeddingToken String?
+  embeddingStartedAt DateTime?
+  embeddingError String?
   
   createdAt DateTime      @default(now())
   updatedAt DateTime?     @updatedAt
   
   users     UserSkill[]
+}
+
+enum SkillEmbeddingStatus {
+  NOT_STARTED
+  PROCESSING
+  READY
+  FAILED
 }
 
 // Admin: Skill Status Enum
