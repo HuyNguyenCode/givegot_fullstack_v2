@@ -145,6 +145,8 @@ export default function HistoryPage() {
         return 'Admin: Mentor vắng mặt'
       case 'ADMIN_RESOLVED_SYSTEM_ERROR':
         return 'Admin: Hoàn điểm (lỗi hệ thống)'
+      case 'REFUND_WITHDRAWAL_REJECTED':
+        return 'Hoàn điểm do yêu cầu rút tiền bị từ chối'
       default:
         return type
     }
@@ -165,6 +167,7 @@ export default function HistoryPage() {
       case 'ADMIN_RESOLVED_MENTOR_ABSENT':
         return 'text-orange-600'
       case 'ADMIN_RESOLVED_SYSTEM_ERROR':
+      case 'REFUND_WITHDRAWAL_REJECTED':
         return 'text-blue-600'
       default:
         return 'text-gray-600'

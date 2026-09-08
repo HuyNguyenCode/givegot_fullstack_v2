@@ -25,7 +25,7 @@ import ReportResolutionEmail from '@/emails/ReportResolutionEmail'
 
 export async function getAdminStats() {
   try {
-    const [totalUsers, totalBookings, totalGivePoints, pendingSkills, pendingReports] = await Promise.all([
+    const [totalUsers, totalBookings, totalGivePoints, pendingSkills, pendingReports, pendingWithdrawals] = await Promise.all([
       prisma.user.count(),
       prisma.booking.count(),
       prisma.user.aggregate({
@@ -42,6 +42,11 @@ export async function getAdminStats() {
         where: {
           status: ReportStatus.PENDING
         }
+      }),
+      prisma.withdrawRequest.count({
+        where: {
+          status: 'PENDING'
+        }
       })
     ])
 
@@ -50,7 +55,8 @@ export async function getAdminStats() {
       totalBookings,
       totalGivePoints: totalGivePoints._sum.givePoints || 0,
       pendingSkills,
-      pendingReports
+      pendingReports,
+      pendingWithdrawals
     }
   } catch (error) {
     console.error('Failed to get admin stats:', error)

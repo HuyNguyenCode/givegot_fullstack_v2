@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { isAdmin } from '@/lib/admin'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = prisma as any
@@ -62,8 +63,8 @@ export async function getWithdrawRequests(): Promise<WithdrawRequestWithMentor[]
  * the request was created (see `createWithdrawRequest` in wallet.ts), so we
  * only need to flip the status here — no additional ledger writes required.
  *
- * For REJECTED: an admin refund action (crediting points back) is a separate
- * concern handled outside this function for explicitness and audit clarity.
+ * For REJECTED: status change, full point refund and immutable ledger entry
+ * are committed in one database transaction. There is no separate refund step.
  */
 export async function updateWithdrawStatus(
   requestId: string,
@@ -74,32 +75,76 @@ export async function updateWithdrawStatus(
   }
 
   try {
-    const existing = await db.withdrawRequest.findUnique({
-      where: { id: requestId },
-      select: { id: true, status: true },
-    })
-
-    if (!existing) {
-      return { success: false, message: 'Withdrawal request not found.' }
+    if (!(await isAdmin())) {
+      return { success: false, message: 'Bạn không có quyền xử lý yêu cầu rút tiền.' }
     }
 
-    if (existing.status !== 'PENDING') {
-      return {
-        success: false,
-        message: `Request is already ${existing.status}. Only PENDING requests can be updated.`,
+    const outcome = await prisma.$transaction(async (tx) => {
+      const request = await tx.withdrawRequest.findUnique({
+        where: { id: requestId },
+        select: { id: true, mentorId: true, pointsRequested: true, status: true },
+      })
+
+      if (!request) return { kind: 'NOT_FOUND' as const }
+      if (request.status !== 'PENDING') {
+        return { kind: 'ALREADY_PROCESSED' as const, status: request.status }
       }
-    }
+      if (!Number.isInteger(request.pointsRequested) || request.pointsRequested <= 0) {
+        throw new Error('Invalid pointsRequested on withdrawal request')
+      }
 
-    await db.withdrawRequest.update({
-      where: { id: requestId },
-      data:  { status: newStatus },
+      // Conditional transition is the idempotency/concurrency gate. If two
+      // admins act at once, only the transaction that changes PENDING wins.
+      const transitioned = await tx.withdrawRequest.updateMany({
+        where: { id: requestId, status: 'PENDING' },
+        data: { status: newStatus },
+      })
+      if (transitioned.count !== 1) {
+        return { kind: 'CONCURRENTLY_PROCESSED' as const }
+      }
+
+      if (newStatus === 'REJECTED') {
+        await tx.user.update({
+          where: { id: request.mentorId },
+          data: { givePoints: { increment: request.pointsRequested } },
+        })
+        await tx.transactionLog.create({
+          data: {
+            userId: request.mentorId,
+            amount: request.pointsRequested,
+            type: 'REFUND_WITHDRAWAL_REJECTED',
+            status: 'SUCCESS',
+            referenceId: `withdrawal-rejection:${request.id}`,
+          },
+        })
+      }
+
+      return { kind: 'UPDATED' as const, pointsRefunded: newStatus === 'REJECTED' ? request.pointsRequested : 0 }
     })
 
-    revalidatePath('/admin/finance')
+    if (outcome.kind === 'NOT_FOUND') {
+      return { success: false, message: 'Không tìm thấy yêu cầu rút tiền.' }
+    }
+    if (outcome.kind === 'ALREADY_PROCESSED') {
+      return { success: false, message: `Yêu cầu đã được xử lý với trạng thái ${outcome.status}.` }
+    }
+    if (outcome.kind === 'CONCURRENTLY_PROCESSED') {
+      return { success: false, message: 'Yêu cầu vừa được admin khác xử lý. Không có điểm nào được hoàn lặp.' }
+    }
+
+    try {
+      revalidatePath('/admin/finance')
+      revalidatePath('/profile')
+      revalidatePath('/history')
+    } catch (error) {
+      console.error('[AdminFinance] Post-commit revalidation error:', error)
+    }
 
     return {
       success: true,
-      message: `Request ${requestId} has been ${newStatus.toLowerCase()}.`,
+      message: newStatus === 'REJECTED'
+        ? `Đã từ chối yêu cầu và hoàn ngay ${outcome.pointsRefunded} GivePoints vào ví Mentor.`
+        : 'Đã duyệt yêu cầu rút tiền.',
     }
   } catch (error) {
     console.error('[AdminFinance] updateWithdrawStatus error:', error)

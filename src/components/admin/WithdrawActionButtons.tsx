@@ -22,10 +22,7 @@ export default function WithdrawActionButtons({ requestId }: WithdrawActionButto
     try {
       const result = await updateWithdrawStatus(requestId, newStatus)
       if (result.success) {
-        showToast(
-          newStatus === 'APPROVED' ? 'Đã duyệt yêu cầu.' : 'Đã từ chối yêu cầu.',
-          newStatus === 'APPROVED' ? 'success' : 'error',
-        )
+        showToast(result.message, 'success')
         // Page will revalidate automatically via revalidatePath in the action
       } else {
         showToast(result.message, 'error')

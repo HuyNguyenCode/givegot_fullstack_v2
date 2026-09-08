@@ -1,5 +1,5 @@
 import { getAdminStats } from '@/actions/admin'
-import { Users, Calendar, Coins, AlertCircle, CheckSquare } from 'lucide-react'
+import { Users, Calendar, Coins, AlertCircle, CheckSquare, Banknote } from 'lucide-react'
 
 export default async function AdminDashboard() {
   const stats = await getAdminStats()
@@ -44,6 +44,14 @@ export default async function AdminDashboard() {
       color: 'bg-red-500',
       bgColor: 'bg-red-50',
       textColor: 'text-red-600'
+    },
+    {
+      title: 'Yêu cầu rút tiền đang chờ',
+      value: stats.pendingWithdrawals,
+      icon: Banknote,
+      color: 'bg-emerald-500',
+      bgColor: 'bg-emerald-50',
+      textColor: 'text-emerald-600'
     }
   ]
 
@@ -125,6 +133,23 @@ export default async function AdminDashboard() {
                 {stats.pendingReports > 0 
                   ? `${stats.pendingReports} báo cáo đang chờ xử lý` 
                   : 'Không có báo cáo nào đang chờ xử lý'}
+              </div>
+            </div>
+          </a>
+
+          <a
+            href="/admin/finance"
+            className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition group"
+          >
+            <Banknote className="w-6 h-6 text-gray-600 group-hover:text-emerald-600 transition" />
+            <div>
+              <div className="font-semibold text-gray-900 group-hover:text-emerald-600 transition">
+                Duyệt yêu cầu rút tiền
+              </div>
+              <div className="text-sm text-gray-500">
+                {stats.pendingWithdrawals > 0
+                  ? `${stats.pendingWithdrawals} yêu cầu đang chờ xử lý`
+                  : 'Không có yêu cầu rút tiền đang chờ'}
               </div>
             </div>
           </a>

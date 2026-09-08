@@ -310,6 +310,7 @@ enum TransactionType {
   CANCELLATION_COMPENSATION // +1 point to mentor (late cancellation by mentee)
   TOPUP                     // Fiat → Points (top-up via payment gateway)
   CASHOUT                   // Points → Fiat (cash-out / withdrawal request)
+  REFUND_WITHDRAWAL_REJECTED // +points returned atomically when admin rejects cash-out
   REFUND_NO_SHOW            // +1 point to mentee (mentor confirmed absent by API)
   FRAUD_DETECTION           // +1 point to mentor (mentee's no-show report proved fraudulent)
   ADMIN_RESOLVED_MENTEE_ABSENT // +1 point to mentor (admin manually confirmed mentee no-show)

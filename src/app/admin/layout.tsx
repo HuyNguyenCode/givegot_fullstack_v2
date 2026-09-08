@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { LayoutDashboard, Users, AlertTriangle, CheckSquare, Home } from 'lucide-react'
+import { LayoutDashboard, Users, AlertTriangle, CheckSquare, Home, Banknote } from 'lucide-react'
 
 export default async function AdminLayout({
   children,
@@ -33,6 +33,7 @@ export default async function AdminLayout({
     { href: '/admin/users', label: 'Người dùng', icon: Users },
     { href: '/admin/reports', label: 'Báo cáo', icon: AlertTriangle },
     { href: '/admin/skills', label: 'Kỹ năng', icon: CheckSquare },
+    { href: '/admin/finance', label: 'Rút tiền', icon: Banknote },
   ]
 
   return (
