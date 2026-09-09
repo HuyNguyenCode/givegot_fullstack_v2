@@ -378,10 +378,19 @@ export default function MenteeBookingCalendar({
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-blue-900">Quy tắc Time-Banking</p>
                     <ul className="text-sm text-blue-800 mt-1 space-y-1">
-                      <li>• 1 GivePoint sẽ được giữ lại khi bạn đặt lịch</li>
-                      <li>• Điểm được chuyển cho mentor sau khi buổi học hoàn thành</li>
-                      <li>• Bạn có thể hủy bất cứ lúc nào để được hoàn lại đầy đủ</li>
+                      <li>• 1 GivePoint sẽ được giữ lại ngay khi bạn đặt lịch</li>
+                      <li>• Khi đang chờ phản hồi: hủy/từ chối booking sẽ được hoàn 100% GivePoints, không trừ Trust Score</li>
+                      <li>• Khi đã xác nhận: áp dụng chính sách hủy theo mốc 12 giờ</li>
+                      <li>• Điểm chỉ được chuyển cho Mentor khi buổi học hoàn thành, hoặc bồi thường khi Mentee hủy muộn</li>
                     </ul>
+                    <a
+                      href="/policies/cancellation"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex text-sm font-semibold text-blue-700 underline hover:text-blue-900"
+                    >
+                      Xem chính sách hủy →
+                    </a>
                   </div>
                 </div>
               </div>

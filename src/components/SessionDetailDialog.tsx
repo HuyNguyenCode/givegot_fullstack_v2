@@ -13,12 +13,13 @@ import { useEffect, useState, useTransition } from 'react'
 import {
   acceptBooking,
   declineBooking,
-  cancelBooking,
   reportNoShow,
   reportMentorAbsence,
 } from '@/actions/booking'
 import { deleteMentorSlot } from '@/actions/slots'
 import BlindReviewSection from '@/components/reviews/BlindReviewSection'
+import CancellationImpactDialog from '@/components/CancellationImpactDialog'
+import CancellationReceiptDetails from '@/components/CancellationReceiptDetails'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ export default function SessionDetailDialog({
 }: SessionDetailDialogProps) {
   const [isLoading, setIsLoading]               = useState(false)
   const [feedback, setFeedback]                 = useState<{ ok: boolean; msg: string } | null>(null)
+  const [cancellationBookingId, setCancellationBookingId] = useState<string | null>(null)
 
   // Isolated pending state for the Mentor Absence Report button — kept on its
   // own `useTransition` instead of the shared `isLoading`/`run()` helper below,
@@ -100,6 +102,7 @@ export default function SessionDetailDialog({
   useEffect(() => {
     if (open) {
       setFeedback(null)
+      setCancellationBookingId(null)
     }
   }, [open, s?.bookingId, s?.slotId])
 
@@ -148,10 +151,7 @@ export default function SessionDetailDialog({
     if (!window.confirm('Từ chối buổi học này? Mentee sẽ được hoàn lại điểm.')) return
     run(() => declineBooking(s.bookingId!, currentUserId))
   }
-  const handleCancel      = ()  => {
-    if (!window.confirm('Hủy buổi học này? Trust Score của bạn có thể bị giảm.')) return
-    run(() => cancelBooking(s.bookingId!, currentUserId))
-  }
+  const handleCancel      = ()  => setCancellationBookingId(s.bookingId ?? null)
   const handleReportNoShow = () => {
     if (!window.confirm('Báo cáo vắng mặt? Hệ thống sẽ xác minh qua Google Meet API.')) return
     run(() => reportNoShow(s.bookingId!, currentUserId))
@@ -177,6 +177,7 @@ export default function SessionDetailDialog({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
@@ -256,10 +257,17 @@ export default function SessionDetailDialog({
             )}
             {s.note && (
               <div className="pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 italic">"{s.note}"</p>
+                <p className="text-xs text-gray-500 italic">&quot;{s.note}&quot;</p>
               </div>
             )}
           </div>
+
+          {/* Both the teaching and learning calendars use this shared dialog.
+              A cancelled item therefore exposes the recorded point/Trust
+              outcome to either participant when they open it again. */}
+          {s.type === 'booking' && s.bookingStatus === 'CANCELLED' && s.bookingId && (
+            <CancellationReceiptDetails key={s.bookingId} bookingId={s.bookingId} userId={currentUserId} />
+          )}
 
           {/* Feedback banner */}
           {feedback && (
@@ -522,6 +530,15 @@ export default function SessionDetailDialog({
         </div>
       </div>
     </div>
+    <CancellationImpactDialog
+      open={Boolean(cancellationBookingId)}
+      bookingId={cancellationBookingId}
+      userId={currentUserId}
+      onClose={() => setCancellationBookingId(null)}
+      onMutate={onMutate}
+      onComplete={onClose}
+    />
+    </>
   )
 }
 

@@ -2,7 +2,7 @@
 
 import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState } from 'react'
-import { getMyBookings, acceptBooking, declineBooking, cancelBooking } from '@/actions/booking'
+import { getMyBookings, acceptBooking, declineBooking } from '@/actions/booking'
 import { getUserLearningGoals } from '@/actions/user'
 import { getPointHistory, getTopRequestedSkills, getPopularMentors, PointHistoryEntry, SkillDemandEntry, PopularMentor } from '@/actions/analytics'
 import { BookingWithDetails } from '@/types'
@@ -118,28 +118,6 @@ export default function DashboardPage() {
     setActionLoading(bookingId)
 
     const result = await declineBooking(bookingId, currentUser.id)
-
-    if (result.success) {
-      alert(` ${result.message}`)
-      await refreshUser()
-      await loadBookings()
-    } else {
-      alert(` ${result.message}`)
-    }
-
-    setActionLoading(null)
-  }
-
-  const handleCancel = async (bookingId: string) => {
-    if (!currentUser) return
-
-    if (!confirm('Bạn có chắc muốn hủy lịch đặt này? Điểm của bạn sẽ được hoàn lại.')) {
-      return
-    }
-
-    setActionLoading(bookingId)
-
-    const result = await cancelBooking(bookingId, currentUser.id)
 
     if (result.success) {
       alert(` ${result.message}`)
@@ -649,7 +627,10 @@ export default function DashboardPage() {
                           <CancelBookingDialog
                             booking={booking}
                             userId={currentUser.id}
-                            onSuccess={loadBookings}
+                            onSuccess={async () => {
+                              await refreshUser()
+                              await loadBookings()
+                            }}
                           />
                         </>
                       )}
@@ -764,13 +745,14 @@ export default function DashboardPage() {
                               ⏳ Đang chờ mentor xác nhận...
                             </p>
                           </div>
-                          <button
-                            onClick={() => handleCancel(booking.id)}
-                            disabled={actionLoading === booking.id}
-                            className="px-4 bg-red-100 text-red-700 py-2 rounded-lg font-medium hover:bg-red-200 transition"
-                          >
-                            Hủy
-                          </button>
+                          <CancelBookingDialog
+                            booking={booking}
+                            userId={currentUser.id}
+                            onSuccess={async () => {
+                              await refreshUser()
+                              await loadBookings()
+                            }}
+                          />
                         </>
                       )}
                       {booking.status === BookingStatus.CONFIRMED && (
@@ -803,13 +785,14 @@ export default function DashboardPage() {
                             </svg>
                             Nhắn tin
                           </Link>
-                          <button
-                            onClick={() => handleCancel(booking.id)}
-                            disabled={actionLoading === booking.id}
-                            className="px-4 bg-red-100 text-red-700 py-2 rounded-lg font-medium hover:bg-red-200 transition"
-                          >
-                            Hủy
-                          </button>
+                          <CancelBookingDialog
+                            booking={booking}
+                            userId={currentUser.id}
+                            onSuccess={async () => {
+                              await refreshUser()
+                              await loadBookings()
+                            }}
+                          />
                         </>
                       )}
                       {booking.status === BookingStatus.COMPLETED && (

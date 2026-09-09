@@ -16,7 +16,6 @@ import {
   getMyBookings,
   acceptBooking,
   declineBooking,
-  cancelBooking,
   reportNoShow,
 } from '@/actions/booking'
 import {
@@ -28,6 +27,8 @@ import {
 import { BookingWithDetails } from '@/types'
 import Link from 'next/link'
 import BlindReviewSection from '@/components/reviews/BlindReviewSection'
+import CancellationImpactDialog from '@/components/CancellationImpactDialog'
+import CancellationReceiptDetails from '@/components/CancellationReceiptDetails'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -161,6 +162,7 @@ export default function UnifiedDashboardCalendar({
 
   // UI
   const [clickedEvent, setClickedEvent] = useState<ClickedEvent | null>(null)
+  const [cancellationBookingId, setCancellationBookingId] = useState<string | null>(null)
   const [toasts, setToasts]             = useState<Toast[]>([])
 
   useEffect(() => setMounted(true), [])
@@ -396,8 +398,7 @@ export default function UnifiedDashboardCalendar({
   }
   const handleCancel   = () => {
     if (!clickedEvent?.bookingId) return
-    if (!window.confirm('Hủy lịch đặt này? Bạn có thể bị trừ Điểm tin cậy.')) return
-    withAction(() => cancelBooking(clickedEvent.bookingId!, currentUserId))
+    setCancellationBookingId(clickedEvent.bookingId)
   }
   const handleReportNoShow = () => {
     if (!clickedEvent?.bookingId) return
@@ -593,6 +594,17 @@ export default function UnifiedDashboardCalendar({
           onReportNoShow={handleReportNoShow}
         />
       )}
+      <CancellationImpactDialog
+        open={Boolean(cancellationBookingId)}
+        bookingId={cancellationBookingId}
+        userId={currentUserId}
+        onClose={() => setCancellationBookingId(null)}
+        onMutate={async () => {
+          await loadData()
+          onDataChange?.()
+        }}
+        onComplete={closePanel}
+      />
     </div>
   )
 }
@@ -732,10 +744,14 @@ function EventDetailPanel({
             )}
             {ev.note && (
               <div className="pt-1 border-t border-gray-200">
-                <p className="text-xs text-gray-500 italic">"{ev.note}"</p>
+                <p className="text-xs text-gray-500 italic">&quot;{ev.note}&quot;</p>
               </div>
             )}
           </div>
+
+          {ev.type === 'booking' && ev.bookingStatus === 'CANCELLED' && ev.bookingId && (
+            <CancellationReceiptDetails key={ev.bookingId} bookingId={ev.bookingId} userId={currentUserId} />
+          )}
 
           {/* ── Actions — Available slot ──────────────────────────────── */}
           {ev.type === 'available' && (

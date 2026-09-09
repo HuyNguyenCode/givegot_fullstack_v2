@@ -52,7 +52,7 @@ export default function BookingConfirmedEmail({
               </Text>
               {meetingUrl ? (
                 <Text className="mb-0 mt-4 text-sm leading-6 text-emerald-800">
-                  🔗 Link Google Meet đã sẵn sàng trong dashboard của bạn.
+                  🔗 Link Google Meet sẽ xuất hiện trong dashboard của bạn trước buổi học 15 phút.
                 </Text>
               ) : (
                 <Text className="mb-0 mt-4 text-sm leading-6 text-emerald-800">

@@ -20,10 +20,60 @@ const CANCELLATION_THRESHOLD_HOURS = 12
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface BookingResult {
+export interface BookingResult {
   success: boolean
   message: string
   bookingId?: string
+  cancellation?: CancellationImpact
+}
+
+export type CancellationTiming = 'pending' | 'early' | 'late'
+
+/**
+ * Read-only explanation of the existing cancellation policy. The mutation
+ * remains the authority; this object is returned so UI can show the same
+ * consequences before and after the action without inventing a second policy.
+ */
+export interface CancellationImpact {
+  bookingId: string
+  bookingStatus: 'PENDING' | 'CONFIRMED'
+  cancelledBy: 'mentee' | 'mentor'
+  timing: CancellationTiming
+  hoursUntilStart: number
+  thresholdHours: number
+  givePointRecipient: 'mentee' | 'mentor'
+  trust: {
+    previousScore: number
+    newScore: number
+    delta: number
+    willSuspend: boolean
+  } | null
+}
+
+export interface CancellationPreviewResult {
+  success: boolean
+  message: string
+  preview?: CancellationImpact
+}
+
+/**
+ * A read-only reconstruction of a completed cancellation from the immutable
+ * point ledger and Trust history. This intentionally adds no new database
+ * fields: old cancelled bookings continue to work exactly as they did.
+ */
+export interface CancellationReceipt extends Omit<CancellationImpact, 'cancelledBy'> {
+  outcome: 'CANCELLED' | 'DECLINED'
+  /**
+   * Legacy/pending cancellation logs may record the refund but not the actor.
+   * Never invent an actor where the immutable audit data cannot prove one.
+   */
+  cancelledBy: 'mentee' | 'mentor' | 'unknown'
+}
+
+export interface CancellationReceiptResult {
+  success: boolean
+  message: string
+  receipt?: CancellationReceipt
 }
 
 export interface ReviewGateStatus {
@@ -936,6 +986,261 @@ interface CancellationPusherPayload {
   message: string
 }
 
+function buildCancellationImpact(input: {
+  bookingId: string
+  bookingStatus: BookingStatus
+  canceledByUserId: string
+  menteeId: string
+  startTime: Date
+  currentTrustScore: number
+}): CancellationImpact | null {
+  const { bookingId, bookingStatus, canceledByUserId, menteeId, startTime, currentTrustScore } = input
+
+  if (bookingStatus !== BookingStatus.PENDING && bookingStatus !== BookingStatus.CONFIRMED) {
+    return null
+  }
+
+  const isMenteeCancelling = canceledByUserId === menteeId
+  const hoursUntilStart = (startTime.getTime() - Date.now()) / (1000 * 60 * 60)
+  const timing: CancellationTiming = bookingStatus === BookingStatus.PENDING
+    ? 'pending'
+    : hoursUntilStart < CANCELLATION_THRESHOLD_HOURS ? 'late' : 'early'
+
+  if (timing === 'pending') {
+    return {
+      bookingId,
+      bookingStatus: 'PENDING',
+      cancelledBy: isMenteeCancelling ? 'mentee' : 'mentor',
+      timing,
+      hoursUntilStart,
+      thresholdHours: CANCELLATION_THRESHOLD_HOURS,
+      givePointRecipient: 'mentee',
+      trust: null,
+    }
+  }
+
+  const trustDelta = isMenteeCancelling
+    ? timing === 'late' ? -10 : -2
+    : timing === 'late' ? -20 : -5
+  const newScore = Math.max(0, currentTrustScore + trustDelta)
+
+  return {
+    bookingId,
+    bookingStatus: 'CONFIRMED',
+    cancelledBy: isMenteeCancelling ? 'mentee' : 'mentor',
+    timing,
+    hoursUntilStart,
+    thresholdHours: CANCELLATION_THRESHOLD_HOURS,
+    givePointRecipient: isMenteeCancelling && timing === 'late' ? 'mentor' : 'mentee',
+    trust: {
+      previousScore: currentTrustScore,
+      newScore,
+      delta: trustDelta,
+      willSuspend: newScore < 30,
+    },
+  }
+}
+
+/** Returns the live policy preview for the current participant only. */
+export async function getCancellationPreview(
+  bookingId: string,
+  canceledByUserId: string,
+): Promise<CancellationPreviewResult> {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        id: true,
+        mentorId: true,
+        menteeId: true,
+        startTime: true,
+        status: true,
+        mentor: { select: { trustScore: true } },
+        mentee: { select: { trustScore: true } },
+      },
+    })
+
+    if (!booking) return { success: false, message: 'Không tìm thấy lịch đặt.' }
+    if (booking.mentorId !== canceledByUserId && booking.menteeId !== canceledByUserId) {
+      return { success: false, message: 'Bạn không có quyền hủy lịch đặt này.' }
+    }
+    if (booking.status !== BookingStatus.PENDING && booking.status !== BookingStatus.CONFIRMED) {
+      return { success: false, message: 'Lịch này không còn có thể hủy.' }
+    }
+
+    const currentTrustScore = canceledByUserId === booking.menteeId
+      ? booking.mentee.trustScore
+      : booking.mentor.trustScore
+    const preview = buildCancellationImpact({
+      bookingId: booking.id,
+      bookingStatus: booking.status,
+      canceledByUserId,
+      menteeId: booking.menteeId,
+      startTime: booking.startTime,
+      currentTrustScore,
+    })
+
+    if (!preview) return { success: false, message: 'Không thể tính hậu quả hủy lịch.' }
+    return { success: true, message: 'Đã tải chính sách hủy hiện tại.', preview }
+  } catch (error) {
+    console.error('[getCancellationPreview] Error:', error)
+    return { success: false, message: 'Không thể tải chính sách hủy. Vui lòng thử lại.' }
+  }
+}
+
+/**
+ * Builds the post-commit receipt exclusively from the transaction's returned
+ * values. In contrast to the preview helper, it never consults Date.now(), so
+ * a cancellation at the 12-hour boundary cannot be reclassified after commit.
+ */
+function buildCommittedCancellationImpact(input: {
+  bookingId: string
+  bookingStatus: BookingStatus
+  cancelledBy: 'mentee' | 'mentor'
+  timing: CancellationTiming
+  hoursUntilStart: number
+  previousTrustScore: number | null
+  newTrustScore: number | null
+  trustDelta: number
+}): CancellationImpact {
+  const {
+    bookingId,
+    bookingStatus,
+    cancelledBy,
+    timing,
+    hoursUntilStart,
+    previousTrustScore,
+    newTrustScore,
+    trustDelta,
+  } = input
+
+  if (timing === 'pending') {
+    return {
+      bookingId,
+      bookingStatus: 'PENDING',
+      cancelledBy,
+      timing,
+      hoursUntilStart,
+      thresholdHours: CANCELLATION_THRESHOLD_HOURS,
+      givePointRecipient: 'mentee',
+      trust: null,
+    }
+  }
+
+  // These values are returned from the same transaction that applied the
+  // wallet and Trust mutations. Missing values indicate a server invariant
+  // failure rather than a reason to recompute policy from the wall clock.
+  if (previousTrustScore === null || newTrustScore === null) {
+    throw new Error('Committed cancellation is missing Trust Score outcome')
+  }
+
+  return {
+    bookingId,
+    bookingStatus: bookingStatus === BookingStatus.PENDING ? 'PENDING' : 'CONFIRMED',
+    cancelledBy,
+    timing,
+    hoursUntilStart,
+    thresholdHours: CANCELLATION_THRESHOLD_HOURS,
+    givePointRecipient: timing === 'late' && cancelledBy === 'mentee' ? 'mentor' : 'mentee',
+    trust: {
+      previousScore: previousTrustScore,
+      newScore: newTrustScore,
+      delta: trustDelta,
+      willSuspend: newTrustScore < 30,
+    },
+  }
+}
+
+/**
+ * Lets either participant inspect the financial/trust result after a booking
+ * has already been cancelled. The source of truth is the existing immutable
+ * TransactionLog plus TrustHistory, so this is safe for both new and legacy
+ * bookings and does not alter any booking, point, or Trust flow.
+ */
+export async function getBookingCancellationReceipt(
+  bookingId: string,
+  viewerId: string,
+): Promise<CancellationReceiptResult> {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, mentorId: true, menteeId: true, status: true },
+    })
+
+    if (!booking) return { success: false, message: 'Không tìm thấy lịch đặt.' }
+    if (booking.mentorId !== viewerId && booking.menteeId !== viewerId) {
+      return { success: false, message: 'Bạn không có quyền xem chi tiết lịch đặt này.' }
+    }
+    if (booking.status !== BookingStatus.CANCELLED) {
+      return { success: false, message: 'Lịch này chưa có biên nhận hủy.' }
+    }
+
+    const [transactions, trustRecord] = await Promise.all([
+      prisma.transactionLog.findMany({
+        where: {
+          bookingId,
+          type: {
+            in: [
+              TransactionType.BOOKING_CANCELLED,
+              TransactionType.BOOKING_DECLINED,
+              TransactionType.CANCELLATION_COMPENSATION,
+            ],
+          },
+        },
+        select: { type: true, userId: true, amount: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.trustHistory.findFirst({
+        where: {
+          userId: { in: [booking.mentorId, booking.menteeId] },
+          reason: { contains: bookingId },
+        },
+        select: { userId: true, previousScore: true, newScore: true, reason: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ])
+
+    const wasDeclined = transactions.some(transaction => transaction.type === TransactionType.BOOKING_DECLINED)
+    const compensation = transactions.find(transaction => transaction.type === TransactionType.CANCELLATION_COMPENSATION)
+    const reason = trustRecord?.reason.toLowerCase() ?? ''
+    const cancelledBy: CancellationReceipt['cancelledBy'] = wasDeclined || reason.includes('by mentor')
+      ? 'mentor'
+      : reason.includes('by mentee')
+        ? 'mentee'
+        : 'unknown'
+    const timing: CancellationTiming = wasDeclined || !trustRecord
+      ? 'pending'
+      : reason.includes('late cancellation') ? 'late' : 'early'
+    const trust = trustRecord ? {
+      previousScore: trustRecord.previousScore,
+      newScore: trustRecord.newScore,
+      delta: trustRecord.newScore - trustRecord.previousScore,
+      willSuspend: trustRecord.newScore < 30,
+    } : null
+
+    return {
+      success: true,
+      message: 'Đã tải chi tiết hủy lịch.',
+      receipt: {
+        bookingId,
+        bookingStatus: wasDeclined || !trustRecord ? 'PENDING' : 'CONFIRMED',
+        outcome: wasDeclined ? 'DECLINED' : 'CANCELLED',
+        cancelledBy,
+        timing,
+        // The original start time is deliberately not inferred from a past
+        // booking. The receipt states its already-recorded policy branch.
+        hoursUntilStart: 0,
+        thresholdHours: CANCELLATION_THRESHOLD_HOURS,
+        givePointRecipient: compensation ? 'mentor' : 'mentee',
+        trust,
+      },
+    }
+  } catch (error) {
+    console.error('[getBookingCancellationReceipt] Error:', error)
+    return { success: false, message: 'Không thể tải chi tiết hủy. Vui lòng thử lại.' }
+  }
+}
+
 export async function cancelBooking(bookingId: string, canceledByUserId: string): Promise<BookingResult> {
   try {
     // ── 1. Fetch booking with both parties ───────────────────────────────────
@@ -1005,7 +1310,13 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
         await tx.transactionLog.create({
           data: { userId: booking.menteeId, amount: 1, type: TransactionType.BOOKING_CANCELLED, bookingId },
         })
-        return { timing: 'pending' as const, trustDelta: 0, penalisedUserId: null, pointsNote: 'Refunded to mentee' }
+        return {
+          timing: 'pending' as const,
+          trustDelta: 0,
+          penalisedUserId: null,
+          previousTrustScore: null,
+          newTrustScore: null,
+        }
       }
 
       // d) CONFIRMED booking: re-read trust scores inside the transaction to avoid stale reads
@@ -1016,7 +1327,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
 
       if (!latestMentor || !latestMentee) throw new Error('User records missing inside transaction')
 
-      let timing: 'early' | 'late'    = isLateCancel ? 'late' : 'early'
+      const timing: 'early' | 'late'  = isLateCancel ? 'late' : 'early'
       let trustDelta: number
       let penalisedUserId: string
 
@@ -1098,7 +1409,16 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
         })
       }
 
-      return { timing, trustDelta, penalisedUserId }
+      const previousTrustScore = isMenteeCancelling
+        ? latestMentee.trustScore
+        : latestMentor.trustScore
+      return {
+        timing,
+        trustDelta,
+        penalisedUserId,
+        previousTrustScore,
+        newTrustScore: Math.max(0, previousTrustScore + trustDelta),
+      }
     })
 
     // ── 4. Revalidate pages ──────────────────────────────────────────────────
@@ -1203,7 +1523,18 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
       ? 'Session cancelled. Mentee refunded. −20 Trust Score.'
       : 'Booking cancelled.'
 
-    return { success: true, message: successMessage, bookingId }
+    const cancellation = buildCommittedCancellationImpact({
+      bookingId,
+      bookingStatus: booking.status,
+      cancelledBy: isMenteeCancelling ? 'mentee' : 'mentor',
+      timing: summary.timing,
+      hoursUntilStart: hoursUntilSession,
+      previousTrustScore: summary.previousTrustScore,
+      newTrustScore: summary.newTrustScore,
+      trustDelta: summary.trustDelta,
+    })
+
+    return { success: true, message: successMessage, bookingId, cancellation }
   } catch (error) {
     console.error('[cancelBooking] Error:', error)
     return { success: false, message: 'Failed to cancel booking. Please try again.' }
