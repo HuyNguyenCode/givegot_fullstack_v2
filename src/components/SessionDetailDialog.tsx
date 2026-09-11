@@ -13,13 +13,14 @@ import { useEffect, useState, useTransition } from 'react'
 import {
   acceptBooking,
   declineBooking,
-  reportNoShow,
   reportMentorAbsence,
 } from '@/actions/booking'
 import { deleteMentorSlot } from '@/actions/slots'
 import BlindReviewSection from '@/components/reviews/BlindReviewSection'
 import CancellationImpactDialog from '@/components/CancellationImpactDialog'
 import CancellationReceiptDetails from '@/components/CancellationReceiptDetails'
+import NoShowImpactDialog from '@/components/NoShowImpactDialog'
+import SessionPolicyTimeline from '@/components/SessionPolicyTimeline'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -92,6 +93,7 @@ export default function SessionDetailDialog({
   const [isLoading, setIsLoading]               = useState(false)
   const [feedback, setFeedback]                 = useState<{ ok: boolean; msg: string } | null>(null)
   const [cancellationBookingId, setCancellationBookingId] = useState<string | null>(null)
+  const [noShowBookingId, setNoShowBookingId] = useState<string | null>(null)
 
   // Isolated pending state for the Mentor Absence Report button — kept on its
   // own `useTransition` instead of the shared `isLoading`/`run()` helper below,
@@ -103,6 +105,7 @@ export default function SessionDetailDialog({
     if (open) {
       setFeedback(null)
       setCancellationBookingId(null)
+      setNoShowBookingId(null)
     }
   }, [open, s?.bookingId, s?.slotId])
 
@@ -152,10 +155,7 @@ export default function SessionDetailDialog({
     run(() => declineBooking(s.bookingId!, currentUserId))
   }
   const handleCancel      = ()  => setCancellationBookingId(s.bookingId ?? null)
-  const handleReportNoShow = () => {
-    if (!window.confirm('Báo cáo vắng mặt? Hệ thống sẽ xác minh qua Google Meet API.')) return
-    run(() => reportNoShow(s.bookingId!, currentUserId))
-  }
+  const handleReportNoShow = () => setNoShowBookingId(s.bookingId ?? null)
   const handleReportMentorAbsence = () => {
     if (!window.confirm('Báo cáo Mentee vắng mặt? Admin sẽ xem xét trường hợp này.')) return
     setFeedback(null)
@@ -261,6 +261,15 @@ export default function SessionDetailDialog({
               </div>
             )}
           </div>
+
+          {s.type === 'booking' && (s.role === 'mentor' || s.role === 'mentee') && s.bookingStatus && s.bookingStatus !== 'PENDING' && (
+            <SessionPolicyTimeline
+              key={s.bookingId ?? s.sessionLabel}
+              endTime={s.endTime}
+              bookingStatus={s.bookingStatus}
+              role={s.role}
+            />
+          )}
 
           {/* Both the teaching and learning calendars use this shared dialog.
               A cancelled item therefore exposes the recorded point/Trust
@@ -535,6 +544,14 @@ export default function SessionDetailDialog({
       bookingId={cancellationBookingId}
       userId={currentUserId}
       onClose={() => setCancellationBookingId(null)}
+      onMutate={onMutate}
+      onComplete={onClose}
+    />
+    <NoShowImpactDialog
+      open={Boolean(noShowBookingId)}
+      bookingId={noShowBookingId}
+      userId={currentUserId}
+      onClose={() => setNoShowBookingId(null)}
       onMutate={onMutate}
       onComplete={onClose}
     />

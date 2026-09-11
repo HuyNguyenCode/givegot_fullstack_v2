@@ -1683,9 +1683,9 @@ const FRAUD_THRESHOLD_MINUTES = 30
 /** Mentee may file a no-show report within this many hours of the session end. */
 const NO_SHOW_GRACE_PERIOD_HOURS = 48
 
-type NoShowVerdict = 'MENTOR_NO_SHOW' | 'FRAUD_DETECTED' | 'DISPUTED'
+export type NoShowVerdict = 'MENTOR_NO_SHOW' | 'FRAUD_DETECTED' | 'DISPUTED'
 
-interface NoShowResult extends BookingResult {
+export interface NoShowResult extends BookingResult {
   verdict?: NoShowVerdict
   attendanceSource?: 'api' | 'mock'
 }

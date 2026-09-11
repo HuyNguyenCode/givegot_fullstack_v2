@@ -16,7 +16,6 @@ import {
   getMyBookings,
   acceptBooking,
   declineBooking,
-  reportNoShow,
 } from '@/actions/booking'
 import {
   getAllMentorSlots,
@@ -29,6 +28,8 @@ import Link from 'next/link'
 import BlindReviewSection from '@/components/reviews/BlindReviewSection'
 import CancellationImpactDialog from '@/components/CancellationImpactDialog'
 import CancellationReceiptDetails from '@/components/CancellationReceiptDetails'
+import NoShowImpactDialog from '@/components/NoShowImpactDialog'
+import SessionPolicyTimeline from '@/components/SessionPolicyTimeline'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,7 @@ export default function UnifiedDashboardCalendar({
   // UI
   const [clickedEvent, setClickedEvent] = useState<ClickedEvent | null>(null)
   const [cancellationBookingId, setCancellationBookingId] = useState<string | null>(null)
+  const [noShowBookingId, setNoShowBookingId] = useState<string | null>(null)
   const [toasts, setToasts]             = useState<Toast[]>([])
 
   useEffect(() => setMounted(true), [])
@@ -402,8 +404,7 @@ export default function UnifiedDashboardCalendar({
   }
   const handleReportNoShow = () => {
     if (!clickedEvent?.bookingId) return
-    if (!window.confirm('Báo cáo vắng mặt? Việc tham gia sẽ được xác minh qua Google Meet API.')) return
-    withAction(() => reportNoShow(clickedEvent.bookingId!, currentUserId))
+    setNoShowBookingId(clickedEvent.bookingId)
   }
 
   // Derived timing flags for the currently clicked event
@@ -605,6 +606,17 @@ export default function UnifiedDashboardCalendar({
         }}
         onComplete={closePanel}
       />
+      <NoShowImpactDialog
+        open={Boolean(noShowBookingId)}
+        bookingId={noShowBookingId}
+        userId={currentUserId}
+        onClose={() => setNoShowBookingId(null)}
+        onMutate={async () => {
+          await loadData()
+          onDataChange?.()
+        }}
+        onComplete={closePanel}
+      />
     </div>
   )
 }
@@ -748,6 +760,15 @@ function EventDetailPanel({
               </div>
             )}
           </div>
+
+          {ev.type === 'booking' && (ev.role === 'mentor' || ev.role === 'mentee') && ev.bookingStatus && ev.bookingStatus !== 'PENDING' && (
+            <SessionPolicyTimeline
+              key={ev.bookingId ?? ev.sessionLabel}
+              endTime={ev.endTime}
+              bookingStatus={ev.bookingStatus}
+              role={ev.role}
+            />
+          )}
 
           {ev.type === 'booking' && ev.bookingStatus === 'CANCELLED' && ev.bookingId && (
             <CancellationReceiptDetails key={ev.bookingId} bookingId={ev.bookingId} userId={currentUserId} />

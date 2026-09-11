@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createNotification } from '@/actions/notifications'
 
 export async function GET(req: NextRequest) {
+  // Keep the request available for the existing optional CRON_SECRET guard
+  // below without changing its current dev-mode behavior.
+  void req
   // 1. TẠM TẮT BẢO MẬT ĐỂ MỞ CỬA CHO TRÌNH DUYỆT TEST (Chỉ dùng khi Dev)
   // Khi nào làm khóa luận xong, đưa lên môi trường thật thì bỏ comment đoạn này ra
   /*
@@ -25,6 +29,10 @@ export async function GET(req: NextRequest) {
           lt: cutoffTime,
         },
       },
+      include: {
+        mentor: { select: { name: true, email: true } },
+        mentee: { select: { name: true, email: true } },
+      },
     })
 
     // Nếu không có ai nợ đọng thì báo cáo về và đi ngủ
@@ -36,12 +44,20 @@ export async function GET(req: NextRequest) {
     const processedIds: string[] = []
     // 4. XỬ LÝ TỪNG HỒ SƠ BẰNG TRANSACTION (Quy tắc All-or-Nothing)
     for (const booking of expiredBookings) {
-      await prisma.$transaction(async (tx) => {
-        // A. Đổi trạng thái Booking thành COMPLETED
-        await tx.booking.update({
-          where: { id: booking.id },
+      const wasCompleted = await prisma.$transaction(async (tx) => {
+        // A. Claim booking theo điều kiện ngay trong transaction. Nếu một cron
+        // khác đã chốt trước, tuyệt đối không cộng điểm hoặc ghi sổ lần hai.
+        const claim = await tx.booking.updateMany({
+          where: {
+            id: booking.id,
+            status: 'CONFIRMED',
+          },
           data: { status: 'COMPLETED' },
         })
+
+        if (claim.count !== 1) {
+          return false
+        }
 
         // B. Cộng điểm cho Mentor 
         // LƯU Ý: Chỗ này giả định giá mặc định là 1 điểm. Nếu DB của bạn 
@@ -62,7 +78,35 @@ export async function GET(req: NextRequest) {
             bookingId: booking.id 
           },
         })
+
+        return true
       })
+
+      if (!wasCompleted) {
+        continue
+      }
+
+      // Notifications are intentionally post-commit and best-effort:
+      // a notification failure must not roll back or report a successfully
+      // settled booking as failed.
+      const mentorName = booking.mentor.name ?? booking.mentor.email ?? 'Mentor'
+      const menteeName = booking.mentee.name ?? booking.mentee.email ?? 'Mentee'
+      await Promise.all([
+        createNotification(
+          booking.mentorId,
+          'Buổi học đã được tự động hoàn thành',
+          'Buổi học với ' + menteeName + ' đã được hệ thống chốt sau 72 giờ. 1 GivePoint đã được chuyển vào ví của bạn.',
+          'POINTS',
+          '/history',
+        ),
+        createNotification(
+          booking.menteeId,
+          'Buổi học đã được tự động hoàn thành',
+          'Buổi học với ' + mentorName + ' đã được hệ thống chốt sau 72 giờ. 1 GivePoint đã được chuyển cho Mentor.',
+          'SYSTEM',
+          '/history',
+        ),
+      ])
       processedIds.push(booking.id)
       processedCount++
     }
