@@ -63,3 +63,11 @@ All five passed during Task 00. They are not a Learning Hub suite and do not rep
 ## Task 00 dirty-state guard
 
 The following pre-existing entries are user-owned: two deleted tracked DOCX files under `docs/` and two untracked reference DOCX files under `docs/learning-hub/`, exactly as recorded in `IMPLEMENTATION_STATE.md`. Task 00 may add only the ten requested Markdown files. No application/schema/migration file should appear in its diff.
+
+## Task 01 harness commands
+
+- `npm run test:learning-hub`
+- `npm run test:learning-hub:integration`
+- `npm run test:regression`
+
+The baseline smoke command is `npm run test:learning-hub:integration`. It imports the legacy conversations, messages, and auto-complete route modules without starting a server, touching Prisma, or calling external providers. It records only prerequisite names: Node.js, installed dependencies, and (for future database suites) `DISPOSABLE_TEST_DATABASE_URL`; it never prints environment values or secrets.

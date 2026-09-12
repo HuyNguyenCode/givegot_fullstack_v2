@@ -68,3 +68,14 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 ## Future canonical commands
 
 Task 01 must create and self-test these package scripts before later tasks rely on them: `npm run typecheck`, `npm run test:learning-hub`, `npm run test:learning-hub:integration`, and `npm run test:regression`. Database-writing tests require an explicit disposable database URL and must never print secrets.
+
+## Task 01 canonical commands
+
+Run these exact commands from the repository root:
+
+- `npm run typecheck`
+- `npm run test:learning-hub`
+- `npm run test:learning-hub:integration`
+- `npm run test:regression`
+
+The unit suite uses `node:test` via the existing `tsx` dependency. The integration command first runs `scripts/test-learning-hub-smoke.ts`, which imports legacy routes and prints prerequisite names only. It does not load dotenv, connect to Prisma, call providers, or write data. Future database-writing tests require an explicit `DISPOSABLE_TEST_DATABASE_URL`; they must reject production/shared URLs and never print secrets.

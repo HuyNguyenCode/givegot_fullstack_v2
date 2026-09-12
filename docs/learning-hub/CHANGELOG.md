@@ -27,3 +27,15 @@
 ### Compatibility and rollback
 
 Production behavior and data compatibility are unchanged. Rollback consists only of removing the ten new Markdown files; do not touch the user-owned DOCX changes.
+
+## 2026-09-12 Task 01 Minimal test harness
+
+### Added
+
+- Added dependency-free `node:test` coverage via the existing `tsx` package, deterministic clock/actor/Prisma-mock helpers, and an import-only legacy route smoke script.
+- Added canonical typecheck, Learning Hub unit, Learning Hub integration, and offline regression package commands.
+
+### Not changed
+
+- No application, API, schema, migration, database row, provider call, or visible product behavior changed.
+- The smoke suite does not load environment files, connect to Prisma, or invoke external providers.

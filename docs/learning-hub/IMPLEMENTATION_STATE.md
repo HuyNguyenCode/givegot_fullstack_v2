@@ -163,3 +163,25 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 - A2 must enforce auto-complete cron authentication and private realtime before private artifacts.
 - B1 must not use `prisma db push` against shared/legacy data; it needs reviewed SQL, clean and representative legacy tests, and rollback evidence.
 - Existing baseline failures remain separate from task-introduced failures and must not be hidden by skips or weakened assertions.
+
+## Task 01 completion
+
+- Recorded: 2026-09-12, Asia/Saigon.
+- Status: PASS WITH KNOWN LIMITATION.
+- Scope: minimal test harness only; production behavior, API, schema, migrations, and database rows remain unchanged.
+
+### Added
+
+- Package commands: `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, and `test:regression`.
+- Deterministic `node:test` helpers for a fixed clock, server-session-shaped authenticated actors, and explicit Prisma mocks.
+- An import-only legacy route smoke script for conversations, messages, and auto-complete. It records prerequisite names without reading dotenv, calling providers, connecting to Prisma, or printing secrets.
+
+### Verification
+
+- PASS: `npm run db:generate`; `npx prisma validate`; `npm run typecheck`; `npm run test:learning-hub` (3 tests); `npm run test:learning-hub:integration` (smoke plus 1 test); `npm run test:regression` (all five legacy scripts); `npm run build`.
+- KNOWN LIMITATION, pre-existing and not changed: `npm run lint` fails with 78 errors and 32 warnings in existing application and script files.
+
+### Compatibility and rollback
+
+- Legacy routes are import-smoke tested; the five existing offline regressions continue to pass. No test connects to a database or external provider.
+- Rollback is removal of the Task 01 package scripts, test helpers/tests, smoke script, and Task 01 documentation entries. Preserve the four user-owned DOCX dirty-state entries unchanged.

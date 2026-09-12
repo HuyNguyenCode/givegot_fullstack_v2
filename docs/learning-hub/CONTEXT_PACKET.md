@@ -80,3 +80,11 @@ Task 01: create a minimal test harness and canonical package commands. It may ad
 ## Completion contract
 
 For each task: check every requirement; list changed files and reasons; report schema/migration/API/visible behavior; report compatibility and rollback; run task and regression tests; distinguish pre-existing failures; update state/context/test/changelog; record exact next assumptions; end with PASS, PASS WITH KNOWN LIMITATION, or BLOCKED; then stop.
+
+## Task 01 completion and next assumption
+
+- Task 01 completed on 2026-09-12 with a dependency-free `node:test` plus existing `tsx` harness; no full test framework was added.
+- Canonical commands are `npm run typecheck`, `npm run test:learning-hub`, `npm run test:learning-hub:integration`, and `npm run test:regression`.
+- The integration smoke test imports legacy conversations, messages, and auto-complete routes without a server, database, provider, dotenv load, or secret output. Future database suites require an explicit `DISPOSABLE_TEST_DATABASE_URL` and must reject production/shared targets.
+- Current verification passed Prisma generate/validate, typecheck, unit, integration, legacy regression, and build. Lint remains the unchanged baseline failure: 78 errors and 32 warnings.
+- Next task is A1 only: bind protected legacy paths to server-session identity and add authorization/IDOR coverage before private Learning Hub data exists.
