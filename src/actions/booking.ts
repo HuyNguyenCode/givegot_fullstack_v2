@@ -4,7 +4,7 @@ import { BookingStatus, TransactionType } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { pusherServer } from '@/lib/pusher'
 import { revalidatePath } from 'next/cache'
-import { createNotification } from './notifications'
+import { createNotification } from '@/lib/notifications'
 import { calculateAndUpdateTrustScore } from '@/lib/trust-algorithm'
 import { verifyMeetingAttendance } from '@/lib/google-meet'
 import { createGoogleMeetForMentor } from '@/lib/gcal'
@@ -14,6 +14,7 @@ import BookingConfirmedEmail from '@/emails/BookingConfirmedEmail'
 import BookingCancelledEmail from '@/emails/BookingCancelledEmail'
 import NoShowReportEmail from '@/emails/NoShowReportEmail'
 import NewBookingEmail from '@/emails/NewBookingEmail'
+import { requireAdminUser, requireAuthenticatedUser } from '@/lib/server-authorization'
 
 // ── Cancellation Policy Constants ─────────────────────────────────────────────
 const CANCELLATION_THRESHOLD_HOURS = 12
@@ -92,6 +93,7 @@ export interface ReviewGateStatus {
 // a new one. This keeps the review dataset healthy and enforces community norms.
 
 export async function checkReviewGate(menteeId: string): Promise<ReviewGateStatus> {
+  menteeId = (await requireAuthenticatedUser()).id
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000)
 
   // CONFIRMED + endTime in the past by > 48 h means: the session happened but
@@ -128,6 +130,7 @@ export async function bookAvailableSlot(
   note?: string
 ): Promise<BookingResult> {
   try {
+    menteeId = (await requireAuthenticatedUser()).id
     // ── Layer 1 — Balance guard (pre-transaction fast-path) ───────────────────
     // Read the balance before acquiring any DB locks so we can reject immediately
     // without paying the cost of a full transaction. Layer 2 (inside the tx)
@@ -320,22 +323,23 @@ export async function bookAvailableSlot(
       message: 'Slot booked! 1 GivePoint held. Waiting for mentor to accept.',
       bookingId: result.id,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error booking slot:', error)
+    const message = error instanceof Error ? error.message : ''
 
-    if (error.message === 'INSUFFICIENT_POINTS') {
+    if (message === 'INSUFFICIENT_POINTS') {
       return { success: false, message: 'INSUFFICIENT_POINTS' }
     }
 
-    if (error.message === 'SLOT_TAKEN') {
+    if (message === 'SLOT_TAKEN') {
       return {
         success: false,
         message: 'Oops! Someone just booked this slot. Please choose another time.',
       }
     }
 
-    if (error.message?.startsWith('REVIEW_GATE_BLOCKED')) {
-      return { success: false, message: error.message }
+    if (message.startsWith('REVIEW_GATE_BLOCKED')) {
+      return { success: false, message }
     }
 
     return {
@@ -356,6 +360,7 @@ export async function createBooking(
   note?: string
 ): Promise<BookingResult> {
   try {
+    menteeId = (await requireAuthenticatedUser()).id
     // ── Time-gate: reject bookings in the past ────────────────────────────────
     if (new Date(startTime) <= new Date()) {
       return { success: false, message: 'Cannot book a session that starts in the past.' }
@@ -476,6 +481,7 @@ export async function createBooking(
 
 export async function acceptBooking(bookingId: string, mentorId: string): Promise<BookingResult> {
   try {
+    mentorId = (await requireAuthenticatedUser()).id
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
 
     if (!booking) {
@@ -600,6 +606,7 @@ export async function acceptBooking(bookingId: string, mentorId: string): Promis
 
 export async function declineBooking(bookingId: string, mentorId: string): Promise<BookingResult> {
   try {
+    mentorId = (await requireAuthenticatedUser()).id
     const booking = await prisma.booking.findUnique({ 
       where: { id: bookingId },
     })
@@ -718,6 +725,7 @@ export async function completeSessionWithReview(
   comment?: string
 ): Promise<BookingResult> {
   try {
+    menteeId = (await requireAuthenticatedUser()).id
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
     })
@@ -901,8 +909,13 @@ export async function completeSessionWithReview(
 export async function completeBooking(bookingId: string, menteeId: string): Promise<BookingResult> {
   console.log("💎 [DEBUG] completeBooking đã được gọi cho bookingId:", bookingId);
   try {
+    menteeId = (await requireAuthenticatedUser()).id
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
     if (!booking) return { success: false, message: 'Booking not found' }
+
+    if (booking.menteeId !== menteeId) {
+      return { success: false, message: 'Unauthorized: You are not the mentee for this session' }
+    }
 
     // Idempotent: if it's already completed (e.g. re-invoked), treat as success
     // rather than erroring — avoids double-paying the mentor.
@@ -910,9 +923,6 @@ export async function completeBooking(bookingId: string, menteeId: string): Prom
       return { success: true, message: 'Booking already completed', bookingId }
     }
 
-    if (booking.menteeId !== menteeId) {
-      return { success: false, message: 'Unauthorized: You are not the mentee for this session' }
-    }
     if (booking.status !== BookingStatus.CONFIRMED) {
       return {
         success: false,
@@ -1047,6 +1057,7 @@ export async function getCancellationPreview(
   canceledByUserId: string,
 ): Promise<CancellationPreviewResult> {
   try {
+    canceledByUserId = (await requireAuthenticatedUser()).id
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       select: {
@@ -1162,6 +1173,7 @@ export async function getBookingCancellationReceipt(
   viewerId: string,
 ): Promise<CancellationReceiptResult> {
   try {
+    viewerId = (await requireAuthenticatedUser()).id
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       select: { id: true, mentorId: true, menteeId: true, status: true },
@@ -1243,6 +1255,7 @@ export async function getBookingCancellationReceipt(
 
 export async function cancelBooking(bookingId: string, canceledByUserId: string): Promise<BookingResult> {
   try {
+    canceledByUserId = (await requireAuthenticatedUser()).id
     // ── 1. Fetch booking with both parties ───────────────────────────────────
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
@@ -1556,6 +1569,7 @@ function buildPointsChange(
 
 export async function getMyBookings(userId: string) {
   try {
+    userId = (await requireAuthenticatedUser()).id
     console.log('Getting bookings for user:', userId)
     
     const bookings = await prisma.booking.findMany({
@@ -1592,6 +1606,7 @@ export async function getMyBookings(userId: string) {
 
 export async function getAllBookings() {
   try {
+    await requireAdminUser()
     const bookings = await prisma.booking.findMany({
       include: {
         mentor: true,
@@ -1713,6 +1728,7 @@ export async function reportNoShow(
   menteeId: string,
 ): Promise<NoShowResult> {
   try {
+    menteeId = (await requireAuthenticatedUser()).id
     // ── 1. Fetch booking with both parties ───────────────────────────────────
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
@@ -2058,6 +2074,7 @@ export async function reportMentorAbsence(
   mentorId: string,
 ): Promise<BookingResult> {
   try {
+    mentorId = (await requireAuthenticatedUser()).id
     // ── 1. Fetch booking with both parties ───────────────────────────────────
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },

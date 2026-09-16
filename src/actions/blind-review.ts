@@ -14,6 +14,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { requireAuthenticatedUser } from '@/lib/server-authorization'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ export async function getBlindReviewStatus(
   bookingId: string,
   currentUserId: string
 ): Promise<BlindReviewStatus | null> {
+  currentUserId = (await requireAuthenticatedUser()).id
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     select: {
@@ -58,6 +60,10 @@ export async function getBlindReviewStatus(
   })
 
   if (!booking) return null
+
+  if (currentUserId !== booking.mentorId && currentUserId !== booking.menteeId) {
+    return null
+  }
 
   const myRole: BlindReviewStatus['myRole'] =
     currentUserId === booking.mentorId ? 'mentor' : currentUserId === booking.menteeId ? 'mentee' : null
@@ -93,12 +99,16 @@ export async function submitMentorReview({
   comment?: string
 }): Promise<BlindReviewResult> {
   try {
+    const actor = await requireAuthenticatedUser()
     if (rating < 1 || rating > 5) {
       return { success: false, message: 'Rating must be between 1 and 5' }
     }
 
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
     if (!booking) return { success: false, message: 'Booking not found' }
+    if (booking.mentorId !== actor.id) {
+      return { success: false, message: 'Unauthorized: you are not the mentor for this booking' }
+    }
 
     const existingMentorReview = await prisma.mentorReview.findUnique({ where: { bookingId } })
     if (existingMentorReview) {
@@ -146,12 +156,18 @@ export async function submitMenteeReview({
 }): Promise<BlindReviewResult> {
   console.log("🚀 [DEBUG] submitMenteeReview đã được gọi");
   try {
+    void receiverId
+    void authorId
+    const actor = await requireAuthenticatedUser()
     if (rating < 1 || rating > 5) {
       return { success: false, message: 'Rating must be between 1 and 5' }
     }
 
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
     if (!booking) return { success: false, message: 'Booking not found' }
+    if (booking.menteeId !== actor.id) {
+      return { success: false, message: 'Unauthorized: you are not the mentee for this booking' }
+    }
 
     const existingReview = await prisma.review.findUnique({ where: { bookingId } })
     if (existingReview) {
@@ -163,8 +179,8 @@ export async function submitMenteeReview({
     await prisma.review.create({
       data: {
         bookingId,
-        receiverId,
-        authorId,
+        receiverId: booking.mentorId,
+        authorId: booking.menteeId,
         rating,
         comment: comment ?? null,
         isHidden: false,

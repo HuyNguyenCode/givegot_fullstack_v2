@@ -61,13 +61,22 @@ async function main() {
     },
     $transaction: async callback => callback(transactionDb),
   }
+  let sessionUserId = 'mentee'
+  const asUser = async (userId, action) => {
+    sessionUserId = userId
+    return action()
+  }
   const actions = load('src/actions/booking.ts', {
     __Date: ActionDate,
     '@prisma/client': enums,
     '@/lib/prisma': { prisma: db },
     '@/lib/pusher': { pusherServer: { trigger: async () => {} } },
     'next/cache': { revalidatePath() {} },
-    './notifications': { createNotification: async () => {} },
+    '@/lib/notifications': { createNotification: async () => {} },
+    '@/lib/server-authorization': {
+      requireAuthenticatedUser: async () => ({ id: sessionUserId }),
+      requireAdminUser: async () => ({ id: 'admin' }),
+    },
     '@/lib/trust-algorithm': { calculateAndUpdateTrustScore: async () => {} },
     '@/lib/google-meet': { verifyMeetingAttendance: async () => ({}) },
     '@/lib/gcal': { createGoogleMeetForMentor: async () => null },
@@ -87,7 +96,7 @@ async function main() {
   })
 
   booking = makeBooking({ status: enums.BookingStatus.PENDING })
-  let result = await actions.getCancellationPreview(booking.id, 'mentee')
+  let result = await asUser('mentee', () => actions.getCancellationPreview(booking.id, 'mentee'))
   assert.equal(result.success, true)
   assert.equal(result.preview.timing, 'pending')
   assert.equal(result.preview.givePointRecipient, 'mentee')
@@ -95,26 +104,26 @@ async function main() {
 
   // Slightly over 12h avoids a wall-clock millisecond race in an offline test.
   booking = makeBooking({ hours: 12.01, menteeTrust: 36 })
-  result = await actions.getCancellationPreview(booking.id, 'mentee')
+  result = await asUser('mentee', () => actions.getCancellationPreview(booking.id, 'mentee'))
   assert.equal(result.preview.timing, 'early')
   assert.equal(result.preview.givePointRecipient, 'mentee')
   assert.deepEqual(JSON.parse(JSON.stringify(result.preview.trust)), { previousScore: 36, newScore: 34, delta: -2, willSuspend: false })
 
   booking = makeBooking({ hours: 8.5, menteeTrust: 36 })
-  result = await actions.getCancellationPreview(booking.id, 'mentee')
+  result = await asUser('mentee', () => actions.getCancellationPreview(booking.id, 'mentee'))
   assert.equal(result.preview.timing, 'late')
   assert.equal(result.preview.givePointRecipient, 'mentor')
   assert.deepEqual(JSON.parse(JSON.stringify(result.preview.trust)), { previousScore: 36, newScore: 26, delta: -10, willSuspend: true })
 
   booking = makeBooking({ hours: 24, mentorTrust: 60 })
-  result = await actions.getCancellationPreview(booking.id, 'mentor')
+  result = await asUser('mentor', () => actions.getCancellationPreview(booking.id, 'mentor'))
   assert.equal(result.preview.timing, 'early')
   assert.equal(result.preview.givePointRecipient, 'mentee')
   assert.equal(result.preview.trust.delta, -5)
   assert.equal(result.preview.trust.newScore, 55)
 
   booking = makeBooking({ hours: 1, mentorTrust: 45 })
-  result = await actions.getCancellationPreview(booking.id, 'mentor')
+  result = await asUser('mentor', () => actions.getCancellationPreview(booking.id, 'mentor'))
   assert.equal(result.preview.timing, 'late')
   assert.equal(result.preview.givePointRecipient, 'mentee')
   assert.deepEqual(JSON.parse(JSON.stringify(result.preview.trust)), { previousScore: 45, newScore: 25, delta: -20, willSuspend: true })
@@ -127,7 +136,7 @@ async function main() {
     mentor: { id: 'mentor', name: 'Mentor', email: 'mentor@example.test', trustScore: 60 },
     mentee: { id: 'mentee', name: 'Mentee', email: 'mentee@example.test', trustScore: 36 },
   }
-  const cancellation = await actions.cancelBooking(booking.id, 'mentee')
+  const cancellation = await asUser('mentee', () => actions.cancelBooking(booking.id, 'mentee'))
   assert.equal(cancellation.success, true)
   assert.equal(cancellation.cancellation.timing, 'late')
   assert.equal(cancellation.cancellation.givePointRecipient, 'mentor')
@@ -145,7 +154,7 @@ async function main() {
     mentor: { id: 'mentor', name: 'Mentor', email: 'mentor@example.test', trustScore: 60 },
     mentee: { id: 'mentee', name: 'Mentee', email: 'mentee@example.test', trustScore: 36 },
   }
-  const boundaryCancellation = await actions.cancelBooking(booking.id, 'mentee')
+  const boundaryCancellation = await asUser('mentee', () => actions.cancelBooking(booking.id, 'mentee'))
   advanceClockDuringTransaction = false
   assert.equal(boundaryCancellation.success, true)
   assert.equal(boundaryCancellation.cancellation.timing, 'early')
@@ -167,7 +176,7 @@ async function main() {
     newScore: 26,
     reason: 'Late cancellation by mentee (<12h notice) for booking booking-12345678',
   }
-  let receiptResult = await actions.getBookingCancellationReceipt(booking.id, 'mentee')
+  let receiptResult = await asUser('mentee', () => actions.getBookingCancellationReceipt(booking.id, 'mentee'))
   assert.equal(receiptResult.success, true)
   assert.equal(receiptResult.receipt.outcome, 'CANCELLED')
   assert.equal(receiptResult.receipt.givePointRecipient, 'mentor')
@@ -182,7 +191,7 @@ async function main() {
     createdAt: new Date(),
   }]
   receiptTrustRecord = null
-  receiptResult = await actions.getBookingCancellationReceipt(booking.id, 'mentor')
+  receiptResult = await asUser('mentor', () => actions.getBookingCancellationReceipt(booking.id, 'mentor'))
   assert.equal(receiptResult.success, true)
   assert.equal(receiptResult.receipt.cancelledBy, 'unknown')
 
@@ -193,16 +202,16 @@ async function main() {
     createdAt: new Date(),
   }]
   receiptTrustRecord = null
-  receiptResult = await actions.getBookingCancellationReceipt(booking.id, 'mentor')
+  receiptResult = await asUser('mentor', () => actions.getBookingCancellationReceipt(booking.id, 'mentor'))
   assert.equal(receiptResult.success, true)
   assert.equal(receiptResult.receipt.outcome, 'DECLINED')
   assert.equal(receiptResult.receipt.timing, 'pending')
   assert.equal(receiptResult.receipt.givePointRecipient, 'mentee')
 
-  result = await actions.getCancellationPreview(booking.id, 'outsider')
+  result = await asUser('outsider', () => actions.getCancellationPreview(booking.id, 'mentee'))
   assert.equal(result.success, false)
   booking = makeBooking({ status: enums.BookingStatus.COMPLETED })
-  result = await actions.getCancellationPreview(booking.id, 'mentee')
+  result = await asUser('mentee', () => actions.getCancellationPreview(booking.id, 'mentee'))
   assert.equal(result.success, false)
 
   const dialogSource = fs.readFileSync('src/components/CancellationImpactDialog.tsx', 'utf8')

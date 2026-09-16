@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createNotification } from '@/actions/notifications'
+import { createNotification } from '@/lib/notifications'
 import { sendEmail, getAppUrl } from '@/lib/email'
 import SessionReminderEmail from '@/emails/SessionReminderEmail'
 

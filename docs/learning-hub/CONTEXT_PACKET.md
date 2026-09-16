@@ -10,13 +10,13 @@
 
 ## Current checkpoint
 
-- Task 00 completed documentation only on 2026-09-11.
-- Branch `feature/learning-hub-mvp`; baseline HEAD `970a033af38ffc2580e3c5bce11fbd3834dc4244`.
-- No Learning Hub feature, API, schema field, model, migration, or package script was added.
-- Current application build passes; TypeScript passes; Prisma schema validates.
-- Prisma generation fails on a locked Windows query-engine DLL.
-- Lint baseline fails with 78 errors and 32 warnings.
-- Five current offline regression scripts pass.
+- Task A1 completed on 2026-09-12 from branch `feature/learning-hub-mvp`, HEAD `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
+- Reusable server authorization derives identity from NextAuth `auth()` and defines authenticated-user, conversation-participant, admin, and future LearningSpace-member guards.
+- Conversations/messages are session-scoped; legacy `userId`/`senderId` fields remain compatible but do not authorize or choose the actor.
+- Concrete booking/review, notification, and admin spoofing paths in the A1 scope are session-bound and action-level admin guards are enforced.
+- No Learning Hub schema field, model, migration, database row, or visible UI flow was added.
+- Typecheck, targeted lint, A1 unit/integration tests, legacy regression, and production build pass.
+- Full lint retains pre-existing debt: 77 errors and 32 warnings. A touched pre-existing booking `any` was safely typed, reducing the baseline error count by one.
 
 ## Owner-owned dirty state before Task 00
 
@@ -50,15 +50,16 @@
 - Settlement is conditional, transactional, idempotent, and recorded in the immutable ledger.
 - Provider/notification failure after commit does not roll back domain state.
 
-## Verified current gaps
+## Security state after A1
 
-- `/api/conversations` GET/POST accepts client `userId` and does not bind it to `auth()`.
-- `/api/messages` GET has no participant/session guard and trusts optional client viewer ID for read state.
-- `/api/messages` POST accepts client `senderId`; participant comparison does not prove the caller is that sender.
+- CLOSED: `/api/conversations` GET/POST scope identity to the server session; changing legacy `userId` values cannot enumerate another user's conversations or create/open a Booking conversation as that user.
+- CLOSED: `/api/messages` GET checks session plus conversation participation before returning data or changing read state.
+- CLOSED: `/api/messages` POST checks session plus participation and always persists the session user as sender.
+- CLOSED IN A1 SCOPE: Booking lifecycle/review actor IDs and private Booking list/receipt reads are session-bound; notification reads/read-state are session-bound; internal notification creation is no longer a server action; admin actions guard role at the action boundary.
 - Pusher conversation channels are documented as public; no authorization route exists.
 - Auto-complete selects `CONFIRMED` plus `endTime < now - 72h`, with no mode/fulfillment predicate.
 - Auto-complete's `CRON_SECRET` block is commented out; middleware exposes `/api/cron`.
-- Many legacy server actions accept actor-like user IDs; A1 must inventory and bind protected paths to session.
+- Other legacy action families outside the explicitly audited A1 boundaries still require case-by-case authorization review before they are reused for Learning Hub data.
 
 ## Current repository shape
 
@@ -67,7 +68,7 @@
 - Existing APIs: auth, conversations, messages, three cron routes, two test routes, and three VNPay routes.
 - Schema has 17 models; none are Learning Hub models and Booking has no Learning Hub fields.
 - Only manual migrations 001 skill category, 002 embedding readiness, and 003 withdrawal refund exist.
-- Package has no canonical typecheck or Learning Hub/regression test scripts; Task 01 owns them.
+- Canonical commands are `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, and `test:regression`.
 
 ## Environment names only
 
@@ -75,16 +76,24 @@
 
 ## Next task
 
-Task 01: create a minimal test harness and canonical package commands. It may add test infrastructure but must not implement Learning Hub features or weaken existing regressions. Required future commands are `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, and `test:regression`.
+Task A2 only: secure private realtime subscriptions and enforce production cron authentication. Do not start schema task B1 until A2's critical realtime/cron gates are closed.
 
 ## Completion contract
 
 For each task: check every requirement; list changed files and reasons; report schema/migration/API/visible behavior; report compatibility and rollback; run task and regression tests; distinguish pre-existing failures; update state/context/test/changelog; record exact next assumptions; end with PASS, PASS WITH KNOWN LIMITATION, or BLOCKED; then stop.
 
-## Task 01 completion and next assumption
+## Task 01 completion
 
 - Task 01 completed on 2026-09-12 with a dependency-free `node:test` plus existing `tsx` harness; no full test framework was added.
 - Canonical commands are `npm run typecheck`, `npm run test:learning-hub`, `npm run test:learning-hub:integration`, and `npm run test:regression`.
 - The integration smoke test imports legacy conversations, messages, and auto-complete routes without a server, database, provider, dotenv load, or secret output. Future database suites require an explicit `DISPOSABLE_TEST_DATABASE_URL` and must reject production/shared targets.
 - Current verification passed Prisma generate/validate, typecheck, unit, integration, legacy regression, and build. Lint remains the unchanged baseline failure: 78 errors and 32 warnings.
-- Next task is A1 only: bind protected legacy paths to server-session identity and add authorization/IDOR coverage before private Learning Hub data exists.
+
+## Task A1 completion
+
+- Task A1 completed with no schema, migration, database, settlement-policy, or visible UI change.
+- Existing chat callers may continue sending legacy identity fields, but the server ignores them for authorization and authorship.
+- The A1 suites cover missing session, spoofed query/body actor, nonparticipant IDOR/read-state, session-owned sender, legitimate list/read/send, admin role behavior, and Booking-to-chat association.
+- A2 may rely on `requireAuthenticatedUser` and `requireConversationParticipant` when authorizing private Pusher channels.
+- B1 may implement `LearningSpaceMembershipLookup` without changing the A1 server-session identity contract.
+- Remaining critical blockers before private Learning Hub payloads are R-002 public realtime and R-003 cron authentication.

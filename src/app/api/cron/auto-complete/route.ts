@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createNotification } from '@/actions/notifications'
+import { createNotification } from '@/lib/notifications'
 
 export async function GET(req: NextRequest) {
   // Keep the request available for the existing optional CRON_SECRET guard

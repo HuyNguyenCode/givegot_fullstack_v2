@@ -108,7 +108,7 @@ async function main() {
   const autoRoute = load('src/app/api/cron/auto-complete/route.ts', {
     'next/server': { NextResponse: response },
     '@/lib/prisma': { prisma: autoDb },
-    '@/actions/notifications': {
+    '@/lib/notifications': {
       createNotification: async (...args) => autoNotifications.push(args),
     },
   }, { Date: FixedDate })

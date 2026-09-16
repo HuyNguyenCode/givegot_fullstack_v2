@@ -2,14 +2,15 @@
 
 ## Checkpoint
 
-- Recorded: 2026-09-11, Asia/Saigon.
+- Recorded: 2026-09-12, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
-- HEAD before Task 00 authoring: `970a033af38ffc2580e3c5bce11fbd3834dc4244`.
-- Task: 00 Control plane and baseline.
+- HEAD before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
+- Task: A1 Server identity and authorization.
 - Status: PASS WITH KNOWN LIMITATION.
-- Production behavior: unchanged.
-- Schema/migration/API behavior: unchanged.
-- Learning Hub implementation: not started.
+- Production behavior: protected chat, scoped Booking/review, notification, and admin boundaries now use server-session identity.
+- Schema/migration behavior: unchanged; no database row was read or written by tests.
+- API behavior: chat success payloads are preserved; protected chat actions now return documented 401/403/404 outcomes.
+- Learning Hub implementation: reusable authorization foundation only; no Learning Hub model or feature UI.
 
 The four memory files the task asked to read first did not exist at baseline. Task 00 creates the complete memory set from the supplied references, the tracked playbook at HEAD, and current repository evidence.
 
@@ -158,8 +159,6 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 
 ## Next task assumptions
 
-- Task 01 starts from this checkpoint and creates the minimal test harness only.
-- A1 must precede private Learning Hub data because current chat routes and many server actions accept client identity.
 - A2 must enforce auto-complete cron authentication and private realtime before private artifacts.
 - B1 must not use `prisma db push` against shared/legacy data; it needs reviewed SQL, clean and representative legacy tests, and rollback evidence.
 - Existing baseline failures remain separate from task-introduced failures and must not be hidden by skips or weakened assertions.
@@ -185,3 +184,46 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 
 - Legacy routes are import-smoke tested; the five existing offline regressions continue to pass. No test connects to a database or external provider.
 - Rollback is removal of the Task 01 package scripts, test helpers/tests, smoke script, and Task 01 documentation entries. Preserve the four user-owned DOCX dirty-state entries unchanged.
+
+## Task A1 completion
+
+- Recorded: 2026-09-12, Asia/Saigon.
+- Starting worktree: clean according to `git status --short --untracked-files=all`; no pre-existing user change was modified.
+- Scope: reusable server identity/authorization plus concrete chat, Booking/review, notification, and admin spoofing paths named by A1.
+
+### Added and changed behavior
+
+- Added `server-authorization.ts` with `AuthorizationError`, `requireAuthenticatedUser`, `requireConversationParticipant`, `requireAdminUser`, and the schema-independent `LearningSpaceMembershipLookup`/`requireLearningSpaceMember` contract.
+- Conversations list/create and messages list/read/send obtain the actor from NextAuth `auth()`. Client `userId`, viewer ID, and `senderId` remain accepted only for UI compatibility and never authorize or select the sender.
+- Chat GET/POST endpoints document 401 unauthenticated, 403 nonparticipant, and 404 missing-object behavior. Authorized response bodies and the Booking mentee=userA/mentor=userB mapping remain unchanged.
+- Booking lifecycle, cancellation, no-show, Booking lists/receipts, and blind-review actions overwrite actor-like parameters with the server-session user before authorization. Blind-review author/receiver IDs come from the Booking.
+- Notification reads and read-state mutations scope to the session user. Internal notification creation moved to a non-server-action module so a browser cannot choose arbitrary recipients/content.
+- Previously unguarded admin user/report/skill/withdrawal reads and mutations now enforce the database-backed ADMIN role; generic report authorship comes from the session; absence resolution verifies that the report belongs to the supplied Booking.
+
+### Schema, migration, data, API, and visible UI
+
+- Schema/migration/database rows: unchanged. No Prisma migration or data-changing test ran.
+- API: only authorization/error behavior changed; successful conversation/message JSON shapes remain compatible.
+- UI: no component changes. Existing clients can continue sending legacy identity fields.
+- Realtime and cron security remain unchanged and belong to A2.
+
+### Verification
+
+- PASS: `npm run test:learning-hub` — 7 tests.
+- PASS: `npm run test:learning-hub:integration` — smoke plus 6 tests.
+- PASS: `npm run test:regression` — all five legacy scripts.
+- PASS: `npm run typecheck`.
+- PASS: targeted ESLint over all changed production and A1 test TypeScript files.
+- PASS: `npm run build`; 29 routes generated, with the pre-existing middleware deprecation warning.
+- KNOWN LIMITATION, pre-existing: full `npm run lint` reports 77 errors and 32 warnings. No changed production or A1 test TypeScript file has a lint finding; existing CommonJS regression scripts retain their documented lint errors.
+
+### Compatibility and rollback
+
+- Legacy Booking, cancellation, PA-02, quiz, skill, withdrawal, chat response, and Booking-to-chat association behavior passed.
+- Rollback is file-level reversion of the A1 source/test/documentation changes. There is no schema, migration, data, or provider rollback.
+
+### Next assumptions
+
+- A2 can use the session and conversation guards for private Pusher authorization and owns mandatory production `CRON_SECRET`.
+- B1 can implement the membership lookup interface after A2; it must remain additive/nullable and preserve legacy rows.
+- Do not treat client identity fields as actor identity in any future endpoint or action.

@@ -3,31 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { NotificationType } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
-
-// ==========================================
-// NOTIFICATION CREATION (Internal utility)
-// ==========================================
-
-/**
- * Creates a notification for a user.
- * Called internally by other server actions — not a direct client call.
- */
-export async function createNotification(
-  userId: string,
-  title: string,
-  message: string,
-  type: NotificationType,
-  link?: string
-): Promise<void> {
-  try {
-    await prisma.notification.create({
-      data: { userId, title, message, type, link },
-    })
-  } catch (error) {
-    // Non-fatal: notification failure must never break the primary action
-    console.error('[Notification] Failed to create notification:', error)
-  }
-}
+import { requireAuthenticatedUser } from '@/lib/server-authorization'
 
 // ==========================================
 // NOTIFICATION QUERIES
@@ -45,8 +21,10 @@ export type NotificationItem = {
 
 export async function getUserNotifications(userId: string): Promise<NotificationItem[]> {
   try {
+    void userId
+    const actor = await requireAuthenticatedUser()
     return await prisma.notification.findMany({
-      where: { userId },
+      where: { userId: actor.id },
       orderBy: { createdAt: 'desc' },
       take: 30,
       select: {
@@ -67,8 +45,10 @@ export async function getUserNotifications(userId: string): Promise<Notification
 
 export async function getUnreadCount(userId: string): Promise<number> {
   try {
+    void userId
+    const actor = await requireAuthenticatedUser()
     return await prisma.notification.count({
-      where: { userId, isRead: false },
+      where: { userId: actor.id, isRead: false },
     })
   } catch (error) {
     console.error('[Notification] Failed to count unread notifications:', error)
@@ -85,8 +65,10 @@ export async function markNotificationAsRead(
   userId: string
 ): Promise<{ success: boolean }> {
   try {
+    void userId
+    const actor = await requireAuthenticatedUser()
     await prisma.notification.updateMany({
-      where: { id: notificationId, userId },
+      where: { id: notificationId, userId: actor.id },
       data: { isRead: true },
     })
     revalidatePath('/', 'layout')
@@ -101,8 +83,10 @@ export async function markAllNotificationsAsRead(
   userId: string
 ): Promise<{ success: boolean }> {
   try {
+    void userId
+    const actor = await requireAuthenticatedUser()
     await prisma.notification.updateMany({
-      where: { userId, isRead: false },
+      where: { userId: actor.id, isRead: false },
       data: { isRead: true },
     })
     revalidatePath('/', 'layout')

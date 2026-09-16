@@ -34,6 +34,7 @@ export type WithdrawRequestWithMentor = {
  */
 export async function getWithdrawRequests(): Promise<WithdrawRequestWithMentor[]> {
   try {
+    if (!(await isAdmin())) return []
     const requests = await db.withdrawRequest.findMany({
       orderBy: { createdAt: 'desc' },
       include: {

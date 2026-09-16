@@ -46,7 +46,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 
 | Suite | Cases | Owner | Status |
 | --- | --- | --- | --- |
-| Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, M1 | PLACEHOLDER |
+| Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, M1 | A1 PASS for server session, chat IDOR, admin role/suspension, and future membership interface; A2/M1 cases remain |
 | Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1 | PLACEHOLDER |
 | Mode transitions | All allowed/forbidden transitions for LIVE, EXERCISE_REVIEW, HYBRID | E1, I1 | PLACEHOLDER |
 | Settlement | Double click, concurrent request/cron, dispute, rollback, ledger reconciliation | I2, I3 | PLACEHOLDER |
@@ -65,9 +65,9 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | `npm run build` | BASELINE PASS; middleware deprecation warning |
 | Five `scripts/test-*.cjs` offline regressions | BASELINE PASS; exact results in `IMPLEMENTATION_STATE.md` |
 
-## Future canonical commands
+## Canonical commands
 
-Task 01 must create and self-test these package scripts before later tasks rely on them: `npm run typecheck`, `npm run test:learning-hub`, `npm run test:learning-hub:integration`, and `npm run test:regression`. Database-writing tests require an explicit disposable database URL and must never print secrets.
+Task 01 created and self-tested these package scripts before later tasks rely on them: `npm run typecheck`, `npm run test:learning-hub`, `npm run test:learning-hub:integration`, and `npm run test:regression`. Database-writing tests require an explicit disposable database URL and must never print secrets.
 
 ## Task 01 canonical commands
 
@@ -79,3 +79,17 @@ Run these exact commands from the repository root:
 - `npm run test:regression`
 
 The unit suite uses `node:test` via the existing `tsx` dependency. The integration command first runs `scripts/test-learning-hub-smoke.ts`, which imports legacy routes and prints prerequisite names only. It does not load dotenv, connect to Prisma, call providers, or write data. Future database-writing tests require an explicit `DISPOSABLE_TEST_DATABASE_URL`; they must reject production/shared URLs and never print secrets.
+
+## Task A1 evidence
+
+| Test/command | Result |
+| --- | --- |
+| `tests/learning-hub/unit/server-authorization.test.ts` | PASS: 401 missing session; participant 403/404; admin USER/suspended denial and ADMIN success; future membership lookup uses session ID |
+| `tests/learning-hub/integration/chat-authorization.test.ts` | PASS: spoofed conversation query blocked; nonparticipant cannot list/read/mark-read; sender/read viewer from session; legitimate list/read/send; Booking-to-chat association |
+| `npm run test:learning-hub` | PASS: 7 tests |
+| `npm run test:learning-hub:integration` | PASS: import smoke plus 6 tests |
+| `npm run test:regression` | PASS: all five legacy regression scripts |
+| `npm run typecheck` | PASS |
+| Targeted ESLint on changed production/A1 test TypeScript | PASS |
+| `npm run lint` | KNOWN PRE-EXISTING LIMITATION: 77 errors, 32 warnings; no changed production/A1 test TypeScript finding |
+| `npm run build` | PASS; existing middleware deprecation warning |

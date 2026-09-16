@@ -11,9 +11,10 @@ import {
   ReportResolutionType,
 } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
-import { createNotification } from './notifications'
+import { createNotification } from '@/lib/notifications'
 import { verifyMeetingAttendance } from '@/lib/google-meet'
 import { isAdmin } from '@/lib/admin'
+import { requireAuthenticatedUser } from '@/lib/server-authorization'
 import { refreshApprovedSkillEmbedding } from '@/lib/skill-embedding'
 import { sendEmail, getAppUrl, formatEmailDateTime } from '@/lib/email'
 import NewMatchEmail from '@/emails/NewMatchEmail'
@@ -25,6 +26,16 @@ import ReportResolutionEmail from '@/emails/ReportResolutionEmail'
 
 export async function getAdminStats() {
   try {
+    if (!(await isAdmin())) {
+      return {
+        totalUsers: 0,
+        totalBookings: 0,
+        totalGivePoints: 0,
+        pendingSkills: 0,
+        pendingReports: 0,
+        pendingWithdrawals: 0,
+      }
+    }
     const [totalUsers, totalBookings, totalGivePoints, pendingSkills, pendingReports, pendingWithdrawals] = await Promise.all([
       prisma.user.count(),
       prisma.booking.count(),
@@ -70,6 +81,7 @@ export async function getAdminStats() {
 
 export async function getAllUsers() {
   try {
+    if (!(await isAdmin())) return []
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -102,6 +114,7 @@ export async function getAllUsers() {
 
 export async function updateUserRole(userId: string, role: UserRole) {
   try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
     await prisma.user.update({
       where: { id: userId },
       data: { role }
@@ -117,6 +130,7 @@ export async function updateUserRole(userId: string, role: UserRole) {
 
 export async function adjustUserPoints(userId: string, amount: number, reason: string) {
   try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
     // Update user points
     const user = await prisma.user.update({
       where: { id: userId },
@@ -165,6 +179,7 @@ export async function updateUser(userId: string, data: {
   isSuspended?: boolean
 }) {
   try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
     await prisma.user.update({
       where: { id: userId },
       data
@@ -180,6 +195,7 @@ export async function updateUser(userId: string, data: {
 
 export async function toggleUserSuspension(userId: string, suspend: boolean) {
   try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
     await prisma.user.update({
       where: { id: userId },
       data: { isSuspended: suspend }
@@ -198,6 +214,7 @@ export async function toggleUserSuspension(userId: string, suspend: boolean) {
 
 export async function deleteUser(userId: string) {
   try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
     // Check if user has active bookings
     const activeBookings = await prisma.booking.count({
       where: {
@@ -234,6 +251,7 @@ export async function deleteUser(userId: string) {
 
 export async function getAllReports() {
   try {
+    if (!(await isAdmin())) return []
     const reports = await prisma.report.findMany({
       include: {
         reporter: {
@@ -356,6 +374,7 @@ export async function getAttendanceEvidence(
 
 export async function resolveReport(reportId: string) {
   try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
     await prisma.report.update({
       where: { id: reportId },
       data: {
@@ -422,6 +441,10 @@ export async function resolveAbsenceReport({
   adminNotes,
 }: ResolveAbsenceReportInput): Promise<ResolveAbsenceReportResult> {
   try {
+    if (!(await isAdmin())) {
+      return { success: false, message: 'Unauthorized' }
+    }
+
     // ── 1. Fetch report + booking (with both parties) ─────────────────────
     const [report, booking] = await Promise.all([
       prisma.report.findUnique({ where: { id: reportId } }),
@@ -442,6 +465,9 @@ export async function resolveAbsenceReport({
     }
     if (!booking) {
       return { success: false, message: 'Không tìm thấy buổi học liên quan đến báo cáo này.' }
+    }
+    if (report.bookingId !== booking.id) {
+      return { success: false, message: 'Báo cáo không thuộc buổi học đã chọn.' }
     }
     if (TERMINAL_BOOKING_STATUSES.includes(booking.status)) {
       return {
@@ -648,9 +674,11 @@ export async function resolveAbsenceReport({
 
 export async function createReport(reporterId: string, reportedUserId: string, reason: string) {
   try {
+    void reporterId
+    const actor = await requireAuthenticatedUser()
     await prisma.report.create({
       data: {
-        reporterId,
+        reporterId: actor.id,
         reportedUserId,
         reason
       }
@@ -948,6 +976,7 @@ export async function updateSkill(skillId: string, data: {
 
 export async function deleteSkill(skillId: string) {
   try {
+    if (!(await isAdmin())) return { success: false, message: 'Unauthorized' }
     // Check if any users are using this skill
     const usageCount = await prisma.userSkill.count({
       where: { skillId }

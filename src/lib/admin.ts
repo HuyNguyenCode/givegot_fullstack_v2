@@ -1,5 +1,5 @@
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { requireAdminUser } from '@/lib/server-authorization'
 
 /**
  * Check if the current user is an admin
@@ -7,20 +7,9 @@ import { prisma } from '@/lib/prisma'
  */
 export async function isAdmin(): Promise<boolean> {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.email) {
-      return false
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { role: true }
-    })
-
-    return user?.role === 'ADMIN'
-  } catch (error) {
-    console.error('Failed to check admin status:', error)
+    await requireAdminUser()
+    return true
+  } catch {
     return false
   }
 }

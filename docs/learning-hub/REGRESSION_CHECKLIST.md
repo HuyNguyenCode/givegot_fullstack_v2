@@ -71,3 +71,12 @@ The following pre-existing entries are user-owned: two deleted tracked DOCX file
 - `npm run test:regression`
 
 The baseline smoke command is `npm run test:learning-hub:integration`. It imports the legacy conversations, messages, and auto-complete route modules without starting a server, touching Prisma, or calling external providers. It records only prerequisite names: Node.js, installed dependencies, and (for future database suites) `DISPOSABLE_TEST_DATABASE_URL`; it never prints environment values or secrets.
+
+## Task A1 regression evidence
+
+- Authentication: server-session 401 and database-backed admin USER/suspended/ADMIN cases pass.
+- Chat: spoofed list query, nonparticipant open/read-state, session sender/viewer, legitimate participant list/read/send, and Booking-to-chat association pass.
+- Booking lifecycle: actor-like Booking/review parameters are replaced by session identity; cancellation and PA-02 scripts pass unchanged.
+- Notifications: reads/read-state use session identity; provider-independent internal writes remain best effort; PA-02 passes.
+- Admin: action-level guards cover user/report/skill/withdrawal boundaries; skill and withdrawal authorization regressions pass.
+- Full legacy regression command passes all five scripts. No database or external provider was used.

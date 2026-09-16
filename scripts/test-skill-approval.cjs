@@ -92,7 +92,8 @@ async function main() {
   })
   const actions = load('src/actions/admin.ts', {
     '@/lib/prisma': { prisma: db }, '@prisma/client': enums, 'next/cache': { revalidatePath() {} },
-    './notifications': { createNotification: async () => { notifications++; assert.equal(skill.embeddingStatus, 'READY') } },
+    '@/lib/notifications': { createNotification: async () => { notifications++; assert.equal(skill.embeddingStatus, 'READY') } },
+    '@/lib/server-authorization': { requireAuthenticatedUser: async () => ({ id: 'admin-user' }) },
     '@/lib/google-meet': {}, '@/lib/admin': { isAdmin: async () => admin },
     '@/lib/skill-embedding': helper, '@/lib/email': { getAppUrl: () => 'http://test' },
     '@/emails/NewMatchEmail': {}, '@/emails/ReportResolutionEmail': {},
