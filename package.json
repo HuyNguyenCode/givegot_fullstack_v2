@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test:learning-hub": "tsx --test tests/learning-hub/unit/*.test.ts",
     "test:learning-hub:integration": "tsx scripts/test-learning-hub-smoke.ts && tsx --test tests/learning-hub/integration/*.test.ts",
+    "test:learning-hub:migration": "tsx scripts/test-learning-hub-migration.ts",
     "test:regression": "node scripts/test-cancellation-preview.cjs && node scripts/test-pa02-deadlines.cjs && node scripts/test-quiz-publication.cjs && node scripts/test-skill-approval.cjs && node scripts/test-withdrawal-rejection.cjs",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

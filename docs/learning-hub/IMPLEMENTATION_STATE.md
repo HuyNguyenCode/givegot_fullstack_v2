@@ -5,12 +5,12 @@
 - Recorded: 2026-09-16, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
 - HEAD before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Task: A2 Realtime and cron security.
+- Task: B1 Learning Hub domain schema.
 - Status: PASS WITH KNOWN LIMITATION.
-- Production behavior: chat and user-targeted realtime use authorized private channels; sensitive cron routes require production `CRON_SECRET`.
-- Schema/migration behavior: unchanged; no database row was read or written by tests.
-- API behavior: added session-backed `POST /api/pusher/auth`; cron business responses are unchanged after successful authentication.
-- Learning Hub implementation: secure realtime/cron foundation only; no Learning Hub model, migration, or feature UI.
+- Production behavior: unchanged; B1 adds schema/migration only and does not enable Learning Hub routes, settlement, or providers.
+- Schema/migration behavior: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
+- API behavior: unchanged. Future Learning Hub services must continue to derive actor identity from the server session.
+- Learning Hub implementation: domain persistence only; no UI or business service is enabled.
 
 The four memory files the task asked to read first did not exist at baseline. Task 00 creates the complete memory set from the supplied references, the tracked playbook at HEAD, and current repository evidence.
 
@@ -69,11 +69,11 @@ There is no current `/learning` or `/api/learning` route.
 
 ## Current schema
 
-`prisma/schema.prisma` has 462 lines and validates. Current models are User, Skill, UserSkill, AvailableSlot, Booking, Review, MentorReview, Account, Session, VerificationToken, TransactionLog, TrustHistory, Report, Notification, Conversation, Message, and WithdrawRequest.
+`prisma/schema.prisma` validates with 27 models: the 17 legacy models plus LearningSpace, LearningSpaceMember, LearningTopic, LearningInvite, LearningResource, LearningTask, Submission, SubmissionReview, LearningNote, and LearningActivity.
 
-Booking currently has mentor/mentee, optional unique slot, start/end time, BookingStatus, note, meeting URL, review/transaction/conversation relations, blind-review state, absence-report fields, and reports. It has no LearningSpace, topic, learning mode, objective, definition of done, FulfillmentStatus, `deliveredAt`, or `acceptedAt` fields.
+Booking keeps its legacy mentor/mentee, slot, schedule, BookingStatus, note, meeting, review, transaction, conversation, blind-review, absence, and report fields. B1 adds nullable `learningSpaceId`, `topicId`, `learningMode`, `objective`, `definitionOfDone`, `fulfillmentStatus`, `deliveredAt`, and `acceptedAt` fields.
 
-Current BookingStatus values are `PENDING`, `CONFIRMED`, `COMPLETED`, `CANCELLED`, `MISSED`, and `DISPUTED`. FulfillmentStatus does not exist. No Learning Hub model exists.
+BookingStatus remains exactly `PENDING`, `CONFIRMED`, `COMPLETED`, `CANCELLED`, `MISSED`, and `DISPUTED`. FulfillmentStatus is a separate nullable lifecycle with `NOT_STARTED`, `IN_PROGRESS`, `DELIVERED`, `REVISION_REQUESTED`, `ACCEPTED`, and `SETTLED`.
 
 The data source is PostgreSQL with `DATABASE_URL`, `DIRECT_URL`, and the pgvector extension. The repository uses Prisma 5.22.0 and notes `prisma db push`; it has no standard `prisma/migrations` history.
 
@@ -85,7 +85,7 @@ Only `prisma/migrations-manual/` exists:
 - `002_skill_embedding_readiness.sql`: additive BR-11 readiness fields, audit backup, vector eligibility check; explicitly reviewed/manual.
 - `003_withdrawal_rejection_atomic_refund.sql`: adds `REFUND_WITHDRAWAL_REJECTED` to TransactionType.
 
-No Task 00 migration was created or applied.
+Migration 004 adds the B1 domain additively and has paired executable rollback SQL plus a production rollback note. No ambiguous historical row is backfilled.
 
 ## Current scripts
 
@@ -271,3 +271,47 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 - B1 may add only reviewed additive/nullable schema with representative legacy fixtures and no shared `db push`.
 - B2 can supply the concrete LearningSpace membership authorizer before any LearningSpace realtime event is enabled.
 - I1-I3, not A2, own mode-aware fulfillment and settlement timing.
+
+## Task B1 completion
+
+- Recorded: 2026-09-16, Asia/Saigon.
+- Starting worktree: clean according to `git status --short --untracked-files=all`; no pre-existing user change was present or modified.
+- Status: PASS WITH KNOWN LIMITATION.
+- Scope: schema, reviewed migration, rollback, fixtures, and verification only.
+
+### Added and changed behavior
+
+- Added the ten approved Learning Hub models and supporting enums. LearningSpace is persistent across Bookings; `primarySkillId` is mutable; LearningTopic has a free-form normalized label plus optional canonical Skill relation; archive/soft-delete state preserves history.
+- LearningSpaceMember uses composite space/user identity and intentionally has no mentor/learner role or database two-member cap. There is no pair-plus-primary-skill unique constraint; B2 owns transactional active-member enforcement and reuse suggestions.
+- Booking received eight nullable Learning Hub fields. Old rows remain valid and unmodified; BookingStatus retains all six legacy labels and meanings.
+- Relations specify `Restrict` where domain/audit history must prevent hard deletion and `SetNull` where an optional reference may be detached without deleting the retained record. Query-path and lifecycle indexes are explicit.
+- Submission and SubmissionReview enforce one current row per task/submission for MVP. LearningActivity deduplicates on `eventKey`; no mutable LearningHistory table was added.
+
+### Migration, rollback, and data
+
+- Added `004_learning_hub_domain_schema.sql`, matching Prisma's HEAD-to-working-schema diff. It is additive, transactional, contains no `UPDATE "Booking"`, and never alters BookingStatus.
+- Added executable rollback SQL plus a rollback note requiring writer pause and export of new-domain tables/columns before a production downgrade.
+- Added minimal pre-B1 schema and representative legacy fixtures covering PENDING, CONFIRMED, COMPLETED, CANCELLED, MISSED, and DISPUTED Bookings.
+- Credential-free in-memory PostgreSQL execution passed an empty legacy baseline, the representative legacy copy, old Booking queries, same-pair/two-space insertion, archived space/topic reads, no topic-to-Skill auto-publication, nullable legacy fields, unchanged BookingStatus, and rollback rehearsal. The temporary runtime was removed; configured remote databases were never contacted.
+
+### API, UI, identity, settlement, and providers
+
+- API and visible UI: unchanged. No `/learning` or `/api/learning` route was added.
+- Identity: no service boundary was added in B1. B2 must use `auth()`/the existing server authorization contract and must never trust a client actor ID.
+- Settlement, cron timing, GivePoint, public Review/Trust, storage, Calendar/Meet, email, and realtime behavior: unchanged.
+
+### Verification
+
+- PASS: `npm run db:generate` using Prisma binary-engine generation because the already-running dev server held the library DLL; generated Prisma Client 5.22.0.
+- PASS: `npx prisma validate`; Prisma's generated schema diff matches migration 004.
+- PASS: `npm run typecheck` and B1 schema/migration contract tests.
+- PASS: clean and representative legacy migration paths plus rollback rehearsal on isolated in-memory PostgreSQL.
+- PASS: `npm run test:learning-hub:integration` (12 tests), `npm run test:regression` (all five scripts), and production build (30 routes).
+- KNOWN PRE-EXISTING LIMITATION: full lint remains the documented 77 errors and 32 warnings; B1 changed TypeScript is checked separately.
+
+### Compatibility, rollback, and next assumptions
+
+- Legacy Booking queries, dashboards/history build surface, cancellation, PA-02, quiz, Skill, withdrawal, chat, realtime, cron, and ledger behavior remain compatible.
+- Rollback before Learning Hub writes uses the paired SQL. After writes, pause writers and export the ten tables/eight Booking fields first; roll-forward is preferred.
+- B2 may implement only server-session-backed LearningSpace services, including a transaction/lock that rejects a third active member. It must not add a hard pair/skill unique or auto-create Skill rows.
+- Do not begin UI, invite delivery, storage/provider integration, fulfillment, or settlement automatically.

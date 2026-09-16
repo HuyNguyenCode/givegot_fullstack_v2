@@ -3,7 +3,7 @@
 generator client {
   provider        = "prisma-client-js"
   // Bật tính năng extension để dùng được pgvector cho AI
-  previewFeatures = ["postgresqlExtensions"] 
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
@@ -11,65 +11,81 @@ datasource db {
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL") // Dùng cho Supabase
   // BẮT BUỘC: Kích hoạt extension vector của PostgreSQL
-  extensions = [vector] 
+  extensions = [vector]
 }
 
 // 1. Bảng User (UPDATED: NextAuth compatible + Admin role)
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  name       String?
-  avatarUrl  String?
-  bio        String?  @db.Text 
-  
+  id        String  @id @default(uuid())
+  email     String  @unique
+  name      String?
+  avatarUrl String?
+  bio       String? @db.Text
+
   // NextAuth fields
   emailVerified DateTime?
   image         String?
-  password      String?  // For credentials provider (hashed)
-  
+  password      String? // For credentials provider (hashed)
+
   // Admin & Security
-  role         UserRole @default(USER)
-  isSuspended  Boolean  @default(false)
-  
+  role        UserRole @default(USER)
+  isSuspended Boolean  @default(false)
+
   // Time-banking logic
-  givePoints   Int @default(3)
-  
+  givePoints Int @default(3)
+
   // Trust Score system
-  trustScore   Int @default(50)
-  
+  trustScore Int @default(50)
+
   // --- TRƯỜNG DỮ LIỆU MỚI CHO AI SEMANTIC MATCHING ---
   // Lưu tọa độ Vector (chuỗi số do Gemini tạo ra) từ kỹ năng DẠY và HỌC
   // Dimension 768 là chuẩn đầu ra của mô hình Gemini text-embedding-004
-  teachingEmbedding Unsupported("vector(768)")? 
-  learningEmbedding Unsupported("vector(768)")? 
-  
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  teachingEmbedding Unsupported("vector(768)")?
+  learningEmbedding Unsupported("vector(768)")?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Quan hệ
-  skills          UserSkill[] 
-  mentoring       Booking[]  @relation("MentorBooking") 
-  learning        Booking[]  @relation("MenteeBooking") 
-  reviewsReceived Review[]   @relation("ReviewReceiver") 
-  reviewsWritten  Review[]   @relation("ReviewAuthor") // ĐÃ SỬA: Thêm để truy vấn được người viết review
+  skills          UserSkill[]
+  mentoring       Booking[]        @relation("MentorBooking")
+  learning        Booking[]        @relation("MenteeBooking")
+  reviewsReceived Review[]         @relation("ReviewReceiver")
+  reviewsWritten  Review[]         @relation("ReviewAuthor") // ĐÃ SỬA: Thêm để truy vấn được người viết review
   availableSlots  AvailableSlot[] // NEW: Mentor's available time slots
   transactions    TransactionLog[] // NEW: Point transaction history
   reportsCreated  Report[]         @relation("ReportCreator") // NEW: Reports filed by this user
-  reportsReceived Report[]         @relation("ReportedUser")  // NEW: Reports against this user
+  reportsReceived Report[]         @relation("ReportedUser") // NEW: Reports against this user
   trustHistory    TrustHistory[]
-  
+
   // NextAuth relations
-  accounts          Account[]
-  sessions          Session[]
-  notifications     Notification[]
+  accounts      Account[]
+  sessions      Session[]
+  notifications Notification[]
 
   // Messaging relations
-  conversationsAsA  Conversation[]   @relation("ConversationUserA")
-  conversationsAsB  Conversation[]   @relation("ConversationUserB")
-  sentMessages      Message[]
+  conversationsAsA Conversation[] @relation("ConversationUserA")
+  conversationsAsB Conversation[] @relation("ConversationUserB")
+  sentMessages     Message[]
 
   // Fiat payment relations
-  withdrawRequests  WithdrawRequest[]
+  withdrawRequests WithdrawRequest[]
+
+  // Learning Hub relations. Membership deliberately carries no permanent
+  // mentor/learner role; exchange-specific roles belong to Booking/Task.
+  learningSpaceMemberships  LearningSpaceMember[]
+  learningSpacesCreated     LearningSpace[]       @relation("LearningSpaceCreator")
+  learningSpacesUpdated     LearningSpace[]       @relation("LearningSpaceUpdater")
+  learningTopicsCreated     LearningTopic[]
+  learningInvitesSent       LearningInvite[]      @relation("LearningInviteInviter")
+  learningInvitesAccepted   LearningInvite[]      @relation("LearningInviteAccepter")
+  learningResourcesUploaded LearningResource[]
+  learningTasksCreated      LearningTask[]        @relation("LearningTaskCreator")
+  learningTasksAssigned     LearningTask[]        @relation("LearningTaskAssignee")
+  learningSubmissions       Submission[]
+  learningSubmissionReviews SubmissionReview[]
+  learningNotes             LearningNote[]
+  learningActivities        LearningActivity[]
 }
 
 // Admin: User Role Enum
@@ -80,23 +96,29 @@ enum UserRole {
 
 // 2. Bảng Skill (UPDATED: Admin approval shadow)
 model Skill {
-  id        String        @id @default(uuid())
-  name      String        @unique 
-  slug      String        @unique 
-  category  SkillCategory @default(OTHER) // NEW: was String, now a fixed enum (see migration below)
-  embedding Unsupported("vector(768)")? // NEW: Granular skill-level embedding
-  status    SkillStatus   @default(PENDING) // Moderation, independent from AI readiness
-  embeddingStatus SkillEmbeddingStatus @default(NOT_STARTED)
-  embeddingVersion Int @default(0)
-  embeddingAttempts Int @default(0)
-  embeddingToken String?
+  id                 String                      @id @default(uuid())
+  name               String                      @unique
+  slug               String                      @unique
+  category           SkillCategory               @default(OTHER) // NEW: was String, now a fixed enum (see migration below)
+  embedding          Unsupported("vector(768)")? // NEW: Granular skill-level embedding
+  status             SkillStatus                 @default(PENDING) // Moderation, independent from AI readiness
+  embeddingStatus    SkillEmbeddingStatus        @default(NOT_STARTED)
+  embeddingVersion   Int                         @default(0)
+  embeddingAttempts  Int                         @default(0)
+  embeddingToken     String?
   embeddingStartedAt DateTime?
-  embeddingError String?
-  
-  createdAt DateTime      @default(now())
-  updatedAt DateTime?     @updatedAt
-  
-  users     UserSkill[]
+  embeddingError     String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  users UserSkill[]
+
+  // Learning Hub topics may map to a canonical Skill, but creating a topic
+  // never creates or publishes a Skill.
+  primaryLearningSpaces LearningSpace[]  @relation("LearningSpacePrimarySkill")
+  learningTopics        LearningTopic[]
+  learningInvites       LearningInvite[]
 }
 
 enum SkillEmbeddingStatus {
@@ -137,29 +159,29 @@ model UserSkill {
   skillId    String
   type       SkillType @default(WANT)
   isVerified Boolean   @default(false) // AI Quiz verification status
-  roadmap    Json?     // NEW: AI-generated learning roadmap (cached)
+  roadmap    Json? // NEW: AI-generated learning roadmap (cached)
 
-  user       User      @relation(fields: [userId], references: [id])
-  skill      Skill     @relation(fields: [skillId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  skill Skill @relation(fields: [skillId], references: [id])
 
   // ĐÃ SỬA: Đảm bảo 1 người có thể vừa GIVE vừa WANT cùng 1 skill (nếu cần)
-  @@unique([userId, skillId, type]) 
+  @@unique([userId, skillId, type])
 }
 
 // 3. Bảng AvailableSlot ( NEW: Calendar-based availability)
 model AvailableSlot {
-  id        String    @id @default(uuid())
-  mentorId  String
-  
+  id       String @id @default(uuid())
+  mentorId String
+
   startTime DateTime
   endTime   DateTime
-  isBooked  Boolean   @default(false) //  CRITICAL: Concurrency control flag
-  
-  mentor    User      @relation(fields: [mentorId], references: [id], onDelete: Cascade)
-  booking   Booking?  //  1-to-1: One slot can only have one booking
-  
-  createdAt DateTime  @default(now())
-  
+  isBooked  Boolean  @default(false) //  CRITICAL: Concurrency control flag
+
+  mentor  User     @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  booking Booking? //  1-to-1: One slot can only have one booking
+
+  createdAt DateTime @default(now())
+
   //  Prevent overlapping slots for the same mentor
   @@unique([mentorId, startTime, endTime])
   @@index([mentorId, isBooked]) //  Optimize queries for available slots
@@ -167,27 +189,41 @@ model AvailableSlot {
 
 // 4. Bảng Booking ( UPDATED: Now references AvailableSlot)
 model Booking {
-  id        String        @id @default(uuid())
-  
-  mentorId  String
-  menteeId  String
-  slotId    String?       @unique //  NEW: Link to the booked slot (nullable for backward compatibility)
-  
-  mentor    User          @relation("MentorBooking", fields: [mentorId], references: [id])
-  mentee    User          @relation("MenteeBooking", fields: [menteeId], references: [id])
-  slot      AvailableSlot? @relation(fields: [slotId], references: [id]) //  NEW: 1-to-1 relation
-  
+  id String @id @default(uuid())
+
+  mentorId String
+  menteeId String
+  slotId   String? @unique //  NEW: Link to the booked slot (nullable for backward compatibility)
+
+  mentor User           @relation("MentorBooking", fields: [mentorId], references: [id])
+  mentee User           @relation("MenteeBooking", fields: [menteeId], references: [id])
+  slot   AvailableSlot? @relation(fields: [slotId], references: [id]) //  NEW: 1-to-1 relation
+
   startTime  DateTime
   endTime    DateTime
-  status     BookingStatus @default(PENDING) 
-  note       String?       @db.Text 
-  meetingUrl String?       // Google Meet link, populated when booking is CONFIRMED
-  
-  createdAt DateTime      @default(now())
+  status     BookingStatus @default(PENDING)
+  note       String?       @db.Text
+  meetingUrl String? // Google Meet link, populated when booking is CONFIRMED
 
-  review        Review?
-  transactions  TransactionLog[] //  NEW: Audit trail
-  conversation  Conversation?    //  Messaging: one conversation per booking
+  // Learning Hub is additive. Every field remains nullable so legacy rows
+  // retain their existing scheduling/attendance semantics without backfill.
+  learningSpaceId   String?
+  topicId           String?
+  learningMode      LearningMode?
+  objective         String?            @db.Text
+  definitionOfDone  String?            @db.Text
+  fulfillmentStatus FulfillmentStatus?
+  deliveredAt       DateTime?
+  acceptedAt        DateTime?
+
+  learningSpace LearningSpace? @relation(fields: [learningSpaceId], references: [id], onDelete: SetNull)
+  topic         LearningTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  review       Review?
+  transactions TransactionLog[] //  NEW: Audit trail
+  conversation Conversation? //  Messaging: one conversation per booking
 
   // Two-way Blind Review (Twin Table Strategy — kept separate from `Review` to avoid breaking changes)
   mentorReview     MentorReview?
@@ -203,24 +239,33 @@ model Booking {
   // Reverse side of Report.booking — a booking may accumulate multiple
   // reports (e.g. mentee's no-show dispute AND mentor's absence report).
   reports Report[]
+
+  learningResources  LearningResource[]
+  learningTasks      LearningTask[]
+  learningNotes      LearningNote[]
+  learningActivities LearningActivity[]
+
+  @@index([learningSpaceId, createdAt])
+  @@index([topicId])
+  @@index([fulfillmentStatus, deliveredAt])
 }
 
 // 5. Bảng Review
 model Review {
-  id         String   @id @default(uuid())
-  bookingId  String   @unique 
-  receiverId String   
-  authorId   String   
-  
-  rating     Int      
-  comment    String?  @db.Text
-  isHidden   Boolean  @default(true)  // Trust moderation: hidden until trust system approves
-  
-  booking    Booking  @relation(fields: [bookingId], references: [id])
-  receiver   User     @relation("ReviewReceiver", fields: [receiverId], references: [id])
-  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id])
-  
-  createdAt  DateTime @default(now())
+  id         String @id @default(uuid())
+  bookingId  String @unique
+  receiverId String
+  authorId   String
+
+  rating   Int
+  comment  String? @db.Text
+  isHidden Boolean @default(true) // Trust moderation: hidden until trust system approves
+
+  booking  Booking @relation(fields: [bookingId], references: [id])
+  receiver User    @relation("ReviewReceiver", fields: [receiverId], references: [id])
+  author   User    @relation("ReviewAuthor", fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 // 5b. Bảng MentorReview (NEW: Two-way Blind Review — mentor's review of the mentee)
@@ -233,16 +278,35 @@ model MentorReview {
   comment   String?  @db.Text
   createdAt DateTime @default(now())
 
-  booking   Booking  @relation(fields: [bookingId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id])
 }
 
 enum BookingStatus {
-  PENDING   
-  CONFIRMED 
-  COMPLETED 
+  PENDING
+  CONFIRMED
+  COMPLETED
   CANCELLED
-  MISSED    // Mentor confirmed absent by attendance API — mentee refunded
-  DISPUTED  // Inconclusive attendance data — funds frozen, pending admin review
+  MISSED // Mentor confirmed absent by attendance API — mentee refunded
+  DISPUTED // Inconclusive attendance data — funds frozen, pending admin review
+}
+
+// Learning mode changes obligations and completion evidence; it is separate
+// from BookingStatus and nullable on legacy Bookings.
+enum LearningMode {
+  LIVE
+  EXERCISE_REVIEW
+  HYBRID
+}
+
+// Fulfillment tracks learning delivery only. BookingStatus continues to own
+// scheduling, attendance, cancellation, no-show, and dispute meaning.
+enum FulfillmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DELIVERED
+  REVISION_REQUESTED
+  ACCEPTED
+  SETTLED
 }
 
 // 6. NextAuth Models ( NEW: Authentication)
@@ -285,57 +349,57 @@ model VerificationToken {
 model TransactionLog {
   id          String            @id @default(uuid())
   userId      String
-  amount      Int               // positive = credited, negative = debited (in GivePoints)
+  amount      Int // positive = credited, negative = debited (in GivePoints)
   type        TransactionType
   status      TransactionStatus @default(SUCCESS) // PENDING until payment gateway confirms
   bookingId   String?
-  referenceId String?           // Payment gateway transaction ID (VNPay / Momo / Stripe)
+  referenceId String? // Payment gateway transaction ID (VNPay / Momo / Stripe)
 
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  booking   Booking?            @relation(fields: [bookingId], references: [id])
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
 
-  createdAt DateTime            @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
-  @@index([status])             // Efficient PENDING reconciliation queries
+  @@index([status]) // Efficient PENDING reconciliation queries
 }
 
 enum TransactionType {
-  BOOKING_CREATED           // -1 point (mentee books)
-  BOOKING_COMPLETED         // +1 point (mentor earns)
-  BOOKING_CANCELLED         // +1 point (refund to mentee)
-  BOOKING_DECLINED          // +1 point (refund to mentee)
-  INITIAL_BONUS             // +3 points (new user bonus)
-  ADMIN_ADJUSTMENT          // Manual adjustment
+  BOOKING_CREATED // -1 point (mentee books)
+  BOOKING_COMPLETED // +1 point (mentor earns)
+  BOOKING_CANCELLED // +1 point (refund to mentee)
+  BOOKING_DECLINED // +1 point (refund to mentee)
+  INITIAL_BONUS // +3 points (new user bonus)
+  ADMIN_ADJUSTMENT // Manual adjustment
   CANCELLATION_COMPENSATION // +1 point to mentor (late cancellation by mentee)
-  TOPUP                     // Fiat → Points (top-up via payment gateway)
-  CASHOUT                   // Points → Fiat (cash-out / withdrawal request)
+  TOPUP // Fiat → Points (top-up via payment gateway)
+  CASHOUT // Points → Fiat (cash-out / withdrawal request)
   REFUND_WITHDRAWAL_REJECTED // +points returned atomically when admin rejects cash-out
-  REFUND_NO_SHOW            // +1 point to mentee (mentor confirmed absent by API)
-  FRAUD_DETECTION           // +1 point to mentor (mentee's no-show report proved fraudulent)
+  REFUND_NO_SHOW // +1 point to mentee (mentor confirmed absent by API)
+  FRAUD_DETECTION // +1 point to mentor (mentee's no-show report proved fraudulent)
   ADMIN_RESOLVED_MENTEE_ABSENT // +1 point to mentor (admin manually confirmed mentee no-show)
   ADMIN_RESOLVED_MENTOR_ABSENT // +1 point to mentee (admin manually confirmed mentor no-show)
-  ADMIN_RESOLVED_SYSTEM_ERROR  // +1 point to mentee (admin ruled no-fault dispute — full refund)
+  ADMIN_RESOLVED_SYSTEM_ERROR // +1 point to mentee (admin ruled no-fault dispute — full refund)
 }
 
 enum TransactionStatus {
   PENDING // Awaiting payment gateway confirmation
   SUCCESS // Confirmed and applied to wallet
-  FAILED  // Payment failed or reversed — points NOT credited/debited
+  FAILED // Payment failed or reversed — points NOT credited/debited
 }
 
 // 8. TrustHistory Model (NEW: Trust Score audit log)
 model TrustHistory {
-  id            String   @id @default(uuid())
+  id            String @id @default(uuid())
   userId        String
   previousScore Int
   newScore      Int
-  reason        String   // Human-readable explanation of what drove the change
-  
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime @default(now())
-  
+  reason        String // Human-readable explanation of what drove the change
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
   @@index([userId, createdAt])
 }
 
@@ -353,16 +417,16 @@ model Report {
   // report flows so an admin can act on GivePoints/Trust Score directly
   // from this ticket via `resolveAbsenceReport`.
   bookingId      String?
-  booking        Booking?             @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   resolutionType ReportResolutionType?
-  adminNotes     String?              @db.Text
+  adminNotes     String?               @db.Text
 
-  reporter       User         @relation("ReportCreator", fields: [reporterId], references: [id], onDelete: Cascade)
-  reportedUser   User         @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
-  
-  createdAt      DateTime     @default(now())
-  resolvedAt     DateTime?
-  
+  reporter     User @relation("ReportCreator", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
   @@index([status, createdAt])
   @@index([bookingId])
 }
@@ -395,28 +459,28 @@ model Notification {
   message   String
   type      NotificationType
   isRead    Boolean          @default(false)
-  link      String?          // Optional deep-link for routing (e.g. "/dashboard")
+  link      String? // Optional deep-link for routing (e.g. "/dashboard")
   createdAt DateTime         @default(now())
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead, createdAt])
 }
 
 // 11. Conversation Model (NEW: Real-time messaging between mentor & mentee)
 model Conversation {
-  id        String    @id @default(uuid())
-  bookingId String    @unique  // 1-to-1: one conversation per booking
-  userAId   String              // Mentee (initiator)
-  userBId   String              // Mentor
+  id        String @id @default(uuid())
+  bookingId String @unique // 1-to-1: one conversation per booking
+  userAId   String // Mentee (initiator)
+  userBId   String // Mentor
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  userA     User      @relation("ConversationUserA", fields: [userAId], references: [id])
-  userB     User      @relation("ConversationUserB", fields: [userBId], references: [id])
-  messages  Message[]
+  booking  Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userA    User      @relation("ConversationUserA", fields: [userAId], references: [id])
+  userB    User      @relation("ConversationUserB", fields: [userBId], references: [id])
+  messages Message[]
 
   @@index([userAId])
   @@index([userBId])
@@ -424,15 +488,15 @@ model Conversation {
 
 // 12. Message Model (NEW: Individual chat messages)
 model Message {
-  id             String       @id @default(uuid())
+  id             String   @id @default(uuid())
   conversationId String
   senderId       String
-  content        String       @db.Text
-  isRead         Boolean      @default(false)
-  createdAt      DateTime     @default(now())
+  content        String   @db.Text
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation(fields: [senderId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id])
 
   @@index([conversationId, createdAt])
 }
@@ -441,12 +505,12 @@ model Message {
 model WithdrawRequest {
   id              String         @id @default(uuid())
   mentorId        String
-  pointsRequested Int            // GivePoints to be exchanged
-  fiatAmount      Int            // Expected VND equivalent (pointsRequested × exchange rate)
+  pointsRequested Int // GivePoints to be exchanged
+  fiatAmount      Int // Expected VND equivalent (pointsRequested × exchange rate)
   bankDetails     String         @db.Text // e.g. "VCB – 0123456789 – Nguyen Van A"
   status          WithdrawStatus @default(PENDING)
 
-  mentor    User     @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  mentor User @relation(fields: [mentorId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -456,7 +520,314 @@ model WithdrawRequest {
 }
 
 enum WithdrawStatus {
-  PENDING  // Awaiting admin review
+  PENDING // Awaiting admin review
   APPROVED // Bank transfer completed
   REJECTED // Request denied (e.g. fraud check)
+}
+
+// 14. Learning Hub domain
+enum LearningSpaceStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum LearningSpaceMemberStatus {
+  ACTIVE
+  LEFT
+  REMOVED
+}
+
+enum LearningTopicStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum LearningInviteStatus {
+  ACTIVE
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum LearningResourceKind {
+  LINK
+  FILE
+}
+
+enum LearningResourceStatus {
+  PENDING
+  READY
+  QUARANTINED
+  DELETED
+}
+
+enum LearningTaskStatus {
+  OPEN
+  IN_PROGRESS
+  SUBMITTED
+  REVISION_REQUESTED
+  COMPLETED
+  CANCELLED
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  REVISION_REQUESTED
+  REVIEWED
+}
+
+enum SubmissionReviewOutcome {
+  REVIEWED
+  REVISION_REQUESTED
+}
+
+enum LearningNoteVisibility {
+  SPACE_MEMBERS
+  BOOKING_PARTICIPANTS
+  AUTHOR_ONLY
+}
+
+model LearningSpace {
+  id               String              @id @default(uuid())
+  title            String
+  primarySkillId   String
+  state            LearningSpaceStatus @default(ACTIVE)
+  objective        String?             @db.Text
+  definitionOfDone String?             @db.Text
+  version          Int                 @default(1)
+  createdById      String
+  updatedById      String?
+  archivedAt       DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @default(now()) @updatedAt
+
+  primarySkill Skill @relation("LearningSpacePrimarySkill", fields: [primarySkillId], references: [id], onDelete: Restrict)
+  createdBy    User  @relation("LearningSpaceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User? @relation("LearningSpaceUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  members    LearningSpaceMember[]
+  topics     LearningTopic[]
+  bookings   Booking[]
+  invites    LearningInvite[]
+  resources  LearningResource[]
+  tasks      LearningTask[]
+  notes      LearningNote[]
+  activities LearningActivity[]
+
+  @@index([primarySkillId, state])
+  @@index([state, updatedAt])
+}
+
+model LearningSpaceMember {
+  learningSpaceId String
+  userId          String
+  status          LearningSpaceMemberStatus @default(ACTIVE)
+  joinedAt        DateTime                  @default(now())
+  leftAt          DateTime?
+
+  learningSpace LearningSpace @relation(fields: [learningSpaceId], references: [id], onDelete: Restrict)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([learningSpaceId, userId])
+  @@index([learningSpaceId, status])
+  @@index([userId, status])
+}
+
+model LearningTopic {
+  id              String              @id @default(uuid())
+  learningSpaceId String
+  label           String
+  normalizedLabel String
+  skillId         String?
+  state           LearningTopicStatus @default(ACTIVE)
+  creatorId       String
+  provenance      String?
+  archivedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @default(now()) @updatedAt
+
+  learningSpace LearningSpace @relation(fields: [learningSpaceId], references: [id], onDelete: Restrict)
+  skill         Skill?        @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  creator       User          @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+
+  bookings  Booking[]
+  resources LearningResource[]
+  tasks     LearningTask[]
+  notes     LearningNote[]
+
+  @@index([learningSpaceId, state, normalizedLabel])
+  @@index([skillId])
+  @@index([creatorId])
+}
+
+model LearningInvite {
+  id              String               @id @default(uuid())
+  learningSpaceId String?
+  inviterId       String
+  acceptedById    String?
+  tokenHash       String               @unique
+  primarySkillId  String
+  objective       String?              @db.Text
+  status          LearningInviteStatus @default(ACTIVE)
+  maxUses         Int                  @default(1)
+  useCount        Int                  @default(0)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @default(now()) @updatedAt
+
+  learningSpace LearningSpace? @relation(fields: [learningSpaceId], references: [id], onDelete: SetNull)
+  inviter       User           @relation("LearningInviteInviter", fields: [inviterId], references: [id], onDelete: Restrict)
+  acceptedBy    User?          @relation("LearningInviteAccepter", fields: [acceptedById], references: [id], onDelete: SetNull)
+  primarySkill  Skill          @relation(fields: [primarySkillId], references: [id], onDelete: Restrict)
+
+  @@index([learningSpaceId, status])
+  @@index([inviterId, status])
+  @@index([primarySkillId])
+  @@index([status, expiresAt])
+}
+
+model LearningResource {
+  id              String                 @id @default(uuid())
+  learningSpaceId String
+  bookingId       String?
+  topicId         String?
+  uploaderId      String
+  kind            LearningResourceKind
+  title           String
+  description     String?                @db.Text
+  storageKey      String?                @unique
+  externalUrl     String?
+  mimeType        String?
+  sizeBytes       BigInt?
+  status          LearningResourceStatus @default(PENDING)
+  deletedAt       DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @default(now()) @updatedAt
+
+  learningSpace LearningSpace  @relation(fields: [learningSpaceId], references: [id], onDelete: Restrict)
+  booking       Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  topic         LearningTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  uploader      User           @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
+  submissions   Submission[]   @relation("SubmissionAttachment")
+
+  @@index([learningSpaceId, status, createdAt])
+  @@index([bookingId])
+  @@index([topicId])
+  @@index([uploaderId])
+}
+
+model LearningTask {
+  id                 String             @id @default(uuid())
+  learningSpaceId    String
+  bookingId          String?
+  topicId            String?
+  creatorId          String
+  assigneeId         String
+  title              String
+  description        String?            @db.Text
+  acceptanceCriteria String?            @db.Text
+  dueAt              DateTime?
+  status             LearningTaskStatus @default(OPEN)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @default(now()) @updatedAt
+
+  learningSpace LearningSpace  @relation(fields: [learningSpaceId], references: [id], onDelete: Restrict)
+  booking       Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  topic         LearningTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  creator       User           @relation("LearningTaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  assignee      User           @relation("LearningTaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  submission    Submission?
+
+  @@index([learningSpaceId, status, dueAt])
+  @@index([bookingId])
+  @@index([topicId])
+  @@index([assigneeId, status, dueAt])
+}
+
+model Submission {
+  id                   String           @id @default(uuid())
+  taskId               String           @unique
+  authorId             String
+  content              String?          @db.Text
+  linkUrl              String?
+  attachmentResourceId String?
+  revisionCount        Int              @default(1)
+  status               SubmissionStatus @default(SUBMITTED)
+  submittedAt          DateTime         @default(now())
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @default(now()) @updatedAt
+
+  task       LearningTask      @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  author     User              @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  attachment LearningResource? @relation("SubmissionAttachment", fields: [attachmentResourceId], references: [id], onDelete: SetNull)
+  review     SubmissionReview?
+
+  @@index([authorId, submittedAt])
+  @@index([attachmentResourceId])
+  @@index([status, submittedAt])
+}
+
+model SubmissionReview {
+  id           String                  @id @default(uuid())
+  submissionId String                  @unique
+  reviewerId   String
+  content      String                  @db.Text
+  outcome      SubmissionReviewOutcome
+  reviewedAt   DateTime                @default(now())
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @default(now()) @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  reviewer   User       @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([reviewerId, reviewedAt])
+  @@index([outcome, reviewedAt])
+}
+
+model LearningNote {
+  id              String                 @id @default(uuid())
+  learningSpaceId String
+  bookingId       String?
+  topicId         String?
+  authorId        String
+  content         String                 @db.Text
+  visibility      LearningNoteVisibility @default(SPACE_MEMBERS)
+  version         Int                    @default(1)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @default(now()) @updatedAt
+
+  learningSpace LearningSpace  @relation(fields: [learningSpaceId], references: [id], onDelete: Restrict)
+  booking       Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  topic         LearningTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  author        User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([learningSpaceId, createdAt])
+  @@index([bookingId])
+  @@index([topicId])
+  @@index([authorId, updatedAt])
+}
+
+model LearningActivity {
+  id              String   @id @default(uuid())
+  learningSpaceId String
+  bookingId       String?
+  actorId         String?
+  eventType       String
+  entityType      String
+  entityId        String?
+  eventKey        String   @unique
+  metadata        Json?
+  occurredAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  learningSpace LearningSpace @relation(fields: [learningSpaceId], references: [id], onDelete: Restrict)
+  booking       Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  actor         User?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([learningSpaceId, occurredAt])
+  @@index([bookingId, occurredAt])
+  @@index([actorId, occurredAt])
+  @@index([entityType, entityId])
 }

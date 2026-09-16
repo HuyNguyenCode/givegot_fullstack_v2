@@ -57,7 +57,7 @@
 - CLOSED: `/api/messages` POST checks session plus participation and always persists the session user as sender.
 - CLOSED IN A1 SCOPE: Booking lifecycle/review actor IDs and private Booking list/receipt reads are session-bound; notification reads/read-state are session-bound; internal notification creation is no longer a server action; admin actions guard role at the action boundary.
 - CLOSED: conversation and user-targeted realtime channels are private and authorized from the server session; guessed conversation/user IDs fail before Pusher signing.
-- CLOSED: LearningSpace channel names are private and deny by default until B1/B2 supplies a concrete membership authorizer.
+- CLOSED: LearningSpace channel names are private and deny by default until B2 supplies a concrete membership authorizer.
 - Auto-complete selects `CONFIRMED` plus `endTime < now - 72h`, with no mode/fulfillment predicate.
 - CLOSED: auto-complete, reminders, and review-deadlines enforce the shared production `CRON_SECRET` guard; middleware exposure does not bypass route authentication.
 - Other legacy action families outside the explicitly audited A1 boundaries still require case-by-case authorization review before they are reused for Learning Hub data.
@@ -67,9 +67,9 @@
 - Next.js 16.1.6 App Router, React 19.2.3, NextAuth 5 beta, Prisma/PostgreSQL 5.22.0.
 - Existing user routes: auth, homepage, discover, mentor, booking, dashboard, chat, history, wallet, profile, admin.
 - Existing APIs: auth, conversations, messages, three cron routes, two test routes, and three VNPay routes.
-- Schema has 17 models; none are Learning Hub models and Booking has no Learning Hub fields.
-- Only manual migrations 001 skill category, 002 embedding readiness, and 003 withdrawal refund exist.
-- Canonical commands are `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, and `test:regression`.
+- Schema has 27 models, including the ten Learning Hub domain models. Booking has eight nullable Learning Hub fields and keeps its original status enum unchanged.
+- Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. It performs no historical backfill.
+- Canonical commands include `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, `test:learning-hub:migration`, and `test:regression`.
 
 ## Environment names only
 
@@ -77,7 +77,7 @@
 
 ## Next task
 
-Task B1 only: reviewed additive Learning Hub schema migration with nullable Booking fields and legacy fixtures. Do not use `prisma db push` against shared data.
+Task B2 only: implement server-session-backed LearningSpace services for pair membership, mutable primary skill, topics, objective/versioning, and reuse suggestion. Do not begin UI, settlement, or provider work.
 
 ## Completion contract
 
@@ -107,3 +107,11 @@ For each task: check every requirement; list changed files and reasons; report s
 - No schema, migration, database, settlement timing, eligibility rule, or visible UI structure changed.
 - A2 suites cover unauthenticated subscription, guessed conversation/user IDs, legitimate participant authorization, chat event delivery, notification channel privacy, missing/invalid/valid cron credentials, production bypass denial, and no secret/private-boundary logging.
 - Verification passed typecheck, 11 unit tests, 12 integration tests, all five legacy regressions, targeted lint with no errors, and production build. Full lint remains the unchanged 77-error/32-warning baseline.
+
+## Task B1 completion
+
+- Added the ten approved Learning Hub models, supporting enums, explicit relations/deletion behavior, indexes, archive/soft-delete state, deduplicated activity, and one-current Submission/SubmissionReview constraints.
+- Added nullable `learningSpaceId`, `topicId`, `learningMode`, `objective`, `definitionOfDone`, `fulfillmentStatus`, `deliveredAt`, and `acceptedAt` fields to Booking. Existing `BookingStatus` and settlement behavior are unchanged.
+- Manual migration 004 performs no backfill. A guarded real-PostgreSQL verifier and representative six-status legacy fixtures are committed; credential-free in-memory PostgreSQL execution passed clean, legacy, invariant, and rollback paths.
+- The schema has no member role, no two-member database cap, and no pair-plus-primary-skill uniqueness. B2 must enforce at most two active members transactionally and derive every actor from the server session.
+- Verification passed Prisma generation/validation, typecheck, 15 unit tests, 12 integration tests, all five legacy regressions, migration execution/rehearsal, and production build. Full lint remains the documented pre-existing 77-error/32-warning baseline.

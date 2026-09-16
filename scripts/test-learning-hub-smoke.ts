@@ -15,10 +15,10 @@ async function main() {
     assert.equal(typeof route[method], 'function', `${modulePath} must export ${method}`)
   }
 
-  // This suite never loads dotenv or invokes Prisma. Future database tests must
-  // use an explicit disposable URL, never DATABASE_URL.
+  // This suite never loads dotenv or invokes Prisma. The separate B1 migration
+  // verifier requires an explicit disposable URL and never falls back to DATABASE_URL.
   console.log('PASS: route imports: conversations, messages, Pusher auth, and cron routes.')
-  console.log('Prerequisites (values are never printed): Node.js; installed dependencies; optional DISPOSABLE_TEST_DATABASE_URL for future database tests.')
+  console.log('Prerequisites (values are never printed): Node.js; installed dependencies; DISPOSABLE_TEST_DATABASE_URL only for the explicit migration suite.')
 }
 
 main().catch((error: unknown) => {

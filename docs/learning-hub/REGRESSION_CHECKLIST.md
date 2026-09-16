@@ -70,7 +70,7 @@ The following pre-existing entries are user-owned: two deleted tracked DOCX file
 - `npm run test:learning-hub:integration`
 - `npm run test:regression`
 
-The baseline smoke command is `npm run test:learning-hub:integration`. It imports the legacy conversations, messages, and auto-complete route modules without starting a server, touching Prisma, or calling external providers. It records only prerequisite names: Node.js, installed dependencies, and (for future database suites) `DISPOSABLE_TEST_DATABASE_URL`; it never prints environment values or secrets.
+The baseline smoke command is `npm run test:learning-hub:integration`. It imports the legacy conversations, messages, Pusher auth, and cron route modules without starting a server, touching Prisma, or calling external providers. The separate B1 migration command requires `DISPOSABLE_TEST_DATABASE_URL`; neither command prints environment values or secrets.
 
 ## Task A1 regression evidence
 
@@ -89,3 +89,14 @@ The baseline smoke command is `npm run test:learning-hub:integration`. It import
 - Cron jobs: missing/invalid production credentials stop before database access; a valid secret preserves the current response; the explicit local header is ineffective in production.
 - Settlement/business rules: PA-02 selection, 72-hour cutoff, conditional claim, GivePoint credit, ledger write, and post-commit notifications are unchanged and pass.
 - Full legacy regression command passes all five scripts. No database or external provider was used.
+
+## Task B1 regression evidence
+
+- Starting worktree was clean. Only B1 schema, migration/rollback, fixtures/verifier, tests, package command, smoke wording, and repository memory files changed.
+- Clean path: migration 004 applied to an empty pre-B1 PostgreSQL schema; all ten tables and eight Booking columns were present.
+- Legacy path: representative PENDING, CONFIRMED, COMPLETED, CANCELLED, MISSED, and DISPUTED Bookings migrated without row loss or reinterpretation; legacy select/filter queries returned the original notes, meeting links, participants, times, and status order.
+- New Booking fields remained null for every legacy row. No migration backfill ran.
+- The same pair and primary Skill inserted into two distinct spaces. Membership carried no permanent role and the database imposed no two-active-member cap.
+- Archived space/topic rows remained readable, and a free-form topic with no canonical mapping did not create a Skill.
+- Rollback removed only B1 objects and retained the original BookingStatus labels; the production rollback note requires export before any rollback after Learning Hub writes.
+- Prisma generation/validation, typecheck, Learning Hub tests, all five legacy regressions, and production build passed. Existing auto-complete/settlement, Review/Trust, providers, and UI were untouched.

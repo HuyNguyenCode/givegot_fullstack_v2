@@ -92,3 +92,33 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - PASS: 11 Learning Hub unit tests, route smoke plus 12 integration tests, all five legacy regressions, typecheck, targeted lint without errors, and production build.
 - KNOWN PRE-EXISTING LIMITATION: full lint remains exactly 77 errors and 32 warnings; the changed chat page retains one pre-existing hook warning.
 - Rollback is file-level source/test/documentation reversion only; no schema or data rollback is required.
+
+## 2026-09-16 Task B1 Learning Hub domain schema
+
+### Added
+
+- Added LearningSpace, LearningSpaceMember, LearningTopic, LearningInvite, LearningResource, LearningTask, Submission, SubmissionReview, LearningNote, and LearningActivity with supporting enums, explicit foreign-key deletion behavior, indexes, archive/soft-delete state, and audit/event deduplication fields.
+- Added named manual migration `004_learning_hub_domain_schema.sql`, executable rollback SQL, and a production rollback note.
+- Added a guarded local-disposable migration verifier, pre-B1 schema fixture, representative six-status Booking fixture, and schema/migration contract tests.
+
+### Changed
+
+- Added nullable Learning Hub references, mode, objective/definition snapshots, fulfillment state, and delivery/acceptance timestamps to Booking.
+- Added `test:learning-hub:migration` for explicit local disposable PostgreSQL verification.
+
+### Not changed
+
+- BookingStatus and its six values/meanings are unchanged. The migration performs no historical backfill and does not reinterpret any legacy row.
+- No UI, route, service, settlement, GivePoint, Review/Trust, provider, storage, cron-timing, or visible behavior changed.
+- Membership has no permanent mentor/learner role; there is no pair-plus-primary-skill unique and no database two-active-member cap. B2 owns transactionally enforcing that service invariant from server-session identity.
+
+### Verification and compatibility
+
+- PASS: Prisma client generation/validation, generated DDL comparison, typecheck, B1 contract tests, route integration tests, all five legacy regressions, and production build.
+- PASS: credential-free clean and representative legacy migration execution, legacy Booking queries, same-pair multiple-space insertion, archived history reads, no Skill auto-publication, and rollback rehearsal.
+- The first default Prisma generation attempt reproduced the known Windows DLL lock from the running dev server; the required command then passed in Prisma binary-engine mode without stopping user work.
+- KNOWN PRE-EXISTING LIMITATION: full lint remains the 77-error/32-warning baseline.
+
+### Rollback
+
+- Before Learning Hub writes, use the paired rollback SQL. After writes, pause writers and export all ten Learning Hub tables plus the eight Booking fields first; roll-forward is preferred. Never use `prisma db push` for shared migration state.

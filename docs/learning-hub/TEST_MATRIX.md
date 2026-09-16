@@ -25,8 +25,8 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | --- | --- | --- | --- | --- | --- |
 | LH 001 | C1 | `LH001-U` token entropy/hash, expiry, usage | `LH001-I` create; `LH001-S` session/self/third-member auth | Invite delivery/provider failure preserves state | PLACEHOLDER |
 | LH 002 | C1, C2 | `LH002-U` token state transitions | `LH002-I` preview/accept; `LH002-C` concurrent/idempotent accept | Signup return and existing-space behavior | PLACEHOLDER |
-| LH 010 | B1, B2, D1 | `LH010-U` create/reuse decision | `LH010-I` pair membership; `LH010-L` old Booking/null compatibility | Discover/Booking creation still works | PLACEHOLDER |
-| LH 011 | B1, B2, D1 | `LH011-U` normalize/rename/archive/map | `LH011-I` member auth; `LH011-L` topic/history provenance | Skill moderation/public catalog unchanged | PLACEHOLDER |
+| LH 010 | B1, B2, D1 | `LH010-U` create/reuse decision | `LH010-I` pair membership; `LH010-L` old Booking/null compatibility | Discover/Booking creation still works | B1 schema/legacy PASS; B2/D1 pending |
+| LH 011 | B1, B2, D1 | `LH011-U` normalize/rename/archive/map | `LH011-I` member auth; `LH011-L` topic/history provenance | Skill moderation/public catalog unchanged | B1 schema/history PASS; B2/D1 pending |
 | LH 012 | B2, D1 | `LH012-U` objective/DoD validation/version | `LH012-I` member auth; `LH012-C` optimistic-lock conflict | Booking note and UI long-text behavior | PLACEHOLDER |
 | LH 020 | E1, I1 | `LH020-U` mode/checklist rules | `LH020-I` Booking integration and immutable-after-delivery guard | `LH020-R` legacy Live/Calendar/Meet/cancellation | PLACEHOLDER |
 | LH 030 | F2 | `LH030-U` HTTPS normalization/validation | `LH030-I` member CRUD; `LH030-S` XSS/SSRF/no-fetch | Safe external navigation and deleted link | PLACEHOLDER |
@@ -47,7 +47,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | Suite | Cases | Owner | Status |
 | --- | --- | --- | --- |
 | Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, M1 | A1 PASS for server session/chat/admin; A2 PASS for private conversation/user subscription authorization and deny-by-default LearningSpace realtime; M1 cases remain |
-| Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1 | PLACEHOLDER |
+| Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1 | PASS: isolated clean/legacy/rollback execution; six BookingStatus rows retained; no backfill |
 | Mode transitions | All allowed/forbidden transitions for LIVE, EXERCISE_REVIEW, HYBRID | E1, I1 | PLACEHOLDER |
 | Settlement | Double click, concurrent request/cron, dispute, rollback, ledger reconciliation | I2, I3 | PLACEHOLDER |
 | Storage | MIME/extension mismatch, size/quota, orphan, expiry, delete, filename/path, provider failure | F1, F2 | PLACEHOLDER |
@@ -67,7 +67,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 
 ## Canonical commands
 
-Task 01 created and self-tested these package scripts before later tasks rely on them: `npm run typecheck`, `npm run test:learning-hub`, `npm run test:learning-hub:integration`, and `npm run test:regression`. Database-writing tests require an explicit disposable database URL and must never print secrets.
+Task 01 created and self-tested the core commands. B1 adds `npm run test:learning-hub:migration`, which requires a local explicit `DISPOSABLE_TEST_DATABASE_URL`, refuses shared/remote endpoints, and never prints secrets. The credential-free B1 execution used isolated in-memory PostgreSQL and removed its temporary runtime afterward.
 
 ## Task 01 canonical commands
 
@@ -109,3 +109,21 @@ The unit suite uses `node:test` via the existing `tsx` dependency. The integrati
 | Targeted ESLint on changed TypeScript | PASS with 0 errors and one pre-existing chat hook warning |
 | `npm run lint` | KNOWN PRE-EXISTING LIMITATION: unchanged 77 errors and 32 warnings |
 | `npm run build` | PASS: 30 routes including `/api/pusher/auth`; existing middleware deprecation warning |
+
+## Task B1 evidence
+
+| Test/command | Result |
+| --- | --- |
+| `npm run db:generate` | PASS with Prisma 5.22.0 binary engine; avoided the DLL held by the running dev server |
+| `npx prisma validate` | PASS |
+| Prisma HEAD-to-working-schema diff | PASS: generated DDL and reviewed migration 004 contain the same enums, columns, tables, indexes, and foreign keys |
+| `tests/learning-hub/unit/learning-hub-schema-contract.test.ts` | PASS: ten models, exact mode/fulfillment enums, nullable Booking fields, no member role/pair-skill unique, explicit delete behavior, no Booking update/status alteration |
+| Clean disposable migration | PASS: empty pre-B1 schema upgraded to ten Learning Hub tables and eight nullable Booking columns |
+| Representative legacy migration | PASS: all six legacy status rows and legacy query payloads retained; every new Booking field remained null |
+| Domain invariants on disposable DB | PASS: same pair/primary skill inserted into two spaces; archived space/topic remained readable; free-form topic created no Skill |
+| Rollback rehearsal | PASS: new tables/columns/types removed; legacy BookingStatus labels retained |
+| `npm run typecheck` | PASS |
+| `npm run test:learning-hub:integration` | PASS: route smoke plus 12 tests |
+| `npm run test:regression` | PASS: all five legacy scripts |
+| `npm run build` | PASS: 30 routes; existing middleware deprecation warning only |
+| Full `npm run lint` | KNOWN PRE-EXISTING LIMITATION: 77 errors and 32 warnings baseline; not weakened or hidden |
