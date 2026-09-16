@@ -15,6 +15,7 @@ import BookingCancelledEmail from '@/emails/BookingCancelledEmail'
 import NoShowReportEmail from '@/emails/NoShowReportEmail'
 import NewBookingEmail from '@/emails/NewBookingEmail'
 import { requireAdminUser, requireAuthenticatedUser } from '@/lib/server-authorization'
+import { privateUserChannel } from '@/lib/realtime-channels'
 
 // ── Cancellation Policy Constants ─────────────────────────────────────────────
 const CANCELLATION_THRESHOLD_HOURS = 12
@@ -1500,11 +1501,11 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
     }
 
     await Promise.allSettled([
-      pusherServer.trigger(`user-${canceledByUserId}`, 'booking-cancelled', {
+      pusherServer.trigger(privateUserChannel(canceledByUserId), 'booking-cancelled', {
         ...pusherPayload,
         message: cancellerNotifMessage,
       }),
-      pusherServer.trigger(`user-${notifyRecipientId}`, 'booking-cancelled', pusherPayload),
+      pusherServer.trigger(privateUserChannel(notifyRecipientId), 'booking-cancelled', pusherPayload),
     ])
 
     // ── Transactional email (additive, non-blocking) ────────────────────────

@@ -2,15 +2,15 @@
 
 ## Checkpoint
 
-- Recorded: 2026-09-12, Asia/Saigon.
+- Recorded: 2026-09-16, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
 - HEAD before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Task: A1 Server identity and authorization.
+- Task: A2 Realtime and cron security.
 - Status: PASS WITH KNOWN LIMITATION.
-- Production behavior: protected chat, scoped Booking/review, notification, and admin boundaries now use server-session identity.
+- Production behavior: chat and user-targeted realtime use authorized private channels; sensitive cron routes require production `CRON_SECRET`.
 - Schema/migration behavior: unchanged; no database row was read or written by tests.
-- API behavior: chat success payloads are preserved; protected chat actions now return documented 401/403/404 outcomes.
-- Learning Hub implementation: reusable authorization foundation only; no Learning Hub model or feature UI.
+- API behavior: added session-backed `POST /api/pusher/auth`; cron business responses are unchanged after successful authentication.
+- Learning Hub implementation: secure realtime/cron foundation only; no Learning Hub model, migration, or feature UI.
 
 The four memory files the task asked to read first did not exist at baseline. Task 00 creates the complete memory set from the supplied references, the tracked playbook at HEAD, and current repository evidence.
 
@@ -227,3 +227,47 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 - A2 can use the session and conversation guards for private Pusher authorization and owns mandatory production `CRON_SECRET`.
 - B1 can implement the membership lookup interface after A2; it must remain additive/nullable and preserve legacy rows.
 - Do not treat client identity fields as actor identity in any future endpoint or action.
+
+## Task A2 completion
+
+- Recorded: 2026-09-16, Asia/Saigon.
+- Starting worktree: clean according to `git status --short`; no pre-existing user change was present or modified.
+- Status: PASS WITH KNOWN LIMITATION.
+- Scope: realtime privacy and cron authentication only.
+
+### Added and changed behavior
+
+- Added strict private channel constructors for conversations, users, and future LearningSpaces.
+- Added `POST /api/pusher/auth`, which derives identity from the server session, authorizes conversation participants, authorizes only the matching user channel, rejects public/unknown channels, and denies LearningSpace subscriptions until a concrete membership authorizer is wired.
+- Chat publishes/subscribes on `private-conversation-*`. Booking-cancellation realtime publishes on `private-user-*`.
+- Added one shared cron guard to auto-complete, reminders, and review-deadlines. Production requires a configured matching `CRON_SECRET`; missing configuration fails closed.
+- Preserved a deliberate local test path requiring non-production `NODE_ENV` plus `x-givegot-local-cron: 1`. The header cannot bypass production authentication.
+
+### Schema, migration, data, API, and visible UI
+
+- Schema/migration/database rows: unchanged; no migration or data-changing test ran.
+- API: one new Pusher authorization endpoint; unauthorized cron requests now fail before data access. Authorized cron payloads and business logic remain unchanged.
+- UI: no layout or copy change. Chat transparently uses private subscriptions.
+- Settlement: unchanged `CONFIRMED` plus `endTime < now - 72h` legacy rule, transaction claim, credit, and notifications. Mode-aware settlement remains I1-I3 scope.
+
+### Verification
+
+- PASS: `npm run typecheck`.
+- PASS: `npm run test:learning-hub` — 11 tests.
+- PASS: `npm run test:learning-hub:integration` — route smoke plus 12 tests.
+- PASS: `npm run test:regression` — all five legacy scripts, including private notification realtime and unchanged PA-02 auto-complete behavior.
+- PASS: targeted ESLint over changed TypeScript — 0 errors; one pre-existing `src/app/chat/page.tsx` hook-dependency warning.
+- PASS: `npm run build` — 30 routes including `/api/pusher/auth`; existing middleware deprecation warning only.
+- KNOWN PRE-EXISTING LIMITATION: full `npm run lint` remains 77 errors and 32 warnings, exactly the A1 baseline.
+
+### Compatibility and rollback
+
+- Legacy request/response payloads, Booking lifecycle, notification content, 72-hour timing, transaction semantics, and old rows remain compatible.
+- Pusher clients must use the repository client configuration so private subscriptions authenticate through `/api/pusher/auth`.
+- Rollback is file-level reversion of A2 source, test, and documentation changes; no schema or data rollback is required.
+
+### Next assumptions
+
+- B1 may add only reviewed additive/nullable schema with representative legacy fixtures and no shared `db push`.
+- B2 can supply the concrete LearningSpace membership authorizer before any LearningSpace realtime event is enabled.
+- I1-I3, not A2, own mode-aware fulfillment and settlement timing.

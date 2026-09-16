@@ -13,6 +13,10 @@ export function getPusherClient(): PusherClient | null {
   if (!_client) {
     _client = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      channelAuthorization: {
+        endpoint: '/api/pusher/auth',
+        transport: 'ajax',
+      },
     })
   }
   return _client
@@ -20,7 +24,9 @@ export function getPusherClient(): PusherClient | null {
 
 /**
  * Channel name conventions:
- *   conversation-<id>   public channel for a single conversation
+ *   private-conversation-<id>    authorized participants only
+ *   private-user-<id>            matching server-session user only
+ *   private-learning-space-<id>  denied until membership lookup is wired
  *
  * Event names:
  *   new-message         emitted when a message is saved (data = MessagePayload)

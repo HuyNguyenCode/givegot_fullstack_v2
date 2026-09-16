@@ -66,3 +66,29 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - KNOWN PRE-EXISTING LIMITATION: full lint reports 77 errors and 32 warnings; changed production and A1 test TypeScript files are clean.
 - Existing UI request shapes remain accepted; authorized chat response payloads and mentee=userA/mentor=userB conversation association are preserved.
 - Rollback is source/test/documentation file reversion only; no data rollback is required.
+
+## 2026-09-16 Task A2 Realtime and cron security
+
+### Added
+
+- Added private conversation, user, and future LearningSpace channel conventions.
+- Added session-backed `POST /api/pusher/auth` with participant/user ownership checks and deny-by-default LearningSpace behavior.
+- Added a shared production cron guard plus an explicit non-production-only local test header.
+- Added executable unit, integration, route, chat realtime, notification realtime, and logging-safety coverage.
+
+### Changed
+
+- Chat now publishes and subscribes on authorized `private-conversation-*` channels.
+- Booking-cancellation realtime now publishes on authorized `private-user-*` channels.
+- Auto-complete, reminders, and review-deadlines now require a configured matching `CRON_SECRET` in production.
+
+### Not changed
+
+- No schema, migration, database row, Learning Hub model/UI, cron timing, settlement eligibility, GivePoint rule, notification copy, or legacy request/response shape changed.
+- Future LearningSpace subscriptions remain denied until concrete membership authorization is available.
+
+### Verification and compatibility
+
+- PASS: 11 Learning Hub unit tests, route smoke plus 12 integration tests, all five legacy regressions, typecheck, targeted lint without errors, and production build.
+- KNOWN PRE-EXISTING LIMITATION: full lint remains exactly 77 errors and 32 warnings; the changed chat page retains one pre-existing hook warning.
+- Rollback is file-level source/test/documentation reversion only; no schema or data rollback is required.

@@ -46,7 +46,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 
 | Suite | Cases | Owner | Status |
 | --- | --- | --- | --- |
-| Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, M1 | A1 PASS for server session, chat IDOR, admin role/suspension, and future membership interface; A2/M1 cases remain |
+| Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, M1 | A1 PASS for server session/chat/admin; A2 PASS for private conversation/user subscription authorization and deny-by-default LearningSpace realtime; M1 cases remain |
 | Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1 | PLACEHOLDER |
 | Mode transitions | All allowed/forbidden transitions for LIVE, EXERCISE_REVIEW, HYBRID | E1, I1 | PLACEHOLDER |
 | Settlement | Double click, concurrent request/cron, dispute, rollback, ledger reconciliation | I2, I3 | PLACEHOLDER |
@@ -93,3 +93,19 @@ The unit suite uses `node:test` via the existing `tsx` dependency. The integrati
 | Targeted ESLint on changed production/A1 test TypeScript | PASS |
 | `npm run lint` | KNOWN PRE-EXISTING LIMITATION: 77 errors, 32 warnings; no changed production/A1 test TypeScript finding |
 | `npm run build` | PASS; existing middleware deprecation warning |
+
+## Task A2 evidence
+
+| Test/command | Result |
+| --- | --- |
+| `tests/learning-hub/unit/realtime-cron-security.test.ts` | PASS: private-only names; missing/invalid/valid cron secret; production bypass denial; explicit non-production test path; no security-boundary logging |
+| `tests/learning-hub/integration/realtime-authorization.test.ts` | PASS: unauthenticated denial; guessed conversation/user denial; participant success; user-channel ownership; public/unknown denial; LearningSpace deny-by-default |
+| `tests/learning-hub/integration/cron-route-security.test.ts` | PASS: missing/invalid auto-complete authentication stops before data access; valid request preserves empty-batch response |
+| Chat/notification realtime regressions | PASS: chat publishes the existing message payload on a private conversation channel; cancellation publishes existing payloads on private user channels without note/file/task/resource/secret fields |
+| `npm run test:learning-hub` | PASS: 11 tests |
+| `npm run test:learning-hub:integration` | PASS: route smoke plus 12 tests |
+| `npm run test:regression` | PASS: all five legacy regression scripts |
+| `npm run typecheck` | PASS |
+| Targeted ESLint on changed TypeScript | PASS with 0 errors and one pre-existing chat hook warning |
+| `npm run lint` | KNOWN PRE-EXISTING LIMITATION: unchanged 77 errors and 32 warnings |
+| `npm run build` | PASS: 30 routes including `/api/pusher/auth`; existing middleware deprecation warning |

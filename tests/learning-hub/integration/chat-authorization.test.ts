@@ -153,6 +153,7 @@ test('a nonparticipant cannot open or mark a conversation read', async () => {
 test('message sender and read viewer come from the session for legitimate participants', async () => {
   let createdData: unknown
   let readWhere: unknown
+  let realtimeEvent: unknown[] | null = null
   const sentMessage = {
     id: 'message-2',
     content: 'session-owned',
@@ -178,7 +179,10 @@ test('message sender and read viewer come from the session for legitimate partic
       },
     } as unknown as MessageDependencies['prisma'],
     pusherServer: {
-      trigger: async () => ({}),
+      trigger: async (...args: unknown[]) => {
+        realtimeEvent = args
+        return {}
+      },
     } as unknown as MessageDependencies['pusherServer'],
     requireAuthenticatedUser: async () => ACTOR_A,
     requireConversationParticipant: async (_conversationId, actor) => {
@@ -216,6 +220,14 @@ test('message sender and read viewer come from the session for legitimate partic
     senderId: ACTOR_A.id,
     content: 'session-owned',
   })
+  assert.deepEqual(realtimeEvent, [
+    'private-conversation-conversation-1',
+    'new-message',
+    {
+      ...sentMessage,
+      createdAt: sentMessage.createdAt.toISOString(),
+    },
+  ])
 })
 
 test('conversation creation keeps the Booking mentee-to-mentor association', async () => {

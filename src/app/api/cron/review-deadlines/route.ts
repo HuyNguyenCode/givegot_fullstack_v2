@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { authorizeCronRequest } from '@/lib/cron-auth'
 
 const HOUR_MS = 60 * 60 * 1000
 
@@ -57,17 +58,8 @@ async function createNotificationOnce(input: {
 }
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  // Local staging remains easy to test without a secret. Production always
-  // refuses an unconfigured or invalid cron request.
-  if (!cronSecret && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'CRON_SECRET environment variable is not set.' }, { status: 500 })
-  }
-  if (cronSecret && authHeader !== 'Bearer ' + cronSecret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = authorizeCronRequest(req)
+  if (denied) return denied
 
   const now = new Date()
   const oldestEligibleEnd = new Date(now.getTime() - 72 * HOUR_MS)

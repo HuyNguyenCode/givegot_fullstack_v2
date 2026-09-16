@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
 import { pusherServer } from '@/lib/pusher'
+import { privateConversationChannel } from '@/lib/realtime-channels'
 import {
   isAuthorizationError,
   type AuthenticatedUser,
@@ -115,7 +116,7 @@ export function createMessageRouteHandlers(dependencies: MessageRouteDependencie
 
       const payload = { ...message, createdAt: message.createdAt.toISOString() }
       await dependencies.pusherServer.trigger(
-        `conversation-${conversationId}`,
+        privateConversationChannel(conversationId),
         'new-message',
         payload,
       )

@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
+import { authorizeCronRequest } from '@/lib/cron-auth'
 
-export async function GET(req: NextRequest) {
-  // Keep the request available for the existing optional CRON_SECRET guard
-  // below without changing its current dev-mode behavior.
-  void req
-  // 1. TẠM TẮT BẢO MẬT ĐỂ MỞ CỬA CHO TRÌNH DUYỆT TEST (Chỉ dùng khi Dev)
-  // Khi nào làm khóa luận xong, đưa lên môi trường thật thì bỏ comment đoạn này ra
-  /*
-  const authHeader = req.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  */
+export type AutoCompleteRouteDependencies = {
+  prisma: typeof prisma
+  createNotification: typeof createNotification
+  authorizeCronRequest: typeof authorizeCronRequest
+}
+
+async function handleAutoCompleteRoute(
+  req: NextRequest,
+  dependencies: AutoCompleteRouteDependencies,
+) {
+  const denied = dependencies.authorizeCronRequest(req)
+  if (denied) return denied
 
   // 2. XÁC ĐỊNH THỜI ĐIỂM CHỐT SỔ (Quá 72h kể từ lúc kết thúc buổi học)
   const now = new Date()
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // 3. TÌM CÁC HỒ SƠ TỒN ĐỌNG (Trạng thái CONFIRMED & Đã quá 72h)
-    const expiredBookings = await prisma.booking.findMany({
+    const expiredBookings = await dependencies.prisma.booking.findMany({
       where: {
         status: 'CONFIRMED',
         endTime: {
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     const processedIds: string[] = []
     // 4. XỬ LÝ TỪNG HỒ SƠ BẰNG TRANSACTION (Quy tắc All-or-Nothing)
     for (const booking of expiredBookings) {
-      const wasCompleted = await prisma.$transaction(async (tx) => {
+      const wasCompleted = await dependencies.prisma.$transaction(async (tx) => {
         // A. Claim booking theo điều kiện ngay trong transaction. Nếu một cron
         // khác đã chốt trước, tuyệt đối không cộng điểm hoặc ghi sổ lần hai.
         const claim = await tx.booking.updateMany({
@@ -92,14 +92,14 @@ export async function GET(req: NextRequest) {
       const mentorName = booking.mentor.name ?? booking.mentor.email ?? 'Mentor'
       const menteeName = booking.mentee.name ?? booking.mentee.email ?? 'Mentee'
       await Promise.all([
-        createNotification(
+        dependencies.createNotification(
           booking.mentorId,
           'Buổi học đã được tự động hoàn thành',
           'Buổi học với ' + menteeName + ' đã được hệ thống chốt sau 72 giờ. 1 GivePoint đã được chuyển vào ví của bạn.',
           'POINTS',
           '/history',
         ),
-        createNotification(
+        dependencies.createNotification(
           booking.menteeId,
           'Buổi học đã được tự động hoàn thành',
           'Buổi học với ' + mentorName + ' đã được hệ thống chốt sau 72 giờ. 1 GivePoint đã được chuyển cho Mentor.',
@@ -123,3 +123,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export function createAutoCompleteRouteHandler(
+  dependencies: AutoCompleteRouteDependencies,
+) {
+  return (req: NextRequest) => handleAutoCompleteRoute(req, dependencies)
+}
+
+export const GET = createAutoCompleteRouteHandler({
+  prisma,
+  createNotification,
+  authorizeCronRequest,
+})

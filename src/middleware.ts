@@ -21,6 +21,7 @@ function isPublicPath(pathname: string): boolean {
   return (
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith('/api/auth') ||
+    pathname === '/api/pusher/auth' ||
     pathname.startsWith('/api/cron')
   )
 }

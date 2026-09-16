@@ -7,8 +7,8 @@ Severity and likelihood are qualitative. `Open baseline` means verified before a
 | ID | Risk and evidence | Severity | Likelihood | Required mitigation/owner | Status |
 | --- | --- | --- | --- | --- | --- |
 | R-001 | Client-controlled chat identity: conversation/message routes accept `userId`, `viewerId`, or `senderId` without binding actor to `auth()`. Message GET lacks membership authorization. | Critical | High | A1: server-session identity, object guards, spoofing/IDOR tests | CLOSED 2026-09-12: session identity, participant guards, and executable route tests |
-| R-002 | Conversation Pusher channels are public and have no authorization endpoint, so private message payloads depend on channel-ID secrecy. | Critical | High | A2: private channels, authorization route, non-member subscription tests | Open baseline |
-| R-003 | Auto-complete cron authorization block is commented out while middleware exposes `/api/cron`. | Critical | High | A2: mandatory production `CRON_SECRET`, unset-secret failure, route tests | Open baseline |
+| R-002 | Conversation Pusher channels are public and have no authorization endpoint, so private message payloads depend on channel-ID secrecy. | Critical | High | A2: private channels, authorization route, non-member subscription tests | CLOSED 2026-09-16: private conversation/user channels, session-backed authorization, guessed-ID denial, and LearningSpace deny-by-default |
+| R-003 | Auto-complete cron authorization block is commented out while middleware exposes `/api/cron`. | Critical | High | A2: mandatory production `CRON_SECRET`, unset-secret failure, route tests | CLOSED 2026-09-16: shared fail-closed production guard on all three cron routes with route-level tests |
 | R-004 | Auto-complete selects `CONFIRMED` solely by `endTime < now-72h`; future Exercise Review/Hybrid work could settle before fulfillment. | Critical | Certain if reused | I1-I3: separate fulfillment, `deliveredAt` eligibility, dispute guard, concurrency/reconciliation tests | Open baseline; do not reuse for async/hybrid |
 | R-005 | Many legacy server actions accept actor-like user IDs from clients. Participant comparison alone cannot prove caller identity. | High | High | A1 inventory protected Booking/review, notification, and admin boundaries and bind concrete actor paths to session before private Hub work | MITIGATED 2026-09-12 for A1 scope; do not reuse unaudited legacy action families for Learning Hub data |
 | R-006 | Learning artifacts may expose personal work through metadata, signed URLs, logs, admin support, or realtime events. | Critical | Medium | F1/F2/M1: private bucket, membership before metadata/URL, short TTL, redacted logs, narrow audited admin access | Planned |
@@ -28,7 +28,7 @@ Severity and likelihood are qualitative. `Open baseline` means verified before a
 
 ## Immediate gates
 
-- No private Learning Hub data before R-001 through R-003 are closed by A1/A2.
+- R-001 through R-003 are closed. LearningSpace realtime remains disabled until concrete B1/B2 membership authorization is wired.
 - No Learning Hub schema migration before R-008, R-009, R-014, and R-016 have executable evidence.
 - No async/hybrid GivePoint settlement before R-004, R-010, and R-017 are closed.
 - No AI/transcript implementation while R-013 remains ungated.

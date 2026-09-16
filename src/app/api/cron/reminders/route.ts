@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
+import { authorizeCronRequest } from '@/lib/cron-auth'
 import { sendEmail, getAppUrl } from '@/lib/email'
 import SessionReminderEmail from '@/emails/SessionReminderEmail'
 
@@ -23,20 +24,8 @@ import SessionReminderEmail from '@/emails/SessionReminderEmail'
  */
 export async function GET(req: NextRequest) {
   // ── Security guard ───────────────────────────────────────────────────────
-  const authHeader = req.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret) {
-    // CRON_SECRET not configured — refuse to run to avoid accidental data leaks
-    return NextResponse.json(
-      { error: 'CRON_SECRET environment variable is not set.' },
-      { status: 500 }
-    )
-  }
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = authorizeCronRequest(req)
+  if (denied) return denied
 
   // ── Time window: sessions starting within the next 10-15 minutes ─────────
   const now = new Date()

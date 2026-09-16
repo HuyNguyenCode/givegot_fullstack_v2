@@ -29,6 +29,7 @@ async function main() {
   let receiptTrustRecord = null
   let actionNow = Date.now()
   let advanceClockDuringTransaction = false
+  const realtimeEvents = []
   class ActionDate extends Date {
     static now() { return actionNow }
   }
@@ -70,7 +71,8 @@ async function main() {
     __Date: ActionDate,
     '@prisma/client': enums,
     '@/lib/prisma': { prisma: db },
-    '@/lib/pusher': { pusherServer: { trigger: async () => {} } },
+    '@/lib/pusher': { pusherServer: { trigger: async (...args) => realtimeEvents.push(args) } },
+    '@/lib/realtime-channels': { privateUserChannel: userId => `private-user-${userId}` },
     'next/cache': { revalidatePath() {} },
     '@/lib/notifications': { createNotification: async () => {} },
     '@/lib/server-authorization': {
@@ -141,6 +143,14 @@ async function main() {
   assert.equal(cancellation.cancellation.timing, 'late')
   assert.equal(cancellation.cancellation.givePointRecipient, 'mentor')
   assert.deepEqual(JSON.parse(JSON.stringify(cancellation.cancellation.trust)), { previousScore: 36, newScore: 26, delta: -10, willSuspend: true })
+  assert.deepEqual(realtimeEvents.slice(0, 2).map(event => event.slice(0, 2)), [
+    ['private-user-mentee', 'booking-cancelled'],
+    ['private-user-mentor', 'booking-cancelled'],
+  ])
+  for (const [, , payload] of realtimeEvents.slice(0, 2)) {
+    const serialized = JSON.stringify(payload)
+    assert.doesNotMatch(serialized, /note|filename|taskContent|resourceMetadata|CRON_SECRET/)
+  }
 
   // Cross the 12-hour line *during* the transaction. The committed receipt
   // must retain the transaction's EARLY result rather than recalculate LATE
@@ -232,7 +242,7 @@ async function main() {
   assert.match(postCommitSource, /buildCommittedCancellationImpact/)
   assert.doesNotMatch(postCommitSource, /buildCancellationImpact\(/)
 
-  console.log('PASS: cancellation policy, atomic 12-hour boundary receipt, actor-safe stored receipts, and authorization.')
+  console.log('PASS: cancellation policy, private notification realtime, atomic 12-hour boundary receipt, actor-safe stored receipts, and authorization.')
 }
 
 main().catch(error => {

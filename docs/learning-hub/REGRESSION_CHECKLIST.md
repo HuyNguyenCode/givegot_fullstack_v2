@@ -80,3 +80,12 @@ The baseline smoke command is `npm run test:learning-hub:integration`. It import
 - Notifications: reads/read-state use session identity; provider-independent internal writes remain best effort; PA-02 passes.
 - Admin: action-level guards cover user/report/skill/withdrawal boundaries; skill and withdrawal authorization regressions pass.
 - Full legacy regression command passes all five scripts. No database or external provider was used.
+
+## Task A2 regression evidence
+
+- Authentication: unauthenticated Pusher authorization fails with 401; public/unknown channels and guessed IDs are not signed.
+- Chat: authorized participants receive a signed private channel and the existing message payload is emitted on `private-conversation-*`.
+- Notifications: booking-cancellation realtime retains its event/payload behavior on participant-owned `private-user-*` channels and contains no note, filename, task, resource, or secret field.
+- Cron jobs: missing/invalid production credentials stop before database access; a valid secret preserves the current response; the explicit local header is ineffective in production.
+- Settlement/business rules: PA-02 selection, 72-hour cutoff, conditional claim, GivePoint credit, ledger write, and post-commit notifications are unchanged and pass.
+- Full legacy regression command passes all five scripts. No database or external provider was used.

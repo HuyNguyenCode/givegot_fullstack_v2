@@ -16,6 +16,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { getPusherClient } from '@/lib/pusher-client'
+import { privateConversationChannel } from '@/lib/realtime-channels'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -239,7 +240,7 @@ function ChatContent() {
     const pusher = getPusherClient()
     if (!pusher) return
 
-    const channelName = `conversation-${selectedConvId}`
+    const channelName = privateConversationChannel(selectedConvId)
     const channel = pusher.subscribe(channelName)
 
     // Named handler so we can unbind precisely rather than using unbind_all()

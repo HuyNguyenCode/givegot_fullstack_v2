@@ -10,13 +10,13 @@
 
 ## Current checkpoint
 
-- Task A1 completed on 2026-09-12 from branch `feature/learning-hub-mvp`, HEAD `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Reusable server authorization derives identity from NextAuth `auth()` and defines authenticated-user, conversation-participant, admin, and future LearningSpace-member guards.
-- Conversations/messages are session-scoped; legacy `userId`/`senderId` fields remain compatible but do not authorize or choose the actor.
-- Concrete booking/review, notification, and admin spoofing paths in the A1 scope are session-bound and action-level admin guards are enforced.
-- No Learning Hub schema field, model, migration, database row, or visible UI flow was added.
-- Typecheck, targeted lint, A1 unit/integration tests, legacy regression, and production build pass.
-- Full lint retains pre-existing debt: 77 errors and 32 warnings. A touched pre-existing booking `any` was safely typed, reducing the baseline error count by one.
+- Task A2 completed on 2026-09-16 after the A1 server-session authorization foundation.
+- Conversation messages now publish and subscribe only on authorized `private-conversation-*` channels; user-targeted booking cancellation realtime uses authorized `private-user-*` channels.
+- `/api/pusher/auth` obtains the actor from the server session, checks conversation participation or exact user ownership, and denies LearningSpace realtime until a concrete membership authorizer is supplied.
+- All three sensitive cron routes use one production `CRON_SECRET` guard. The only secretless path requires both non-production `NODE_ENV` and the explicit `x-givegot-local-cron: 1` test header.
+- Cron selection, 72-hour settlement timing, notification copy, transaction behavior, schema, migrations, database rows, and visible UI structure are unchanged.
+- Typecheck, A2 unit/integration tests, legacy regression, targeted lint without errors, and production build pass.
+- Full lint remains the documented pre-existing baseline: 77 errors and 32 warnings.
 
 ## Owner-owned dirty state before Task 00
 
@@ -50,15 +50,16 @@
 - Settlement is conditional, transactional, idempotent, and recorded in the immutable ledger.
 - Provider/notification failure after commit does not roll back domain state.
 
-## Security state after A1
+## Security state after A2
 
 - CLOSED: `/api/conversations` GET/POST scope identity to the server session; changing legacy `userId` values cannot enumerate another user's conversations or create/open a Booking conversation as that user.
 - CLOSED: `/api/messages` GET checks session plus conversation participation before returning data or changing read state.
 - CLOSED: `/api/messages` POST checks session plus participation and always persists the session user as sender.
 - CLOSED IN A1 SCOPE: Booking lifecycle/review actor IDs and private Booking list/receipt reads are session-bound; notification reads/read-state are session-bound; internal notification creation is no longer a server action; admin actions guard role at the action boundary.
-- Pusher conversation channels are documented as public; no authorization route exists.
+- CLOSED: conversation and user-targeted realtime channels are private and authorized from the server session; guessed conversation/user IDs fail before Pusher signing.
+- CLOSED: LearningSpace channel names are private and deny by default until B1/B2 supplies a concrete membership authorizer.
 - Auto-complete selects `CONFIRMED` plus `endTime < now - 72h`, with no mode/fulfillment predicate.
-- Auto-complete's `CRON_SECRET` block is commented out; middleware exposes `/api/cron`.
+- CLOSED: auto-complete, reminders, and review-deadlines enforce the shared production `CRON_SECRET` guard; middleware exposure does not bypass route authentication.
 - Other legacy action families outside the explicitly audited A1 boundaries still require case-by-case authorization review before they are reused for Learning Hub data.
 
 ## Current repository shape
@@ -76,7 +77,7 @@
 
 ## Next task
 
-Task A2 only: secure private realtime subscriptions and enforce production cron authentication. Do not start schema task B1 until A2's critical realtime/cron gates are closed.
+Task B1 only: reviewed additive Learning Hub schema migration with nullable Booking fields and legacy fixtures. Do not use `prisma db push` against shared data.
 
 ## Completion contract
 
@@ -97,3 +98,12 @@ For each task: check every requirement; list changed files and reasons; report s
 - A2 may rely on `requireAuthenticatedUser` and `requireConversationParticipant` when authorizing private Pusher channels.
 - B1 may implement `LearningSpaceMembershipLookup` without changing the A1 server-session identity contract.
 - Remaining critical blockers before private Learning Hub payloads are R-002 public realtime and R-003 cron authentication.
+
+## Task A2 completion
+
+- Task A2 closed R-002 and R-003 with private authorized realtime channels and one shared production cron guard.
+- Server-session identity authorizes conversation and user channels. LearningSpace channels remain private and deny by default until a concrete membership lookup exists.
+- The explicit local cron bypass is accepted only outside production and only with `x-givegot-local-cron: 1`; it cannot override production authentication.
+- No schema, migration, database, settlement timing, eligibility rule, or visible UI structure changed.
+- A2 suites cover unauthenticated subscription, guessed conversation/user IDs, legitimate participant authorization, chat event delivery, notification channel privacy, missing/invalid/valid cron credentials, production bypass denial, and no secret/private-boundary logging.
+- Verification passed typecheck, 11 unit tests, 12 integration tests, all five legacy regressions, targeted lint with no errors, and production build. Full lint remains the unchanged 77-error/32-warning baseline.

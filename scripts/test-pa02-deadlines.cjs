@@ -60,6 +60,7 @@ async function main() {
   const deadlineRoute = load('src/app/api/cron/review-deadlines/route.ts', {
     'next/server': { NextResponse: response },
     '@/lib/prisma': { prisma: deadlineDb },
+    '@/lib/cron-auth': { authorizeCronRequest: () => null },
   }, { Date: FixedDate })
 
   assert.equal(deadlineRoute.getReviewDeadlineMilestone(new Date(fixedNow - 23.9 * HOUR), fixedNow), null)
@@ -111,6 +112,7 @@ async function main() {
     '@/lib/notifications': {
       createNotification: async (...args) => autoNotifications.push(args),
     },
+    '@/lib/cron-auth': { authorizeCronRequest: () => null },
   }, { Date: FixedDate })
   result = await autoRoute.GET({})
   assert.equal(result.body.processed, 1)
