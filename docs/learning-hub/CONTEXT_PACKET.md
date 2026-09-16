@@ -10,13 +10,13 @@
 
 ## Current checkpoint
 
-- Task A2 completed on 2026-09-16 after the A1 server-session authorization foundation.
-- Conversation messages now publish and subscribe only on authorized `private-conversation-*` channels; user-targeted booking cancellation realtime uses authorized `private-user-*` channels.
-- `/api/pusher/auth` obtains the actor from the server session, checks conversation participation or exact user ownership, and denies LearningSpace realtime until a concrete membership authorizer is supplied.
-- All three sensitive cron routes use one production `CRON_SECRET` guard. The only secretless path requires both non-production `NODE_ENV` and the explicit `x-givegot-local-cron: 1` test header.
-- Cron selection, 72-hour settlement timing, notification copy, transaction behavior, schema, migrations, database rows, and visible UI structure are unchanged.
-- Typecheck, A2 unit/integration tests, legacy regression, targeted lint without errors, and production build pass.
-- Full lint remains the documented pre-existing baseline: 77 errors and 32 warnings.
+- Task B2 completed on 2026-09-16 after B1’s additive Learning Hub schema migration.
+- LearningSpace and LearningTopic now have server-session-backed protected service/API handlers. Direct and confirmed-Booking creation create exactly two active members; a transaction-scoped advisory lock rejects a third active member.
+- Primary-skill changes are versioned and audited. Objective/definition updates use optimistic concurrency. Topics are free-form or canonically mapped, and archive state preserves historical Booking references.
+- Reuse suggestions return matching active pair spaces without forcing reuse or imposing pair-plus-skill uniqueness. Archived spaces remain readable to members and only restore is allowed among normal mutations.
+- `/api/pusher/auth` now authorizes private LearningSpace channels through active membership. B2 does not publish LearningSpace payloads.
+- No UI, schema, migration, provider, mode, fulfillment, settlement, or legacy Booking lifecycle changed. Legacy Bookings with null Learning Hub fields remain valid.
+- Verification passed typecheck, 17 Learning Hub unit tests, 12 integration tests, all five legacy regressions, and production build. Full lint remains the documented pre-existing 77-error/32-warning baseline.
 
 ## Owner-owned dirty state before Task 00
 
@@ -57,7 +57,7 @@
 - CLOSED: `/api/messages` POST checks session plus participation and always persists the session user as sender.
 - CLOSED IN A1 SCOPE: Booking lifecycle/review actor IDs and private Booking list/receipt reads are session-bound; notification reads/read-state are session-bound; internal notification creation is no longer a server action; admin actions guard role at the action boundary.
 - CLOSED: conversation and user-targeted realtime channels are private and authorized from the server session; guessed conversation/user IDs fail before Pusher signing.
-- CLOSED: LearningSpace channel names are private and deny by default until B2 supplies a concrete membership authorizer.
+- CLOSED: LearningSpace channel names are private and authorized through B2's active-membership lookup.
 - Auto-complete selects `CONFIRMED` plus `endTime < now - 72h`, with no mode/fulfillment predicate.
 - CLOSED: auto-complete, reminders, and review-deadlines enforce the shared production `CRON_SECRET` guard; middleware exposure does not bypass route authentication.
 - Other legacy action families outside the explicitly audited A1 boundaries still require case-by-case authorization review before they are reused for Learning Hub data.
@@ -77,7 +77,7 @@
 
 ## Next task
 
-Task B2 only: implement server-session-backed LearningSpace services for pair membership, mutable primary skill, topics, objective/versioning, and reuse suggestion. Do not begin UI, settlement, or provider work.
+Task C1 only: implement the secure idempotent LearningInvite backend on top of B2. Do not begin invite onboarding UI, LearningSpace shell UI, settlement, or provider work.
 
 ## Completion contract
 
@@ -115,3 +115,15 @@ For each task: check every requirement; list changed files and reasons; report s
 - Manual migration 004 performs no backfill. A guarded real-PostgreSQL verifier and representative six-status legacy fixtures are committed; credential-free in-memory PostgreSQL execution passed clean, legacy, invariant, and rollback paths.
 - The schema has no member role, no two-member database cap, and no pair-plus-primary-skill uniqueness. B2 must enforce at most two active members transactionally and derive every actor from the server session.
 - Verification passed Prisma generation/validation, typecheck, 15 unit tests, 12 integration tests, all five legacy regressions, migration execution/rehearsal, and production build. Full lint remains the documented pre-existing 77-error/32-warning baseline.
+
+## Task B2 completion
+
+- Recorded: 2026-09-16, Asia/Saigon.
+- Status: PASS WITH KNOWN LIMITATION.
+- Added server-session-backed LearningSpace/Topic service handlers and `/api/learning/spaces` routes; no UI, schema, migration, provider, mode, fulfillment, settlement, or legacy Booking lifecycle change.
+- Direct and confirmed-Booking creation require two distinct active users and an existing primary Skill. The service uses a transaction-scoped PostgreSQL advisory lock before membership capacity changes; there is no pair-plus-skill unique constraint, so reuse is suggested but creation remains allowed.
+- Reads and mutations use active membership derived from `auth()`; archived spaces remain readable to members and reject normal mutations, while restore is allowed. Topics are soft-archived without changing historical `Booking.topicId` references. Primary-skill changes write structured activity with the previous/new IDs and version.
+- LearningSpace Pusher authorization now checks the concrete active-membership repository; no LearningSpace content is published by B2.
+- Verification: typecheck; 17 Learning Hub unit tests; 12 integration tests; all five legacy regressions; production build. Full lint remains the pre-existing 77-error/32-warning baseline.
+- Compatibility/rollback: no schema/data migration or backfill; legacy Bookings with null Learning Hub fields remain unchanged/readable. Rollback is file-level reversion of B2 routes, services, tests, realtime authorizer wiring, and docs.
+- Next safe task: C1.

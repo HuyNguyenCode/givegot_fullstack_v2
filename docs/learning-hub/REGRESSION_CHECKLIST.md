@@ -100,3 +100,8 @@ The baseline smoke command is `npm run test:learning-hub:integration`. It import
 - Archived space/topic rows remained readable, and a free-form topic with no canonical mapping did not create a Skill.
 - Rollback removed only B1 objects and retained the original BookingStatus labels; the production rollback note requires export before any rollback after Learning Hub writes.
 - Prisma generation/validation, typecheck, Learning Hub tests, all five legacy regressions, and production build passed. Existing auto-complete/settlement, Review/Trust, providers, and UI were untouched.
+
+## Task B2 regression evidence
+
+- LearningSpace routes/services do not alter existing Booking status, cancellation, no-show, ledger, review, chat, notification, provider, dashboard, or cron flows. Old Bookings with null Learning Hub fields remain unchanged; the full five-script legacy regression suite passed.
+

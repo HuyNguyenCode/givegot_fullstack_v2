@@ -12,7 +12,7 @@ Severity and likelihood are qualitative. `Open baseline` means verified before a
 | R-004 | Auto-complete selects `CONFIRMED` solely by `endTime < now-72h`; future Exercise Review/Hybrid work could settle before fulfillment. | Critical | Certain if reused | I1-I3: separate fulfillment, `deliveredAt` eligibility, dispute guard, concurrency/reconciliation tests | Open baseline; do not reuse for async/hybrid |
 | R-005 | Many legacy server actions accept actor-like user IDs from clients. Participant comparison alone cannot prove caller identity. | High | High | A1 inventory protected Booking/review, notification, and admin boundaries and bind concrete actor paths to session before private Hub work | MITIGATED 2026-09-12 for A1 scope; do not reuse unaudited legacy action families for Learning Hub data |
 | R-006 | Learning artifacts may expose personal work through metadata, signed URLs, logs, admin support, or realtime events. | Critical | Medium | F1/F2/M1: private bucket, membership before metadata/URL, short TTL, redacted logs, narrow audited admin access | Planned |
-| R-007 | Pair-plus-skill uniqueness would fragment or block legitimate separate goals; hard mentor/learner membership roles would prevent role reversal. | High | Medium | B1/B2: no hard unique constraint; role on Booking/Task; concurrency tests | B1 schema closed: no pair/skill unique or member role; B2 service/concurrency proof remains |
+| R-007 | Pair-plus-skill uniqueness would fragment or block legitimate separate goals; hard mentor/learner membership roles would prevent role reversal. | High | Medium | B1/B2: no hard unique constraint; role on Booking/Task; concurrency tests | CLOSED 2026-09-16: B2 transaction-scoped member-capacity lock, third-member rejection coverage, no pair/skill unique, and no permanent member role |
 | R-008 | Non-null Learning Hub fields or broad backfill could invalidate legacy Booking rows. | Critical | Medium | B1: nullable additions, selective backfill, legacy fixtures, rollback rehearsal | CLOSED 2026-09-16: eight nullable fields, no backfill, six-status legacy fixture and rollback passed |
 | R-009 | Repository uses manual migrations and `prisma db push`; drift or destructive implicit change can bypass review. | Critical | Medium | B1: reviewed SQL, backup/rollback, clean and legacy validation; never push shared DB for Hub migration | CLOSED FOR B1 2026-09-16: named reviewed SQL, Prisma diff parity, guarded verifier, rollback SQL/note, clean and legacy execution |
 | R-010 | Settlement races could double-credit GivePoints or desynchronize balance and TransactionLog. | Critical | Medium | I2/I3: conditional claim in transaction, unique idempotency evidence, reconciliation | Planned |
@@ -28,7 +28,12 @@ Severity and likelihood are qualitative. `Open baseline` means verified before a
 
 ## Immediate gates
 
-- R-001 through R-003 are closed. LearningSpace realtime remains disabled until concrete B1/B2 membership authorization is wired.
+- R-001 through R-003 are closed. LearningSpace realtime is private and authorized through B2 active-membership lookup.
 - B1 supplied executable evidence for R-008, R-009, R-014, and the migration portion of R-016. Shared deployment still follows the rollback note and never uses `db push`.
 - No async/hybrid GivePoint settlement before R-004, R-010, and R-017 are closed.
 - No AI/transcript implementation while R-013 remains ungated.
+
+## Task B2 update
+
+- R-007 B2 service mitigation is CLOSED for MVP: capacity changes take a transaction-scoped advisory lock and reject a third active member; services retain no permanent member role and impose no pair/skill uniqueness.
+

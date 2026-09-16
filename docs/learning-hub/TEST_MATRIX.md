@@ -25,9 +25,9 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | --- | --- | --- | --- | --- | --- |
 | LH 001 | C1 | `LH001-U` token entropy/hash, expiry, usage | `LH001-I` create; `LH001-S` session/self/third-member auth | Invite delivery/provider failure preserves state | PLACEHOLDER |
 | LH 002 | C1, C2 | `LH002-U` token state transitions | `LH002-I` preview/accept; `LH002-C` concurrent/idempotent accept | Signup return and existing-space behavior | PLACEHOLDER |
-| LH 010 | B1, B2, D1 | `LH010-U` create/reuse decision | `LH010-I` pair membership; `LH010-L` old Booking/null compatibility | Discover/Booking creation still works | B1 schema/legacy PASS; B2/D1 pending |
-| LH 011 | B1, B2, D1 | `LH011-U` normalize/rename/archive/map | `LH011-I` member auth; `LH011-L` topic/history provenance | Skill moderation/public catalog unchanged | B1 schema/history PASS; B2/D1 pending |
-| LH 012 | B2, D1 | `LH012-U` objective/DoD validation/version | `LH012-I` member auth; `LH012-C` optimistic-lock conflict | Booking note and UI long-text behavior | PLACEHOLDER |
+| LH 010 | B1, B2, D1 | `LH010-U` create/reuse decision | `LH010-I` pair membership; `LH010-L` old Booking/null compatibility | Discover/Booking creation still works | B1/B2 PASS; D1 UI pending |
+| LH 011 | B1, B2, D1 | `LH011-U` normalize/rename/archive/map | `LH011-I` member auth; `LH011-L` topic/history provenance | Skill moderation/public catalog unchanged | B1/B2 PASS; D1 UI pending |
+| LH 012 | B2, D1 | `LH012-U` objective/DoD validation/version | `LH012-I` member auth; `LH012-C` optimistic-lock conflict | Booking note and UI long-text behavior | B2 PASS; D1 UI pending |
 | LH 020 | E1, I1 | `LH020-U` mode/checklist rules | `LH020-I` Booking integration and immutable-after-delivery guard | `LH020-R` legacy Live/Calendar/Meet/cancellation | PLACEHOLDER |
 | LH 030 | F2 | `LH030-U` HTTPS normalization/validation | `LH030-I` member CRUD; `LH030-S` XSS/SSRF/no-fetch | Safe external navigation and deleted link | PLACEHOLDER |
 | LH 031 | F1, F2 | `LH031-U` MIME/extension/size/key/quota | `LH031-I` signed upload/finalize; `LH031-S` spoof/path/expiry | Orphan cleanup and provider failure | PLACEHOLDER |
@@ -127,3 +127,8 @@ The unit suite uses `node:test` via the existing `tsx` dependency. The integrati
 | `npm run test:regression` | PASS: all five legacy scripts |
 | `npm run build` | PASS: 30 routes; existing middleware deprecation warning only |
 | Full `npm run lint` | KNOWN PRE-EXISTING LIMITATION: 77 errors and 32 warnings baseline; not weakened or hidden |
+
+## Task B2 evidence
+
+- PASS: tests/learning-hub/unit/learning-space-service.test.ts covers two-member capacity, repeated-pair spaces, non-forced reuse, session-bound non-member denial, 409 optimistic conflict, topic-reference preservation, primary-skill audit, and null legacy Booking compatibility.
+- PASS: npm run typecheck, npm run test:learning-hub (17), npm run test:learning-hub:integration (12), npm run test:regression (five scripts), and production build.

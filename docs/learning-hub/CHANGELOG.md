@@ -122,3 +122,8 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 ### Rollback
 
 - Before Learning Hub writes, use the paired rollback SQL. After writes, pause writers and export all ten Learning Hub tables plus the eight Booking fields first; roll-forward is preferred. Never use `prisma db push` for shared migration state.
+
+## 2026-09-16 — B2 LearningSpace domain services
+
+- Added protected LearningSpace/Topic service/API handlers, membership-backed realtime authorization, B2 tests, and repository-memory evidence. No UI, schema, migration, or legacy Booking behavior change.
+

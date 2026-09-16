@@ -5,12 +5,12 @@
 - Recorded: 2026-09-16, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
 - HEAD before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Task: B1 Learning Hub domain schema.
+- Task: B2 LearningSpace domain services.
 - Status: PASS WITH KNOWN LIMITATION.
-- Production behavior: unchanged; B1 adds schema/migration only and does not enable Learning Hub routes, settlement, or providers.
-- Schema/migration behavior: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
-- API behavior: unchanged. Future Learning Hub services must continue to derive actor identity from the server session.
-- Learning Hub implementation: domain persistence only; no UI or business service is enabled.
+- Production behavior: protected LearningSpace/Topic service and API handlers are enabled; no UI, settlement, provider, or legacy Booking lifecycle behavior changed.
+- Schema/migration behavior: unchanged from B1: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
+- API behavior: `/api/learning/spaces` protected handlers and membership-backed LearningSpace Pusher authorization derive actor identity from the server session.
+- Learning Hub implementation: B2 domain services cover pair membership, primary skill audit, topics, objective/definition versioning, archive/restore, and reuse suggestion; no final UI.
 
 The four memory files the task asked to read first did not exist at baseline. Task 00 creates the complete memory set from the supplied references, the tracked playbook at HEAD, and current repository evidence.
 
@@ -65,7 +65,7 @@ Verified by source inventory and successful Next.js build:
 /wallet
 ```
 
-There is no current `/learning` or `/api/learning` route.
+Protected `/api/learning/spaces` routes are available from B2. There is still no final LearningSpace UI route.
 
 ## Current schema
 
@@ -315,3 +315,15 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 - Rollback before Learning Hub writes uses the paired SQL. After writes, pause writers and export the ten tables/eight Booking fields first; roll-forward is preferred.
 - B2 may implement only server-session-backed LearningSpace services, including a transaction/lock that rejects a third active member. It must not add a hard pair/skill unique or auto-create Skill rows.
 - Do not begin UI, invite delivery, storage/provider integration, fulfillment, or settlement automatically.
+
+## Task B2 completion
+
+- Recorded: 2026-09-16, Asia/Saigon.
+- Status: PASS WITH KNOWN LIMITATION.
+- Added server-session-backed LearningSpace/Topic service handlers and `/api/learning/spaces` routes; no UI, schema, migration, provider, mode, fulfillment, settlement, or legacy Booking lifecycle change.
+- Direct and confirmed-Booking creation require two distinct active users and an existing primary Skill. The service uses a transaction-scoped PostgreSQL advisory lock before membership capacity changes; there is no pair-plus-skill unique constraint, so reuse is suggested but creation remains allowed.
+- Reads and mutations use active membership derived from `auth()`; archived spaces remain readable to members and reject normal mutations, while restore is allowed. Topics are soft-archived without changing historical `Booking.topicId` references. Primary-skill changes write structured activity with the previous/new IDs and version.
+- LearningSpace Pusher authorization now checks the concrete active-membership repository; no LearningSpace content is published by B2.
+- Verification: typecheck; 17 Learning Hub unit tests; 12 integration tests; all five legacy regressions; production build. Full lint remains the pre-existing 77-error/32-warning baseline.
+- Compatibility/rollback: no schema/data migration or backfill; legacy Bookings with null Learning Hub fields remain unchanged/readable. Rollback is file-level reversion of B2 routes, services, tests, realtime authorizer wiring, and docs.
+- Next safe task: C1.
