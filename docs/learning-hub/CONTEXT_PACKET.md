@@ -10,13 +10,15 @@
 
 ## Current checkpoint
 
-- Task B2 completed on 2026-09-16 after B1’s additive Learning Hub schema migration.
-- LearningSpace and LearningTopic now have server-session-backed protected service/API handlers. Direct and confirmed-Booking creation create exactly two active members; a transaction-scoped advisory lock rejects a third active member.
+- Task C1 completed on 2026-09-16 after B2’s protected LearningSpace domain service work.
+- LearningSpace and LearningTopic have server-session-backed protected service/API handlers. Direct and confirmed-Booking creation create exactly two active members; a transaction-scoped advisory lock rejects a third active member.
 - Primary-skill changes are versioned and audited. Objective/definition updates use optimistic concurrency. Topics are free-form or canonically mapped, and archive state preserves historical Booking references.
 - Reuse suggestions return matching active pair spaces without forcing reuse or imposing pair-plus-skill uniqueness. Archived spaces remain readable to members and only restore is allowed among normal mutations.
-- `/api/pusher/auth` now authorizes private LearningSpace channels through active membership. B2 does not publish LearningSpace payloads.
-- No UI, schema, migration, provider, mode, fulfillment, settlement, or legacy Booking lifecycle changed. Legacy Bookings with null Learning Hub fields remain valid.
-- Verification passed typecheck, 17 Learning Hub unit tests, 12 integration tests, all five legacy regressions, and production build. Full lint remains the documented pre-existing 77-error/32-warning baseline.
+- `/api/pusher/auth` authorizes private LearningSpace channels through active membership. C1 adds `/api/learning/invites` create, preview, accept, and inviter-revoke APIs without a UI.
+- LearningInvite creation returns a 256-bit raw token once and stores only SHA-256. Acceptance is session-bound, transactionally locked/idempotent, and supports an explicit matching active-space reuse or a distinct new space for the same pair. It rejects self, expired, revoked, exhausted, different-user replay, and third-member outcomes.
+- Logged-out preview stores the raw token only in a ten-minute AES-GCM encrypted HttpOnly/SameSite=Lax continuation cookie, cleared after acceptance. No email is sent in C1.
+- No UI, schema, migration, provider, mode, fulfillment, settlement, Discover, social graph, or legacy Booking lifecycle changed. Legacy Bookings with null Learning Hub fields remain valid.
+- Verification passed typecheck, 23 Learning Hub unit tests, 17 integration tests, all five legacy regressions, targeted lint, and production build. Full lint remains the documented pre-existing 77-error/32-warning baseline.
 
 ## Owner-owned dirty state before Task 00
 
@@ -77,7 +79,7 @@
 
 ## Next task
 
-Task C1 only: implement the secure idempotent LearningInvite backend on top of B2. Do not begin invite onboarding UI, LearningSpace shell UI, settlement, or provider work.
+Next safe task: D1 LearningSpace shell. B2 and C1 are complete; C2 remains pending because it depends on both C1 and D1. Do not begin C2, settlement, or provider work as part of D1 unless separately authorized.
 
 ## Completion contract
 
@@ -126,4 +128,4 @@ For each task: check every requirement; list changed files and reasons; report s
 - LearningSpace Pusher authorization now checks the concrete active-membership repository; no LearningSpace content is published by B2.
 - Verification: typecheck; 17 Learning Hub unit tests; 12 integration tests; all five legacy regressions; production build. Full lint remains the pre-existing 77-error/32-warning baseline.
 - Compatibility/rollback: no schema/data migration or backfill; legacy Bookings with null Learning Hub fields remain unchanged/readable. Rollback is file-level reversion of B2 routes, services, tests, realtime authorizer wiring, and docs.
-- Next safe task: C1.
+- At the B2 checkpoint, C1 was the next planned task; it is now complete.

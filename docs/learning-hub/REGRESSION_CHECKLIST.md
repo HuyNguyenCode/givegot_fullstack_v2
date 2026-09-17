@@ -105,3 +105,10 @@ The baseline smoke command is `npm run test:learning-hub:integration`. It import
 
 - LearningSpace routes/services do not alter existing Booking status, cancellation, no-show, ledger, review, chat, notification, provider, dashboard, or cron flows. Old Bookings with null Learning Hub fields remain unchanged; the full five-script legacy regression suite passed.
 
+## Task C1 regression evidence
+
+- Authentication: invite create, accept, and revoke derive actor identity exclusively from the server session. Public preview is bearer-token scoped and exposes no token hash or raw token.
+- Pair safety: valid acceptance, expiry, revocation, self acceptance, cross-user replay, same-user replay, concurrent same-user acceptance, third-member reuse, active-space reuse, and same-pair new-space choice have executable coverage.
+- Login continuation: the raw token is encrypted in a ten-minute HttpOnly/SameSite=Lax cookie and is consumed/cleared after authenticated acceptance; it is absent from the preview response and cookie plaintext.
+- Legacy flows: no Booking, Discover, matching, social graph, notification, email, provider, schema, or migration code changed. All five offline legacy regression scripts passed.
+

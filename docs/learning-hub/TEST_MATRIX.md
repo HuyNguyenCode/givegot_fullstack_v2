@@ -23,8 +23,8 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 
 | Requirement | Task(s) | Unit/state placeholder | Integration/security/compatibility placeholder | Regression placeholder | Status |
 | --- | --- | --- | --- | --- | --- |
-| LH 001 | C1 | `LH001-U` token entropy/hash, expiry, usage | `LH001-I` create; `LH001-S` session/self/third-member auth | Invite delivery/provider failure preserves state | PLACEHOLDER |
-| LH 002 | C1, C2 | `LH002-U` token state transitions | `LH002-I` preview/accept; `LH002-C` concurrent/idempotent accept | Signup return and existing-space behavior | PLACEHOLDER |
+| LH 001 | C1 | `LH001-U` token entropy/hash, expiry, usage | `LH001-I` create; `LH001-S` session/self/third-member auth | Invite delivery/provider failure preserves state | C1 PASS; no delivery/provider coupling added |
+| LH 002 | C1, C2 | `LH002-U` token state transitions | `LH002-I` preview/accept; `LH002-C` concurrent/idempotent accept | Signup return and existing-space behavior | C1 backend PASS; C2 UI pending |
 | LH 010 | B1, B2, D1 | `LH010-U` create/reuse decision | `LH010-I` pair membership; `LH010-L` old Booking/null compatibility | Discover/Booking creation still works | B1/B2 PASS; D1 UI pending |
 | LH 011 | B1, B2, D1 | `LH011-U` normalize/rename/archive/map | `LH011-I` member auth; `LH011-L` topic/history provenance | Skill moderation/public catalog unchanged | B1/B2 PASS; D1 UI pending |
 | LH 012 | B2, D1 | `LH012-U` objective/DoD validation/version | `LH012-I` member auth; `LH012-C` optimistic-lock conflict | Booking note and UI long-text behavior | B2 PASS; D1 UI pending |
@@ -46,13 +46,17 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 
 | Suite | Cases | Owner | Status |
 | --- | --- | --- | --- |
-| Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, M1 | A1 PASS for server session/chat/admin; A2 PASS for private conversation/user subscription authorization and deny-by-default LearningSpace realtime; M1 cases remain |
+| Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, B2, M1 | A1 PASS for server session/chat/admin; A2 PASS for private conversation/user authorization; B2 PASS for active LearningSpace membership, including readable archived spaces, while nonmembers/inactive memberships are denied; M1 cases remain |
 | Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1 | PASS: isolated clean/legacy/rollback execution; six BookingStatus rows retained; no backfill |
 | Mode transitions | All allowed/forbidden transitions for LIVE, EXERCISE_REVIEW, HYBRID | E1, I1 | PLACEHOLDER |
 | Settlement | Double click, concurrent request/cron, dispute, rollback, ledger reconciliation | I2, I3 | PLACEHOLDER |
 | Storage | MIME/extension mismatch, size/quota, orphan, expiry, delete, filename/path, provider failure | F1, F2 | PLACEHOLDER |
 | UI/accessibility | Empty/loading/error, mobile, keyboard/focus/labels/contrast, long Vietnamese | C2, D1, F2, G2, K1 | PLACEHOLDER |
 | Analytics/privacy | Event definitions, dedupe, raw counts, no private content | L1, M1 | PLACEHOLDER |
+
+## B2 realtime reconciliation
+
+`tests/learning-hub/integration/realtime-authorization.test.ts` now covers unauthenticated LearningSpace-channel denial before provider access, nonmember denial, active-member authorization, inactive-member denial, and active-member authorization for readable archived spaces. The post-C1 suite result is 23 unit tests, 17 integration tests, and five legacy regressions passing.
 
 ## Task 00 baseline evidence
 

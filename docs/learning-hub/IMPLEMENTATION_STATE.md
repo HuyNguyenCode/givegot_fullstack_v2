@@ -5,12 +5,12 @@
 - Recorded: 2026-09-16, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
 - HEAD before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Task: B2 LearningSpace domain services.
-- Status: PASS WITH KNOWN LIMITATION.
-- Production behavior: protected LearningSpace/Topic service and API handlers are enabled; no UI, settlement, provider, or legacy Booking lifecycle behavior changed.
+- Task: C1 Bring Your Pair invite backend.
+- Status: PASS.
+- Production behavior: protected LearningSpace/Topic plus LearningInvite service/API handlers are enabled; no UI, settlement, provider, or legacy Booking lifecycle behavior changed.
 - Schema/migration behavior: unchanged from B1: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
-- API behavior: `/api/learning/spaces` protected handlers and membership-backed LearningSpace Pusher authorization derive actor identity from the server session.
-- Learning Hub implementation: B2 domain services cover pair membership, primary skill audit, topics, objective/definition versioning, archive/restore, and reuse suggestion; no final UI.
+- API behavior: `/api/learning/spaces` and `/api/learning/invites` protected mutations derive actor identity from the server session. Invite preview uses the bearer token only and creates a short-lived encrypted HttpOnly continuation cookie for login/signup.
+- Learning Hub implementation: B2 domain services cover pair membership, primary skill audit, topics, objective/definition versioning, archive/restore, and reuse suggestion. C1 covers invite issuance, preview, revocation, idempotent acceptance, and explicit reuse/new-space choice; no final UI.
 
 The four memory files the task asked to read first did not exist at baseline. Task 00 creates the complete memory set from the supplied references, the tracked playbook at HEAD, and current repository evidence.
 
@@ -326,4 +326,22 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 - LearningSpace Pusher authorization now checks the concrete active-membership repository; no LearningSpace content is published by B2.
 - Verification: typecheck; 17 Learning Hub unit tests; 12 integration tests; all five legacy regressions; production build. Full lint remains the pre-existing 77-error/32-warning baseline.
 - Compatibility/rollback: no schema/data migration or backfill; legacy Bookings with null Learning Hub fields remain unchanged/readable. Rollback is file-level reversion of B2 routes, services, tests, realtime authorizer wiring, and docs.
-- Next safe task: C1.
+
+## Task C1 completion
+
+- Recorded: 2026-09-16, Asia/Saigon.
+- Status: PASS.
+- Added a session-bound LearningInvite backend: a 256-bit raw token is returned only on creation, while PostgreSQL receives only its SHA-256 hash. Invites retain inviter, primary skill, initial objective, expiry, one-use pair limit, acceptance/revocation timestamps, and optional resulting LearningSpace.
+- Acceptance holds transaction-scoped advisory locks for the invite and any selected space. It is idempotent only for the original recipient and rejects self acceptance, revoked/expired/exhausted state, a different-user replay, primary-skill mismatch, and a reuse choice that would create a third active member.
+- A recipient may explicitly attach the accepted invite to an existing active matching pair space or omit that choice to create another space for the same pair. No pair-plus-skill uniqueness was introduced.
+- Logged-out preview preserves the raw token only as an AES-GCM encrypted, ten-minute, HttpOnly, SameSite=Lax cookie. The cookie is cleared after acceptance; token hashes and raw tokens are never logged or returned in previews.
+- Verification: `npm run typecheck`; 23 Learning Hub unit tests; route smoke plus 13 integration tests; all five legacy regressions; targeted ESLint; and production build. The Windows runner initially failed before test discovery because `tsx` calls `os.userInfo()` on this host; the test command passed without changing source after a one-command `NODE_OPTIONS` compatibility preload supplying the unavailable Windows `geteuid` path. The temporary preload was deleted.
+- Compatibility/rollback: no schema, migration, backfill, Booking, Discover, social graph, email, notification, or provider change. Old rows remain valid. Rollback is file-level reversion of C1 routes/services/tests/docs; no database rollback is needed.
+- Next safe task: D1. C2 remains pending both completed C1 and incomplete D1.
+
+## Repository memory and B2 realtime reconciliation
+
+- Recorded: 2026-09-16, Asia/Saigon. Status: PASS.
+- Reconciled the stale pre-B2 integration assertion with the actual B2 authorizer. Private LearningSpace channels require a server session and ACTIVE membership; nonmembers and LEFT/REMOVED memberships are denied. An archived LearningSpace remains readable, so its active members remain authorized.
+- Verification: `npm run typecheck`; 23 Learning Hub unit tests; route smoke plus 17 integration tests; and all five legacy regressions. No production behavior, schema, API, or UI changed.
+- Next safe task: D1. C2 remains blocked on both completed C1 and incomplete D1.

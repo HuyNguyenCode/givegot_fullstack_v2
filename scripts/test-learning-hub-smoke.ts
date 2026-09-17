@@ -7,6 +7,10 @@ const routeModules = [
   ['../src/app/api/cron/reminders/route', 'GET'],
   ['../src/app/api/cron/review-deadlines/route', 'GET'],
   ['../src/app/api/pusher/auth/route', 'POST'],
+  ['../src/app/api/learning/invites/route', 'POST'],
+  ['../src/app/api/learning/invites/preview/route', 'POST'],
+  ['../src/app/api/learning/invites/accept/route', 'POST'],
+  ['../src/app/api/learning/invites/[inviteId]/route', 'PATCH'],
 ] as const
 
 async function main() {
@@ -17,7 +21,7 @@ async function main() {
 
   // This suite never loads dotenv or invokes Prisma. The separate B1 migration
   // verifier requires an explicit disposable URL and never falls back to DATABASE_URL.
-  console.log('PASS: route imports: conversations, messages, Pusher auth, and cron routes.')
+  console.log('PASS: route imports: conversations, messages, Pusher auth, LearningInvite, and cron routes.')
   console.log('Prerequisites (values are never printed): Node.js; installed dependencies; DISPOSABLE_TEST_DATABASE_URL only for the explicit migration suite.')
 }
 

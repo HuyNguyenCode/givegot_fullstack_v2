@@ -127,3 +127,28 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 
 - Added protected LearningSpace/Topic service/API handlers, membership-backed realtime authorization, B2 tests, and repository-memory evidence. No UI, schema, migration, or legacy Booking behavior change.
 
+## 2026-09-16 — C1 Bring Your Pair invite backend
+
+### Added
+
+- Added session-bound LearningInvite create, preview, accept, and inviter-revoke APIs plus transaction-scoped service logic.
+- Added 256-bit raw-token issuance with SHA-256-only persistence, safe public preview, exact pair usage limit, and idempotent acceptance for the original recipient.
+- Added an encrypted, ten-minute HttpOnly/SameSite=Lax continuation cookie so login/signup does not lose an intended invite.
+- Added executable coverage for valid/expired/revoked/self/replay/concurrent/third-member paths, logged-out continuation, existing-space reuse, and same-pair separate-space choice.
+
+### Not changed
+
+- No schema or migration, Booking lifecycle, Discover, social graph, UI, email, notification, provider, settlement, or legacy-row behavior changed.
+
+### Verification and compatibility
+
+- PASS: typecheck; 23 Learning Hub unit tests; route smoke plus 13 integration tests; five offline legacy regressions; targeted ESLint; production build.
+- The standard `tsx` command initially failed before discovery on this Windows host because `os.userInfo()` returned ENOMEM. The same command passed with a temporary one-command compatibility preload; the preload was removed and no project runtime behavior depends on it.
+- Rollback is file-level reversion of C1 source/tests/docs only; no data rollback is required.
+
+## 2026-09-16 — Repository memory and B2 realtime reconciliation
+
+- Corrected the current checkpoint: B2 and C1 are complete, D1 is next, and C2 remains dependent on both C1 and D1.
+- Replaced the stale pre-B2 LearningSpace deny-by-default integration assertion with active-member authorization, unauthenticated/nonmember/inactive denial, and readable-archived-space coverage. No production behavior changed.
+- Verification: typecheck; 23 Learning Hub unit tests; route smoke plus 17 integration tests; and five offline legacy regressions.
+
