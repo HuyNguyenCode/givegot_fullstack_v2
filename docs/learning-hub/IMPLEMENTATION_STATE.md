@@ -2,15 +2,17 @@
 
 ## Checkpoint
 
-- Recorded: 2026-09-16, Asia/Saigon.
+- Recorded: 2026-09-17, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
 - HEAD before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Task: C1 Bring Your Pair invite backend.
-- Status: PASS.
-- Production behavior: protected LearningSpace/Topic plus LearningInvite service/API handlers are enabled; no UI, settlement, provider, or legacy Booking lifecycle behavior changed.
+- Task: D1 LearningSpace shell.
+- Status: PASS WITH KNOWN LIMITATION.
+- Production behavior: protected LearningSpace/Topic and LearningInvite handlers remain enabled. The authorized, read-only `/learning/[spaceId]` shell is now enabled; settlement, providers, and legacy Booking lifecycle behavior remain unchanged.
 - Schema/migration behavior: unchanged from B1: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
 - API behavior: `/api/learning/spaces` and `/api/learning/invites` protected mutations derive actor identity from the server session. Invite preview uses the bearer token only and creates a short-lived encrypted HttpOnly continuation cookie for login/signup.
-- Learning Hub implementation: B2 domain services cover pair membership, primary skill audit, topics, objective/definition versioning, archive/restore, and reuse suggestion. C1 covers invite issuance, preview, revocation, idempotent acceptance, and explicit reuse/new-space choice; no final UI.
+- Learning Hub implementation: B2 domain services cover pair membership, primary skill audit, topics, objective/definition versioning, archive/restore, and reuse suggestion. C1 covers invite issuance, preview, revocation, idempotent acceptance, and explicit reuse/new-space choice. D1 adds the server-authorized mobile-first shell with pair/skill/topic/detail/Booking context, archive readability, rebooking CTA, and read-only future-artifact placeholders.
+- Current verification: typecheck; targeted changed-file lint; 28 Learning Hub unit tests; route smoke plus 17 integration tests; and all five legacy regressions passed. The D1 production build compiled but its final exit was not observed on this host; full lint remains the pre-existing baseline failure.
+- Next safe task: C2 invite onboarding UI. Do not begin it automatically.
 
 The four memory files the task asked to read first did not exist at baseline. Task 00 creates the complete memory set from the supplied references, the tracked playbook at HEAD, and current repository evidence.
 
@@ -56,6 +58,7 @@ Verified by source inventory and successful Next.js build:
 /dashboard
 /discover
 /history
+/learning/[spaceId]
 /homepage
 /mentor/[mentorId]
 /policies/cancellation
@@ -65,7 +68,7 @@ Verified by source inventory and successful Next.js build:
 /wallet
 ```
 
-Protected `/api/learning/spaces` routes are available from B2. There is still no final LearningSpace UI route.
+Protected `/api/learning/spaces` routes are available from B2. `/learning/[spaceId]` is the completed D1 LearningSpace UI route.
 
 ## Current schema
 
@@ -92,6 +95,7 @@ Migration 004 adds the B1 domain additively and has paired executable rollback S
 Package scripts:
 
 - `dev`, `build`, `start`, `lint`.
+- `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, `test:learning-hub:migration`, and `test:regression`.
 - `db:generate`, `db:push`, `db:seed`, `db:backfill-embeddings`, `db:backfill-transactions`, `db:migrate-skill-category`.
 - `postinstall` runs Prisma generate.
 
@@ -99,7 +103,7 @@ Repository scripts:
 
 - Interactive/provider or data-changing: `scripts/google-oauth-setup.ts`, `scripts/seed-users.ts`; Prisma seed/backfill/migration/admin utilities under `prisma/`. Not run in Task 00.
 - Offline regressions: `scripts/test-cancellation-preview.cjs`, `scripts/test-pa02-deadlines.cjs`, `scripts/test-quiz-publication.cjs`, `scripts/test-skill-approval.cjs`, `scripts/test-withdrawal-rejection.cjs`.
-- No package-level `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, or `test:regression` command exists yet; Task 01 owns that harness.
+- The Learning Hub unit/integration commands use the existing `tsx` harness. On this Windows host they require the documented one-command compatibility preload; no runtime dependency was added.
 
 ## Environment variable names
 
@@ -111,21 +115,19 @@ Values were not read or recorded.
 
 ## Verified current findings
 
-### Client-controlled identity in chat
+### Server-session identity and private realtime
 
-- `src/app/api/conversations/route.ts` GET accepts `userId` from query and returns that user's conversation list without session authentication.
-- The same route POST accepts body `userId`; it checks that supplied ID is a Booking participant but does not bind it to the server session.
-- `src/app/api/messages/route.ts` GET accepts `conversationId` and optional query `userId`/viewerId, returns messages without membership/session authorization, and uses the supplied viewer ID when marking messages read.
-- The same route POST accepts body `senderId`; it checks that supplied ID is a conversation participant but does not bind it to the server session.
-- `src/lib/pusher-client.ts` documents `conversation-<id>` as a public channel; no channel authorization endpoint exists.
+- Conversations and messages derive actor identity from the server session; client-supplied identity-like fields do not authorize reads or writes.
+- Message reads enforce conversation participation, and persisted message senders are session-owned.
+- Conversation and user realtime channels are private and server-authorized. LearningSpace realtime authorizes active members through the B2 membership lookup.
+- Production cron routes require the shared `CRON_SECRET`; missing or invalid credentials fail before data access.
 
 ### Current auto-complete behavior
 
 - `src/app/api/cron/auto-complete/route.ts` computes `cutoffTime = now - 72 hours`.
 - It selects every Booking where `status = CONFIRMED` and `endTime < cutoffTime`; no mode or fulfillment predicate exists.
 - It conditionally changes status to COMPLETED in a transaction, credits the mentor one GivePoint, creates a BOOKING_COMPLETED TransactionLog, and sends best-effort notifications.
-- Its optional `CRON_SECRET` guard is commented out, while middleware treats all `/api/cron` routes as public.
-- `review-deadlines` uses the same endTime-based 24/46/48/72-hour window and does enforce `CRON_SECRET` when configured, refusing an unset secret only in production.
+- Mode-aware fulfillment and settlement remain I1-I3 scope; no Learning Hub mode/fulfillment predicate has been added to auto-complete.
 
 ## Baseline command evidence
 
@@ -159,8 +161,10 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 
 ## Next task assumptions
 
-- A2 must enforce auto-complete cron authentication and private realtime before private artifacts.
-- B1 must not use `prisma db push` against shared/legacy data; it needs reviewed SQL, clean and representative legacy tests, and rollback evidence.
+- C1's server-session-bound invite backend, including encrypted login continuation, exists and remains the authority for invite acceptance.
+- D1's server-session/member-authorized `/learning/[spaceId]` shell exists and remains read-only.
+- C2 may implement invite onboarding UI only. It must preserve server-session identity and invite continuation behavior.
+- Do not add storage, modes, fulfillment, settlement, notifications, providers, resource/task/note mutations, or other future-task scope.
 - Existing baseline failures remain separate from task-introduced failures and must not be hidden by skips or weakened assertions.
 
 ## Task 01 completion
@@ -337,11 +341,21 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 - Logged-out preview preserves the raw token only as an AES-GCM encrypted, ten-minute, HttpOnly, SameSite=Lax cookie. The cookie is cleared after acceptance; token hashes and raw tokens are never logged or returned in previews.
 - Verification: `npm run typecheck`; 23 Learning Hub unit tests; route smoke plus 13 integration tests; all five legacy regressions; targeted ESLint; and production build. The Windows runner initially failed before test discovery because `tsx` calls `os.userInfo()` on this host; the test command passed without changing source after a one-command `NODE_OPTIONS` compatibility preload supplying the unavailable Windows `geteuid` path. The temporary preload was deleted.
 - Compatibility/rollback: no schema, migration, backfill, Booking, Discover, social graph, email, notification, or provider change. Old rows remain valid. Rollback is file-level reversion of C1 routes/services/tests/docs; no database rollback is needed.
-- Next safe task: D1. C2 remains pending both completed C1 and incomplete D1.
+- Historical checkpoint: D1 was next after C1; D1 is now complete and C2 is the current next safe task.
+
+## Task D1 LearningSpace shell
+
+- Recorded: 2026-09-17, Asia/Saigon. Status: PASS WITH KNOWN LIMITATION.
+- Added the mobile-first `/learning/[spaceId]` server route. It authorizes active membership from the server session before reading any shell metadata; unauthorized, unauthenticated, and absent IDs resolve through the same not-found route result, so the page does not disclose a private space's existence.
+- The read-only shell displays the pair, mutable primary skill, active subtopics, objective, definition of done, current/next linked Booking, archive state, and the required resources/tasks/notes/history placeholders. Archived spaces remain readable and offer only the existing Book-next-session path; D1 adds no artifact or detail mutation UI/API.
+- Route-local loading/error UI, responsive layout, explicit focus-visible controls, wrapping/whitespace handling for long Vietnamese copy, and empty-state content are included. RootLayout continues to own global navigation; the shell adds only a local Dashboard back link.
+- Verification: `npm run typecheck`; 28 Learning Hub unit tests (including D1 member, nonmember, archived, empty, long Vietnamese, mobile, keyboard/focus, and navigation assertions); route smoke plus 17 integration tests; and all five legacy regressions. The unit/integration commands used the documented one-command Windows `tsx` compatibility preload and no project runtime dependency.
+- Compatibility/rollback: no schema, migration, Booking lifecycle, dashboard/history source, provider, resource/task/note, or legacy UI code changed. Old rows remain valid. Rollback is file-level reversion of the D1 route/component/loader/tests/docs only.
+- Next safe task: C2 may begin now that D1 is complete; do not begin it automatically.
 
 ## Repository memory and B2 realtime reconciliation
 
 - Recorded: 2026-09-16, Asia/Saigon. Status: PASS.
 - Reconciled the stale pre-B2 integration assertion with the actual B2 authorizer. Private LearningSpace channels require a server session and ACTIVE membership; nonmembers and LEFT/REMOVED memberships are denied. An archived LearningSpace remains readable, so its active members remain authorized.
 - Verification: `npm run typecheck`; 23 Learning Hub unit tests; route smoke plus 17 integration tests; and all five legacy regressions. No production behavior, schema, API, or UI changed.
-- Next safe task: D1. C2 remains blocked on both completed C1 and incomplete D1.
+- Historical reconciliation only: B2 and C1 are complete; D1 is complete; C2 is the current next safe task.

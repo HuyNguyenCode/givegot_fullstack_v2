@@ -146,9 +146,16 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - The standard `tsx` command initially failed before discovery on this Windows host because `os.userInfo()` returned ENOMEM. The same command passed with a temporary one-command compatibility preload; the preload was removed and no project runtime behavior depends on it.
 - Rollback is file-level reversion of C1 source/tests/docs only; no data rollback is required.
 
+## 2026-09-17 — D1 LearningSpace shell
+
+- Added the authorized, mobile-first, read-only `/learning/[spaceId]` shell with private pair metadata, mutable-skill display, active topics, objective/definition, linked Booking context, archive notice, rebooking CTA, and future artifact placeholders.
+- Session-backed membership is checked before the shell query; inaccessible and missing IDs use the same not-found path. No resource/task/note mutation, schema, API, or legacy flow changed.
+- Added executable member/nonmember/archived/empty/long-Vietnamese/mobile/keyboard/navigation tests. Typecheck, 28 unit tests, 17 integration tests, and the five legacy regressions passed.
+- KNOWN LIMITATION: the D1 production build compiled, but this host did not expose a final build-process exit; it is not recorded as a completed build verification. Full lint remains the existing baseline failure.
+
 ## 2026-09-16 — Repository memory and B2 realtime reconciliation
 
-- Corrected the current checkpoint: B2 and C1 are complete, D1 is next, and C2 remains dependent on both C1 and D1.
+- Historical correction at that checkpoint: B2 and C1 were complete and D1 was next. D1 is now complete; C2 is the current next safe task.
 - Replaced the stale pre-B2 LearningSpace deny-by-default integration assertion with active-member authorization, unauthenticated/nonmember/inactive denial, and readable-archived-space coverage. No production behavior changed.
 - Verification: typecheck; 23 Learning Hub unit tests; route smoke plus 17 integration tests; and five offline legacy regressions.
 
