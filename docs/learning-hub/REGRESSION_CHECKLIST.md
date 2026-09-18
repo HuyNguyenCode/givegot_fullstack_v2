@@ -112,3 +112,11 @@ The baseline smoke command is `npm run test:learning-hub:integration`. It import
 - Login continuation: the raw token is encrypted in a ten-minute HttpOnly/SameSite=Lax cookie and is consumed/cleared after authenticated acceptance; it is absent from the preview response and cookie plaintext.
 - Legacy flows: no Booking, Discover, matching, social graph, notification, email, provider, schema, or migration code changed. All five offline legacy regression scripts passed.
 
+## Historical Task E1 regression evidence
+
+- AvailableSlot concurrency retains the row-level `FOR UPDATE` lock, post-lock `isBooked` check, one Booking create, and slot update in the existing transaction.
+- LearningSpace linkage is optional and null-compatible. Linked creation takes the LearningSpace advisory lock and verifies the session actor plus selected mentor are the two active members before deducting the unchanged one GP.
+- Calendar/Meet acceptance remains on `createGoogleMeetForMentor` and persists CONFIRMED plus `meetingUrl`; LIVE/HYBRID contracts require Meet evidence while EXERCISE_REVIEW completion ignores `endTime`.
+- Existing cancellation, no-show, DISPUTED, wallet/ledger, and cron code remains reachable and unchanged. Source assertions confirm no `learningMode`-dependent amount or GivePoint branch and no mode-specific cron edit.
+- Typecheck, 37 unit tests, 23 integration tests, all five offline legacy regressions, targeted lint, and production build passed.
+

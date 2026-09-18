@@ -101,4 +101,4 @@ Reuse Calendar/Meet, Pusher, email, Prisma/PostgreSQL, and existing GivePoint/Re
 - Archive retention; 30 days after soft delete is the default proposal.
 - Office uploads enter P1 only after malware scanning.
 - GivePoint totals are hidden by default until owner review.
-- Mode pricing follows pilot data; do not market GivePoint as a low hourly wage.
+- GivePoint quantity by learning mode remains an owner decision. E1 preserves the existing Booking amount and introduces no mode-specific pricing; do not market GivePoint as a low hourly wage.

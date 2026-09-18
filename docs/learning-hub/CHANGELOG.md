@@ -153,9 +153,23 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - Added executable member/nonmember/archived/empty/long-Vietnamese/mobile/keyboard/navigation tests. Typecheck, 28 unit tests, 17 integration tests, and the five legacy regressions passed.
 - KNOWN LIMITATION: the D1 production build compiled, but this host did not expose a final build-process exit; it is not recorded as a completed build verification. Full lint remains the existing baseline failure.
 
+## 2026-09-17 — C2 Bring Your Pair user experience
+
+- Added authenticated `/learning/new` invite creation with an approved primary-skill picker, optional objective, seven-day single-use link, copy affordance, clear Vietnamese copy, and back navigation.
+- Added `/learning/invite/[token]` preview/continuation/acceptance UI. It uses C1's encrypted HttpOnly continuation cookie, leaves identity to the server-session accept endpoint, safely handles stale/self/full/replay outcomes, and opens the authorized LearningSpace with its available first Booking action.
+- Invite preview now returns only skill/objective for an active usable link; expired, revoked, exhausted, and accepted links reveal no private pair metadata. Resource/task actions remain unavailable and are not implemented.
+- PASS: typecheck; 31 Learning Hub unit tests; route smoke plus 17 integration tests; and all five legacy regressions. Targeted lint is clean for C2 files; inherited C1 invite service/test retain their documented pre-existing `any` lint findings. The build compiler started but this host left a worker-held lock without a final exit, so it is not recorded as a completed build verification.
+
+## 2026-09-17 — E1 Booking and Learning Mode integration
+
+- Added server-session-authorized LearningSpace context to both existing Booking creation paths. Linked bookings require the actor and selected mentor to be active members of the same space, validate an optional active topic, and snapshot mode/objective/definition/topic inside the Booking transaction.
+- Added distinct LIVE, EXERCISE_REVIEW, and HYBRID artifact/completion contracts plus an accessible selector on LearningSpace-originated booking. Async/hybrid delivery and review anchors are independent of Meet `endTime`; meeting end alone is insufficient.
+- Preserved legacy null-mode bookings, AvailableSlot locking, Calendar/Meet acceptance, cancellation/no-show/dispute, wallet/ledger amounts, TransactionLog, settlement, notifications, and cron. No schema, migration, backfill, fractional point, or mode-dependent amount logic was added.
+- PASS: typecheck; 37 unit tests; route smoke plus 23 integration tests; all five legacy regressions; targeted ESLint; and production build (34 pages, existing middleware warning only). Full lint retains 151 errors and 34 warnings in pre-existing/out-of-scope files; E1 TypeScript is clean.
+
 ## 2026-09-16 — Repository memory and B2 realtime reconciliation
 
-- Historical correction at that checkpoint: B2 and C1 were complete and D1 was next. D1 is now complete; C2 is the current next safe task.
+- Historical correction at that checkpoint: B2 and C1 were complete and D1 was next. D1, C2, and E1 are now complete; F1 is next in registry order.
 - Replaced the stale pre-B2 LearningSpace deny-by-default integration assertion with active-member authorization, unauthenticated/nonmember/inactive denial, and readable-archived-space coverage. No production behavior changed.
 - Verification: typecheck; 23 Learning Hub unit tests; route smoke plus 17 integration tests; and five offline legacy regressions.
 

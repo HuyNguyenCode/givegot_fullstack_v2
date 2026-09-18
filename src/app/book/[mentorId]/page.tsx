@@ -4,6 +4,10 @@ import { useUser } from '@/contexts/UserContext'
 import { useEffect, useState, use } from 'react'
 import { getMentorById } from '@/actions/mentor'
 import { createBooking } from '@/actions/booking'
+import { getLearningBookingContext } from '@/actions/learning-booking'
+import { LearningModeSelector } from '@/components/learning/LearningModeSelector'
+import type { LearningBookingContext } from '@/lib/learning-booking-service'
+import type { LearningModeValue } from '@/lib/learning-mode-contracts'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
@@ -21,8 +25,9 @@ interface MentorWithSkills {
   } | undefined>
 }
 
-export default function BookSessionPage({ params }: { params: Promise<{ mentorId: string }> }) {
+export default function BookSessionPage({ params, searchParams }: { params: Promise<{ mentorId: string }>; searchParams: Promise<{ learningSpaceId?: string }> }) {
   const { mentorId } = use(params)
+  const { learningSpaceId } = use(searchParams)
   const { currentUser, refreshUser } = useUser()
   const router = useRouter()
   const [mentor, setMentor] = useState<MentorWithSkills | null>(null)
@@ -32,6 +37,11 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
   const [note, setNote] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
+  const [learningContext, setLearningContext] = useState<LearningBookingContext | null>(null)
+  const [learningContextLoading, setLearningContextLoading] = useState(Boolean(learningSpaceId))
+  const [learningMode, setLearningMode] = useState<LearningModeValue>('LIVE')
+  const [topicId, setTopicId] = useState('')
+  const [objective, setObjective] = useState('')
 
   useEffect(() => {
     async function loadMentor() {
@@ -41,6 +51,28 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
     }
     loadMentor()
   }, [mentorId])
+
+  useEffect(() => {
+    if (!learningSpaceId) return
+    let cancelled = false
+    getLearningBookingContext(mentorId, learningSpaceId)
+      .then((result) => {
+        if (cancelled) return
+        if (result.success) {
+          setLearningContext(result.context)
+          setObjective(result.context.objective ?? '')
+        } else {
+          setError(result.message)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError('Không thể tải thông tin LearningSpace cho booking này.')
+      })
+      .finally(() => {
+        if (!cancelled) setLearningContextLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [learningSpaceId, mentorId])
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,6 +89,16 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
       return
     }
 
+    if (learningSpaceId && !learningContext) {
+      setError('LearningSpace này không thể dùng cho booking.')
+      return
+    }
+
+    if (learningMode === 'LIVE' && learningContext && !objective.trim()) {
+      setError('Hình thức Học trực tiếp cần có mục tiêu.')
+      return
+    }
+
     setIsSubmitting(true)
     setError(null)
 
@@ -69,7 +111,13 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
       currentUser.id,
       startTime,
       endTime,
-      note
+      note,
+      learningContext ? {
+        learningSpaceId: learningContext.id,
+        learningMode,
+        topicId: topicId || null,
+        objective: objective.trim() || null,
+      } : undefined,
     )
 
     if (result.success) {
@@ -167,6 +215,41 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
           </div>
 
           <form onSubmit={handleBooking} className="space-y-6">
+            {learningSpaceId && (
+              <section className="rounded-xl border border-purple-200 bg-white p-4" aria-labelledby="learning-booking-heading">
+                <h2 id="learning-booking-heading" className="font-semibold text-gray-950">Booking trong LearningSpace</h2>
+                {learningContextLoading ? (
+                  <p className="mt-2 text-sm text-gray-600" role="status">Đang tải hợp đồng học tập…</p>
+                ) : learningContext ? (
+                  <div className="mt-4 space-y-5">
+                    <p className="text-sm text-gray-700">Không gian: <span className="font-semibold">{learningContext.title}</span></p>
+                    <LearningModeSelector value={learningMode} onChange={setLearningMode} />
+                    {learningContext.topics.length > 0 && (
+                      <div>
+                        <label htmlFor="learning-topic" className="block text-sm font-medium text-gray-700 mb-2">Chủ đề (không bắt buộc)</label>
+                        <select id="learning-topic" value={topicId} onChange={(event) => setTopicId(event.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-purple-600">
+                          <option value="">Không chọn chủ đề</option>
+                          {learningContext.topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.label}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    <div>
+                      <label htmlFor="learning-objective" className="block text-sm font-medium text-gray-700 mb-2">
+                        Mục tiêu {learningMode === 'LIVE' ? '*' : '(không bắt buộc)'}
+                      </label>
+                      <textarea id="learning-objective" rows={3} value={objective} onChange={(event) => setObjective(event.target.value)} maxLength={10000} className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-purple-600" />
+                      <p className="mt-1 text-xs text-gray-500">Mục tiêu và chủ đề được lưu thành snapshot của booking này.</p>
+                    </div>
+                    <p className="rounded-lg bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                      Cả ba hình thức vẫn dùng đúng 1 GivePoint theo chính sách booking hiện tại. Hình thức học chỉ thay đổi bằng chứng hoàn thành.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-red-700">LearningSpace này không thể dùng cho booking.</p>
+                )}
+              </section>
+            )}
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <svg
@@ -268,7 +351,7 @@ export default function BookSessionPage({ params }: { params: Promise<{ mentorId
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || (currentUser?.givePoints ?? 0) < 1}
+                disabled={isSubmitting || learningContextLoading || Boolean(learningSpaceId && !learningContext) || (currentUser?.givePoints ?? 0) < 1}
                 className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Đang đặt lịch...' : 'Đặt lịch (1 điểm)'}

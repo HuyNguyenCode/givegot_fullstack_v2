@@ -79,6 +79,11 @@ async function main() {
       requireAuthenticatedUser: async () => ({ id: sessionUserId }),
       requireAdminUser: async () => ({ id: 'admin' }),
     },
+    '@/lib/learning-booking-service': {
+      LearningBookingAuthorizationError: class LearningBookingAuthorizationError extends Error {},
+      LearningBookingValidationError: class LearningBookingValidationError extends Error {},
+      prepareLearningBookingSnapshot: async () => ({}),
+    },
     '@/lib/trust-algorithm': { calculateAndUpdateTrustScore: async () => {} },
     '@/lib/google-meet': { verifyMeetingAttendance: async () => ({}) },
     '@/lib/gcal': { createGoogleMeetForMentor: async () => null },

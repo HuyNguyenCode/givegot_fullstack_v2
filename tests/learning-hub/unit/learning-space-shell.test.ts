@@ -21,6 +21,7 @@ test('member render contains the authorized LearningSpace shell', () => {
   assert.match(html, /Luyện phát âm tiếng Việt/)
   assert.match(html, /Giao tiếp/)
   assert.match(html, /Đặt buổi học tiếp theo/)
+  assert.match(html, /learningSpaceId=space-1/)
   assert.match(html, /Tài nguyên/)
 })
 

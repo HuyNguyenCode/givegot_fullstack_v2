@@ -23,8 +23,9 @@ async function findShell(spaceId: string): Promise<LearningSpaceShellData | null
   return { ...space, primarySkillName: space.primarySkill.name, members: space.members.map(member => member.user) }
 }
 
-export default async function LearningSpacePage({ params }: { params: Promise<{ spaceId: string }> }) {
+export default async function LearningSpacePage({ params, searchParams }: { params: Promise<{ spaceId: string }>; searchParams: Promise<{ onboarding?: string }> }) {
   const { spaceId } = await params
+  const { onboarding } = await searchParams
   let space: AuthorizedLearningSpaceShellData | null
   try {
     space = await loadLearningSpaceShell(spaceId, {
@@ -41,5 +42,5 @@ export default async function LearningSpacePage({ params }: { params: Promise<{ 
   // Treat an inaccessible ID exactly like an absent record. This prevents a
   // route response from disclosing whether a private space exists.
   if (!space) notFound()
-  return <LearningSpaceShell space={space} />
+  return <LearningSpaceShell space={space} showFirstValue={onboarding === 'invite'} />
 }

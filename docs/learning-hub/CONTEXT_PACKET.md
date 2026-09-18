@@ -10,15 +10,18 @@
 
 ## Current checkpoint
 
-- Task D1 completed on 2026-09-17 after B2’s protected LearningSpace domain service work and C1’s invite backend.
+- Tasks D1, C2, and E1 completed on 2026-09-17 after B2’s protected LearningSpace domain service work and C1’s invite backend.
 - LearningSpace and LearningTopic have server-session-backed protected service/API handlers. Direct and confirmed-Booking creation create exactly two active members; a transaction-scoped advisory lock rejects a third active member.
 - Primary-skill changes are versioned and audited. Objective/definition updates use optimistic concurrency. Topics are free-form or canonically mapped, and archive state preserves historical Booking references.
 - Reuse suggestions return matching active pair spaces without forcing reuse or imposing pair-plus-skill uniqueness. Archived spaces remain readable to members and only restore is allowed among normal mutations.
-- `/api/pusher/auth` authorizes private LearningSpace channels through active membership. C1 adds `/api/learning/invites` create, preview, accept, and inviter-revoke APIs without an invite-onboarding UI.
+- `/api/pusher/auth` authorizes private LearningSpace channels through active membership. C1 provides `/api/learning/invites` create, preview, accept, and inviter-revoke APIs; C2 now provides the invite-onboarding UI for those APIs.
 - LearningInvite creation returns a 256-bit raw token once and stores only SHA-256. Acceptance is session-bound, transactionally locked/idempotent, and supports an explicit matching active-space reuse or a distinct new space for the same pair. It rejects self, expired, revoked, exhausted, different-user replay, and third-member outcomes.
 - Logged-out preview stores the raw token only in a ten-minute AES-GCM encrypted HttpOnly/SameSite=Lax continuation cookie, cleared after acceptance. No email is sent in C1.
-- D1 adds the server-session/member-authorized, mobile-first `/learning/[spaceId]` shell. It is read-only; it shows pair/skill/topics/objective/definition/Booking context, archive state, rebooking, and future artifact placeholders. Resource, task, note, invite-onboarding, provider, fulfillment, settlement, Discover, social graph, and legacy Booking lifecycle work remain out of scope.
-- Verification passed typecheck, targeted changed-file lint, 28 Learning Hub unit tests, 17 integration tests, and all five legacy regressions. The D1 production build compiled, but its final exit was not observed on this host. Full lint remains the documented pre-existing 77-error/32-warning baseline.
+- D1 adds the server-session/member-authorized, mobile-first `/learning/[spaceId]` shell. It is read-only; it shows pair/skill/topics/objective/definition/Booking context, archive state, rebooking, and future artifact placeholders. At the D1 checkpoint, invite onboarding was not part of the shell; C2 subsequently delivered it. Resource, task, note, provider, fulfillment, settlement, Discover, social graph, and legacy Booking lifecycle work remain out of scope.
+- C2 adds the minimum Bring Your Pair onboarding UI: `/learning/new` creates a one-use link from an approved primary skill and optional objective, while `/learning/invite/[token]` previews active invite data, uses C1's encrypted login continuation, and accepts through the server-session endpoint. Stale links reveal no pair metadata; the new LearningSpace presents only the existing first-Booking action. Resource/task creation remains out of scope.
+- E1 carries LearningSpace context into both existing Booking creation paths only after server-session pair authorization and transaction-time validation. It snapshots the selected active topic, objective/definition, mode, and `NOT_STARTED` workflow state while preserving null fields for legacy bookings.
+- LIVE, EXERCISE_REVIEW, and HYBRID now have executable required-artifact and completion-readiness contracts. Async and Hybrid timing is expressed from `deliveredAt`/artifact deadlines and not Meet `endTime`; no fulfillment transition, settlement, or cron behavior is implemented by E1.
+- Historical E1 verification recorded typecheck, targeted changed-file lint, 37 Learning Hub unit tests, 23 integration tests, all five legacy regressions, and production build as passing. The current observed full-lint result is 151 errors and 34 warnings; repository memory does not classify the delta from the Task 00 baseline. Targeted E1 TypeScript files have no recorded finding.
 
 ## Owner-owned dirty state before Task 00
 
@@ -68,7 +71,7 @@
 
 - Next.js 16.1.6 App Router, React 19.2.3, NextAuth 5 beta, Prisma/PostgreSQL 5.22.0.
 - Existing user routes: auth, homepage, discover, mentor, booking, dashboard, chat, history, wallet, profile, admin.
-- Existing APIs: auth, conversations, messages, three cron routes, two test routes, and three VNPay routes.
+- Existing APIs: auth, conversations, messages, three cron routes, two test routes, three VNPay routes, and `/api/pusher/auth`. Current Learning Hub APIs are `/api/learning/spaces/*` and `/api/learning/invites/*`.
 - Schema has 27 models, including the ten Learning Hub domain models. Booking has eight nullable Learning Hub fields and keeps its original status enum unchanged.
 - Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. It performs no historical backfill.
 - Canonical commands include `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, `test:learning-hub:migration`, and `test:regression`.
@@ -79,20 +82,20 @@
 
 ## Next task
 
-Task D1 LearningSpace shell completed on 2026-09-17 with PASS WITH KNOWN LIMITATION. `/learning/[spaceId]` is server-session/member authorized before its metadata query and nonmembers receive the same not-found outcome as absent IDs. The route is mobile-first and read-only, keeps archived spaces readable, shows pair/skill/topics/objective/definition/Booking context, and preserves future artifacts as placeholders. C2 is now the next safe task; do not begin it, settlement, or provider work automatically.
+Task E1 Booking and Learning Mode integration completed on 2026-09-17 with PASS WITH KNOWN LIMITATION. LearningSpace-originated Bookings select a mode and store authorized snapshots; unlinked Bookings remain legacy-compatible. Known limitations are the current full-lint result of 151 errors and 34 warnings with an open delta classification, and the Windows `tsx` host issue recorded in the historical E1 verification. E1 targeted lint is clean. F1 private storage infrastructure is the next task in registry order. Do not begin it, G1 artifacts, fulfillment, settlement, or mode-aware cron automatically.
 
 ## Completion contract
 
 For each task: check every requirement; list changed files and reasons; report schema/migration/API/visible behavior; report compatibility and rollback; run task and regression tests; distinguish pre-existing failures; update state/context/test/changelog; record exact next assumptions; end with PASS, PASS WITH KNOWN LIMITATION, or BLOCKED; then stop.
 
-## Task 01 completion
+## Historical Task 01 checkpoint
 
 - Task 01 completed on 2026-09-12 with a dependency-free `node:test` plus existing `tsx` harness; no full test framework was added.
 - Canonical commands are `npm run typecheck`, `npm run test:learning-hub`, `npm run test:learning-hub:integration`, and `npm run test:regression`.
 - The integration smoke test imports legacy conversations, messages, and auto-complete routes without a server, database, provider, dotenv load, or secret output. Future database suites require an explicit `DISPOSABLE_TEST_DATABASE_URL` and must reject production/shared targets.
-- Current verification passed Prisma generate/validate, typecheck, unit, integration, legacy regression, and build. Lint remains the unchanged baseline failure: 78 errors and 32 warnings.
+- Historical Task 01 verification passed Prisma generate/validate, typecheck, unit, integration, legacy regression, and build. Its recorded lint baseline was 78 errors and 32 warnings.
 
-## Task A1 completion
+## Historical Task A1 checkpoint
 
 - Task A1 completed with no schema, migration, database, settlement-policy, or visible UI change.
 - Existing chat callers may continue sending legacy identity fields, but the server ignores them for authorization and authorship.
@@ -101,7 +104,7 @@ For each task: check every requirement; list changed files and reasons; report s
 - B1 may implement `LearningSpaceMembershipLookup` without changing the A1 server-session identity contract.
 - Remaining critical blockers before private Learning Hub payloads are R-002 public realtime and R-003 cron authentication.
 
-## Task A2 completion
+## Historical Task A2 checkpoint
 
 - Task A2 closed R-002 and R-003 with private authorized realtime channels and one shared production cron guard.
 - Server-session identity authorizes conversation and user channels. LearningSpace channels remain private and deny by default until a concrete membership lookup exists.
@@ -110,7 +113,7 @@ For each task: check every requirement; list changed files and reasons; report s
 - A2 suites cover unauthenticated subscription, guessed conversation/user IDs, legitimate participant authorization, chat event delivery, notification channel privacy, missing/invalid/valid cron credentials, production bypass denial, and no secret/private-boundary logging.
 - Verification passed typecheck, 11 unit tests, 12 integration tests, all five legacy regressions, targeted lint with no errors, and production build. Full lint remains the unchanged 77-error/32-warning baseline.
 
-## Task B1 completion
+## Historical Task B1 checkpoint
 
 - Added the ten approved Learning Hub models, supporting enums, explicit relations/deletion behavior, indexes, archive/soft-delete state, deduplicated activity, and one-current Submission/SubmissionReview constraints.
 - Added nullable `learningSpaceId`, `topicId`, `learningMode`, `objective`, `definitionOfDone`, `fulfillmentStatus`, `deliveredAt`, and `acceptedAt` fields to Booking. Existing `BookingStatus` and settlement behavior are unchanged.
@@ -118,7 +121,7 @@ For each task: check every requirement; list changed files and reasons; report s
 - The schema has no member role, no two-member database cap, and no pair-plus-primary-skill uniqueness. B2 must enforce at most two active members transactionally and derive every actor from the server session.
 - Verification passed Prisma generation/validation, typecheck, 15 unit tests, 12 integration tests, all five legacy regressions, migration execution/rehearsal, and production build. Full lint remains the documented pre-existing 77-error/32-warning baseline.
 
-## Task B2 completion
+## Historical Task B2 checkpoint
 
 - Recorded: 2026-09-16, Asia/Saigon.
 - Status: PASS WITH KNOWN LIMITATION.

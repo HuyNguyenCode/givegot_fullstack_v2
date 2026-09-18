@@ -16,9 +16,40 @@ import NoShowReportEmail from '@/emails/NoShowReportEmail'
 import NewBookingEmail from '@/emails/NewBookingEmail'
 import { requireAdminUser, requireAuthenticatedUser } from '@/lib/server-authorization'
 import { privateUserChannel } from '@/lib/realtime-channels'
+import {
+  LearningBookingAuthorizationError,
+  LearningBookingValidationError,
+  prepareLearningBookingSnapshot,
+  type LearningBookingRecord,
+  type LearningBookingRepository,
+  type LearningBookingSelectionInput,
+} from '@/lib/learning-booking-service'
+import type { Prisma } from '@prisma/client'
 
 // ── Cancellation Policy Constants ─────────────────────────────────────────────
 const CANCELLATION_THRESHOLD_HOURS = 12
+
+function learningBookingRepository(client: Prisma.TransactionClient): LearningBookingRepository {
+  return {
+    lockSpace: (spaceId) => client.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${spaceId}))`,
+    isActiveMember: async (learningSpaceId, userId) => Boolean(await client.learningSpaceMember.findFirst({
+      where: { learningSpaceId, userId, status: 'ACTIVE' },
+      select: { userId: true },
+    })),
+    findSpace: (id) => client.learningSpace.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        state: true,
+        objective: true,
+        definitionOfDone: true,
+        members: { select: { userId: true, status: true } },
+        topics: { select: { id: true, label: true, state: true } },
+      },
+    }) as Promise<LearningBookingRecord | null>,
+  }
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -104,6 +135,9 @@ export async function checkReviewGate(menteeId: string): Promise<ReviewGateStatu
       menteeId,
       status: BookingStatus.CONFIRMED,
       endTime: { lt: fortyEightHoursAgo },
+      // Async and Hybrid evidence is deliveredAt/review-window based. Keep the
+      // existing endTime review gate only for legacy and LIVE bookings.
+      OR: [{ learningMode: null }, { learningMode: 'LIVE' }],
     },
     select: {
       id: true,
@@ -128,7 +162,8 @@ export async function checkReviewGate(menteeId: string): Promise<ReviewGateStatu
 export async function bookAvailableSlot(
   slotId: string,
   menteeId: string,
-  note?: string
+  note?: string,
+  learningSelection?: LearningBookingSelectionInput,
 ): Promise<BookingResult> {
   try {
     menteeId = (await requireAuthenticatedUser()).id
@@ -217,6 +252,18 @@ export async function bookAvailableSlot(
           throw new Error('INSUFFICIENT_POINTS')
         }
 
+        const learningBooking = await prepareLearningBookingSnapshot(
+          learningBookingRepository(tx),
+          {
+            actorId: menteeId,
+            mentorId: lockedSlot.mentorId,
+            menteeId,
+            startTime: lockedSlot.startTime,
+            endTime: lockedSlot.endTime,
+            selection: learningSelection,
+          },
+        )
+
         // Step 4: Deduct 1 point from mentee
         await tx.user.update({
           where: { id: menteeId },
@@ -233,6 +280,7 @@ export async function bookAvailableSlot(
             endTime: lockedSlot.endTime,
             status: BookingStatus.PENDING,
             note: note || null,
+            ...learningBooking,
           },
         })
 
@@ -343,6 +391,10 @@ export async function bookAvailableSlot(
       return { success: false, message }
     }
 
+    if (error instanceof LearningBookingAuthorizationError || error instanceof LearningBookingValidationError) {
+      return { success: false, message: error.message }
+    }
+
     return {
       success: false,
       message: 'Failed to book slot. Please try again.',
@@ -358,7 +410,8 @@ export async function createBooking(
   menteeId: string,
   startTime: Date,
   endTime: Date,
-  note?: string
+  note?: string,
+  learningSelection?: LearningBookingSelectionInput,
 ): Promise<BookingResult> {
   try {
     menteeId = (await requireAuthenticatedUser()).id
@@ -402,6 +455,18 @@ export async function createBooking(
 
     // Atomic: deduct point + create booking + write audit log — all or nothing
     const booking = await prisma.$transaction(async (tx) => {
+      const learningBooking = await prepareLearningBookingSnapshot(
+        learningBookingRepository(tx),
+        {
+          actorId: menteeId,
+          mentorId,
+          menteeId,
+          startTime,
+          endTime,
+          selection: learningSelection,
+        },
+      )
+
       // Escrow: deduct 1 point upfront before the mentor accepts
       await tx.user.update({
         where: { id: menteeId },
@@ -416,6 +481,7 @@ export async function createBooking(
           endTime,
           status: BookingStatus.PENDING,
           note,
+          ...learningBooking,
         },
       })
 
@@ -476,6 +542,9 @@ export async function createBooking(
     }
   } catch (error) {
     console.error('Error creating booking:', error)
+    if (error instanceof LearningBookingAuthorizationError || error instanceof LearningBookingValidationError) {
+      return { success: false, message: error.message }
+    }
     return { success: false, message: 'Failed to create booking. Please try again.' }
   }
 }

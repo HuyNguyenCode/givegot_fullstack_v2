@@ -65,7 +65,18 @@ export function createLearningInviteService(deps: {
     const invite = await deps.repository.findInviteByHash(tokenHash(text(token, 'token', 512)))
     if (!invite) throw new AuthorizationError(404, 'Learning invite not found')
     const status = invite.status === 'ACTIVE' && invite.expiresAt <= now() ? 'EXPIRED' : invite.status
-    return { invite: publicInvite(invite), status, canAccept: status === 'ACTIVE' && invite.useCount < invite.maxUses }
+    // A link that can no longer be used must not become a metadata lookup for
+    // a private pair. Only an active, available link reveals its stated skill
+    // and objective; acceptance itself remains session-bound below.
+    if (status !== 'ACTIVE' || invite.useCount >= invite.maxUses) return { invite: null, status, canAccept: false }
+    return {
+      invite: {
+        primarySkillName: invite.primarySkill?.name ?? null,
+        objective: invite.objective,
+      },
+      status,
+      canAccept: true,
+    }
   }
 
   async function revoke(inviteId: string) {
@@ -154,6 +165,9 @@ function tx(client: Prisma.TransactionClient): any { return {
 
 export const learningInviteRepository: LearningInviteRepository = {
   transaction: fn => prisma.$transaction(client => fn(tx(client))),
-  findInviteByHash: hash => prisma.learningInvite.findUnique({ where: { tokenHash: hash } }),
+  findInviteByHash: hash => prisma.learningInvite.findUnique({
+    where: { tokenHash: hash },
+    select: { id: true, tokenHash: true, primarySkillId: true, objective: true, status: true, maxUses: true, useCount: true, expiresAt: true, primarySkill: { select: { name: true } } },
+  }),
 }
 export const learningInviteService = createLearningInviteService({ repository: learningInviteRepository })

@@ -77,3 +77,12 @@ test('C1 lets an existing pair explicitly reuse or create a separate active spac
   const reuse = await create(repo); const reuseAccepted = await service(repo, 'b').accept(reuse.token, { reuseSpaceId: existing.id }); assert.equal(reuseAccepted.space.id, existing.id)
   const separate = await create(repo); const separateAccepted = await service(repo, 'b').accept(separate.token); assert.notEqual(separateAccepted.space.id, existing.id); assert.equal(repo.spaces.size, 2)
 })
+
+test('C2 preview shows only the active invite promise and hides stale pair metadata', async () => {
+  const repo = repository(); const created = await create(repo)
+  const active = await service(repo, 'b').preview(created.token)
+  assert.equal(active.canAccept, true); assert.equal(active.invite?.objective, 'Ship a safe invite')
+  await service(repo, 'a').revoke(created.invite.id)
+  const revoked = await service(repo, 'b').preview(created.token)
+  assert.equal(revoked.status, 'REVOKED'); assert.equal(revoked.canAccept, false); assert.equal(revoked.invite, null)
+})

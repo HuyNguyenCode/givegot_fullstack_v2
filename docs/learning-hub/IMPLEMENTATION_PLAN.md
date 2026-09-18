@@ -7,7 +7,7 @@
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Current checkpoint: B2 and C1 are complete. D1 is the next safe task; C2 remains blocked on both C1 and D1.
+- Current checkpoint: B2, C1, D1, C2, and E1 are complete. F1 is the next task in registry order.
 
 ## Task registry
 

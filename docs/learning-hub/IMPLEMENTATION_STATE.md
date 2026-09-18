@@ -4,17 +4,24 @@
 
 - Recorded: 2026-09-17, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
-- HEAD before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Task: D1 LearningSpace shell.
-- Status: PASS WITH KNOWN LIMITATION.
-- Production behavior: protected LearningSpace/Topic and LearningInvite handlers remain enabled. The authorized, read-only `/learning/[spaceId]` shell is now enabled; settlement, providers, and legacy Booking lifecycle behavior remain unchanged.
+- Current repository HEAD: `d6ac7ae2cee2d21160858b1f3d4c7ed49a7e15f8` (`feat(learning-hub): add LearningSpace shell`).
+- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, and C2 are PASS; E1 is PASS WITH KNOWN LIMITATION. C2 and E1 are current working-tree work after the recorded HEAD; checkpoint status does not require separate commits.
+- Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
+- Status: PASS WITH KNOWN LIMITATION (unclassified 151-error/34-warning full-lint delta and the documented Windows `tsx` host limitation).
+- Production behavior: a Booking started from a LearningSpace now carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. Each mode exposes a distinct required-artifact and completion-readiness contract. Legacy Booking creation remains valid with all Learning Hub fields null.
 - Schema/migration behavior: unchanged from B1: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
-- API behavior: `/api/learning/spaces` and `/api/learning/invites` protected mutations derive actor identity from the server session. Invite preview uses the bearer token only and creates a short-lived encrypted HttpOnly continuation cookie for login/signup.
-- Learning Hub implementation: B2 domain services cover pair membership, primary skill audit, topics, objective/definition versioning, archive/restore, and reuse suggestion. C1 covers invite issuance, preview, revocation, idempotent acceptance, and explicit reuse/new-space choice. D1 adds the server-authorized mobile-first shell with pair/skill/topic/detail/Booking context, archive readability, rebooking CTA, and read-only future-artifact placeholders.
-- Current verification: typecheck; targeted changed-file lint; 28 Learning Hub unit tests; route smoke plus 17 integration tests; and all five legacy regressions passed. The D1 production build compiled but its final exit was not observed on this host; full lint remains the pre-existing baseline failure.
-- Next safe task: C2 invite onboarding UI. Do not begin it automatically.
+- API behavior: no new public route was added. `getLearningBookingContext` is a server action that derives identity from the session and returns context only when the actor and selected mentor are the two active members. Both existing Booking creation actions revalidate the linkage inside their database transaction.
+- Learning Hub implementation: B2/C1/D1/C2 remain intact. E1 adds LearningSpace-aware booking selection, mode contract evaluation, immutable Booking snapshots, and a member-authorized booking UI. It does not implement artifacts, delivery mutations, acceptance, settlement, or mode-aware cron.
+- Historical E1 verification recorded typecheck, targeted changed-file lint, 37 Learning Hub unit tests, route smoke plus 23 integration tests, all five legacy regressions, and production build as passing. The current observed full-lint result is 151 errors and 34 warnings; repository memory leaves the delta from the Task 00 baseline unclassified. No E1 TypeScript file has a recorded lint finding.
+- Next safe task: F1 private storage infrastructure according to the task registry. Do not begin it automatically.
 
-The four memory files the task asked to read first did not exist at baseline. Task 00 creates the complete memory set from the supplied references, the tracked playbook at HEAD, and current repository evidence.
+### OPEN PRODUCT DECISION — GivePoint quantity by learning mode
+
+The GP quantity for EXERCISE_REVIEW and HYBRID remains intentionally unresolved. E1 preserves the existing integer one-GP Booking escrow and ledger semantics for every mode. It adds no mode-specific pricing, fractional GP, or time-based calculation from preparation, task, document, video, or feedback work. Wallet, settlement, TransactionLog, and cron behavior are unchanged. An owner decision is required before any future task changes GP quantity by mode.
+
+## Historical baseline note
+
+The four memory files the Task 00 prompt required first did not exist at that baseline. Task 00 created the complete memory set from the supplied references, the tracked playbook at that HEAD, and repository evidence available then.
 
 ## Pre-existing dirty state
 
@@ -59,6 +66,8 @@ Verified by source inventory and successful Next.js build:
 /discover
 /history
 /learning/[spaceId]
+/learning/new
+/learning/invite/[token]
 /homepage
 /mentor/[mentorId]
 /policies/cancellation
@@ -68,7 +77,7 @@ Verified by source inventory and successful Next.js build:
 /wallet
 ```
 
-Protected `/api/learning/spaces` routes are available from B2. `/learning/[spaceId]` is the completed D1 LearningSpace UI route.
+Current protected Learning Hub APIs are `POST /api/pusher/auth`, `/api/learning/spaces/*`, and `/api/learning/invites/*`. `/learning/[spaceId]` is the completed D1 LearningSpace UI route.
 
 ## Current schema
 
@@ -159,13 +168,18 @@ Data-changing seed, backfill, manual migration, OAuth, and database push scripts
 
 Both supplied DOCX files were fully extracted at paragraph and table level. Visual rendering was attempted with the packaged document renderer but could not start because the bundled runtime exposed no `soffice.exe` on PATH or under its dependency root. No DOCX was edited. This does not affect the textual requirement baseline.
 
-## Next task assumptions
+## Historical E1 task-entry assumptions
 
 - C1's server-session-bound invite backend, including encrypted login continuation, exists and remains the authority for invite acceptance.
 - D1's server-session/member-authorized `/learning/[spaceId]` shell exists and remains read-only.
-- C2 may implement invite onboarding UI only. It must preserve server-session identity and invite continuation behavior.
-- Do not add storage, modes, fulfillment, settlement, notifications, providers, resource/task/note mutations, or other future-task scope.
+- C2 Bring Your Pair onboarding is complete: `/learning/new` creates the link, `/learning/invite/[token]` continues logged-out recipients safely, and acceptance opens the authorized shell with the existing first-Booking action.
+- E1 owns Booking and mode integration only. It must preserve server-session identity, old Booking rows with null Learning Hub fields, legacy Booking lifecycle, Calendar/Meet, cancellation, no-show, dispute, wallet/ledger, Review/Trust, chat, notifications, Discover, dashboard, history, and cron behavior unless an explicit E1 contract changes them.
+- Keep settlement, storage, resources, tasks, submissions, reviews, notes, activity, notifications, providers, analytics, and other future-task work out of E1 scope.
 - Existing baseline failures remain separate from task-introduced failures and must not be hidden by skips or weakened assertions.
+
+## Historical task evidence
+
+The following sections record the state and verification evidence at their named checkpoints. They are not current-checkout claims unless the checkpoint section explicitly says so.
 
 ## Task 01 completion
 
@@ -341,7 +355,7 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 - Logged-out preview preserves the raw token only as an AES-GCM encrypted, ten-minute, HttpOnly, SameSite=Lax cookie. The cookie is cleared after acceptance; token hashes and raw tokens are never logged or returned in previews.
 - Verification: `npm run typecheck`; 23 Learning Hub unit tests; route smoke plus 13 integration tests; all five legacy regressions; targeted ESLint; and production build. The Windows runner initially failed before test discovery because `tsx` calls `os.userInfo()` on this host; the test command passed without changing source after a one-command `NODE_OPTIONS` compatibility preload supplying the unavailable Windows `geteuid` path. The temporary preload was deleted.
 - Compatibility/rollback: no schema, migration, backfill, Booking, Discover, social graph, email, notification, or provider change. Old rows remain valid. Rollback is file-level reversion of C1 routes/services/tests/docs; no database rollback is needed.
-- Historical checkpoint: D1 was next after C1; D1 is now complete and C2 is the current next safe task.
+- Historical checkpoint: D1 was next after C1. D1, C2, and E1 are now complete; F1 is next in registry order.
 
 ## Task D1 LearningSpace shell
 
@@ -351,11 +365,23 @@ Both supplied DOCX files were fully extracted at paragraph and table level. Visu
 - Route-local loading/error UI, responsive layout, explicit focus-visible controls, wrapping/whitespace handling for long Vietnamese copy, and empty-state content are included. RootLayout continues to own global navigation; the shell adds only a local Dashboard back link.
 - Verification: `npm run typecheck`; 28 Learning Hub unit tests (including D1 member, nonmember, archived, empty, long Vietnamese, mobile, keyboard/focus, and navigation assertions); route smoke plus 17 integration tests; and all five legacy regressions. The unit/integration commands used the documented one-command Windows `tsx` compatibility preload and no project runtime dependency.
 - Compatibility/rollback: no schema, migration, Booking lifecycle, dashboard/history source, provider, resource/task/note, or legacy UI code changed. Old rows remain valid. Rollback is file-level reversion of the D1 route/component/loader/tests/docs only.
-- Next safe task: C2 may begin now that D1 is complete; do not begin it automatically.
+- Historical checkpoint: C2 began after D1. C2 and E1 are now complete; F1 is next in registry order. Do not begin it automatically.
 
-## Repository memory and B2 realtime reconciliation
+## Task E1 Booking and Learning Mode integration
+
+- Recorded: 2026-09-17, Asia/Saigon. Status: PASS WITH KNOWN LIMITATION.
+- Affected production files: `src/actions/booking.ts` integrates an optional LearningSpace snapshot into both Booking creation paths; `src/actions/learning-booking.ts` supplies a server-session context read; `src/lib/learning-booking-service.ts` owns pair/topic validation and snapshot preparation; `src/lib/learning-mode-contracts.ts` owns the three evidence/timing contracts; `/book/[mentorId]` and the LearningSpace CTA expose mode selection only for LearningSpace-originated bookings.
+- Identity and authorization: the client never supplies the authoritative actor. The Booking actions overwrite `menteeId` from `requireAuthenticatedUser()`, take the existing LearningSpace advisory lock inside the Booking transaction, and require the actor plus selected mentor to be the two active members. Missing, inactive, outsider, self-pair, mismatched-pair, and cross-space/archived-topic choices are rejected without exposing private membership.
+- Mode contracts: LIVE requires objective, scheduled Booking, Meet link, recap, elapsed scheduled component, and learner acceptance. EXERCISE_REVIEW requires task, submission, feedback, `deliveredAt`, and learner acceptance or expiry of a review window anchored to `deliveredAt`; `endTime` is not consulted. HYBRID requires prework, acknowledgement/questions, scheduled Booking, Meet link, recap, `deliveredAt`, and learner acceptance; its prework deadline and review window use artifact/delivery anchors rather than Meet `endTime`. Meeting end alone is never sufficient.
+- Data behavior: no schema, migration, backfill, or existing row changed. A linked new Booking stores existing nullable fields and initializes fulfillment to `NOT_STARTED`; an unlinked legacy Booking still writes none of those fields. Booking objective/definition and topic reference are transaction-time snapshots and are not rewritten when the LearningSpace changes later.
+- Legacy/provider behavior: AvailableSlot retains `SELECT ... FOR UPDATE`, the `isBooked` recheck, and the one-slot/one-Booking path. Calendar/Meet acceptance remains unchanged. Existing PENDING/CONFIRMED/COMPLETED/CANCELLED/MISSED/DISPUTED transitions, cancellation/no-show/dispute actions, wallet escrow, immutable TransactionLog amounts, settlement, notifications, and cron remain reachable and unchanged. The existing review gate now applies its `endTime` rule only to legacy-null and LIVE bookings; it does not apply Meet timing to async/hybrid work.
+- Verification: `npm run typecheck` PASS; `npm run test:learning-hub` PASS (37); `npm run test:learning-hub:integration` PASS (23 after route smoke); `npm run test:regression` PASS (all five scripts); targeted ESLint PASS; `npm run build` PASS (34 generated pages, existing middleware deprecation warning only). At the E1 checkpoint, full `npm run lint` recorded 151 errors and 34 warnings, with no finding in an E1 TypeScript file. The current repository-memory delta classification remains open rather than treating that count as pre-existing. The standard `tsx` invocation reproduced the known Windows `os.userInfo()` ENOMEM host issue before discovery; the same commands passed with the previously documented temporary preload, which was removed.
+- Rollback: revert only the E1 source, test, and documentation changes. No schema or data rollback is required. Existing linked rows remain compatible because every E1 Booking field was introduced as nullable in B1.
+- Next assumptions: F1 may add private storage without changing E1 mode or GP contracts. G1 may use the EXERCISE_REVIEW/HYBRID artifact requirements after E1. I1-I3 still own fulfillment mutations, settlement enforcement, and mode-aware cron; do not infer settlement eligibility from this read-only evaluator alone.
+
+## Historical repository-memory and B2 realtime reconciliation
 
 - Recorded: 2026-09-16, Asia/Saigon. Status: PASS.
 - Reconciled the stale pre-B2 integration assertion with the actual B2 authorizer. Private LearningSpace channels require a server session and ACTIVE membership; nonmembers and LEFT/REMOVED memberships are denied. An archived LearningSpace remains readable, so its active members remain authorized.
 - Verification: `npm run typecheck`; 23 Learning Hub unit tests; route smoke plus 17 integration tests; and all five legacy regressions. No production behavior, schema, API, or UI changed.
-- Historical reconciliation only: B2 and C1 are complete; D1 is complete; C2 is the current next safe task.
+- Historical reconciliation only: B2, C1, D1, C2, and E1 are complete; F1 is next in registry order.
