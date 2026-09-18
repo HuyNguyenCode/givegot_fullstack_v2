@@ -4,8 +4,8 @@
 
 - Recorded: 2026-09-17, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
-- Current repository HEAD: `d6ac7ae2cee2d21160858b1f3d4c7ed49a7e15f8` (`feat(learning-hub): add LearningSpace shell`).
-- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, and C2 are PASS; E1 is PASS WITH KNOWN LIMITATION. C2 and E1 are current working-tree work after the recorded HEAD; checkpoint status does not require separate commits.
+- Current repository HEAD: `b16dc162557496dc7d3464bc9ab346b5dee0492e` (`feat(learning-hub): add pair onboarding and learning mode booking / checkpoint C2 and E1 before scheduling repair`).
+- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, and C2 are PASS; E1 is PASS WITH KNOWN LIMITATION. C2 and E1 were checkpointed together in the current HEAD
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
 - Status: PASS WITH KNOWN LIMITATION (unclassified 151-error/34-warning full-lint delta and the documented Windows `tsx` host limitation).
 - Production behavior: a Booking started from a LearningSpace now carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. Each mode exposes a distinct required-artifact and completion-readiness contract. Legacy Booking creation remains valid with all Learning Hub fields null.
