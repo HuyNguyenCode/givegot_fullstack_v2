@@ -4,8 +4,10 @@
 
 - Recorded: 2026-09-18, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
-- Current repository HEAD: `b16dc162557496dc7d3464bc9ab346b5dee0492e` (`feat(learning-hub): add pair onboarding and learning mode booking / checkpoint C2 and E1 before scheduling repair`).
-- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, and C2 are PASS; E1 plus its narrow AvailableSlot repair are PASS WITH KNOWN LIMITATION. C2 and the original E1 were checkpointed together in the current HEAD; the repair is in the current working tree.
+- Latest implementation checkpoint: `15f4bff`
+  (`fix(learning-hub): restore slot booking for live and hybrid`),
+  merged into `feature/learning-hub-mvp` by `3fe1370`.
+- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, and C2 are PASS; E1 plus its narrow AvailableSlot repair are PASS WITH KNOWN LIMITATION.
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
 - Status: PASS WITH KNOWN LIMITATION (unclassified 151-error/34-warning full-lint delta and the documented Windows `tsx` host limitation).
 - Production behavior: a Booking started from a LearningSpace carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. LIVE and HYBRID now select a future unbooked mentor AvailableSlot and use the existing locked slot path; EXERCISE_REVIEW retains the E1 manual-time `createBooking` path. Legacy Booking creation remains valid with all Learning Hub fields null.
