@@ -173,3 +173,11 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - Replaced the stale pre-B2 LearningSpace deny-by-default integration assertion with active-member authorization, unauthenticated/nonmember/inactive denial, and readable-archived-space coverage. No production behavior changed.
 - Verification: typecheck; 23 Learning Hub unit tests; route smoke plus 17 integration tests; and five offline legacy regressions.
 
+## 2026-09-18 — E1 narrow AvailableSlot repair
+
+- Confirmed that LearningSpace LIVE/HYBRID were using the legacy manual-time `createBooking` path despite the existing E1-ready `bookAvailableSlot` integration.
+- LIVE/HYBRID now load future unbooked mentor slots, require a slot selection, submit the complete LearningSpace selection through the existing locked slot transaction, and refresh after stale failures. Empty availability has no manual fallback.
+- Added an early `createBooking` rejection for linked LIVE/HYBRID before review-gate work or any GP, Booking, ledger, notification, or email side effect. EXERCISE_REVIEW and unlinked legacy manual booking remain unchanged; the mentor-profile slot component was not modified.
+- No schema, migration, lifecycle, GP/pricing, wallet, settlement, provider, cron, artifact, or fulfillment-state-machine change. F1 remains unstarted.
+- PASS WITH KNOWN LIMITATION: typecheck; 41 unit tests; route smoke plus 25 integration tests; all five legacy regressions; targeted ESLint; and production build with 34 pages. Standard `tsx` reproduced the documented Windows `os.userInfo()` ENOMEM before discovery; suites passed under the temporary compatibility preload, which was removed. The earlier full-lint delta remains open and was not rerun.
+

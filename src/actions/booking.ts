@@ -415,6 +415,12 @@ export async function createBooking(
 ): Promise<BookingResult> {
   try {
     menteeId = (await requireAuthenticatedUser()).id
+    if (learningSelection?.learningMode === 'LIVE' || learningSelection?.learningMode === 'HYBRID') {
+      return {
+        success: false,
+        message: 'LearningSpace LIVE and HYBRID bookings must use an available mentor slot.',
+      }
+    }
     // ── Time-gate: reject bookings in the past ────────────────────────────────
     if (new Date(startTime) <= new Date()) {
       return { success: false, message: 'Cannot book a session that starts in the past.' }

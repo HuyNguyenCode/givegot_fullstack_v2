@@ -147,14 +147,58 @@ test('context loading exposes active topics only after pair membership succeeds'
   assert.deepEqual(context.topics, [{ id: 'topic-1', label: 'Original topic' }])
 })
 
-test('AvailableSlot locking, Calendar/Meet, cancellation, dispute, and fixed one-GP escrow remain intact', () => {
+test('AvailableSlot locking rejects stale requests and keeps one Booking plus one GP debit in the locked path', () => {
+  const bookingSource = readFileSync('src/actions/booking.ts', 'utf8')
+  const slotPath = bookingSource.slice(
+    bookingSource.indexOf('export async function bookAvailableSlot'),
+    bookingSource.indexOf('export const bookSlot = bookAvailableSlot'),
+  )
+
+  const lockIndex = slotPath.indexOf('FOR UPDATE')
+  const takenIndex = slotPath.indexOf('if (lockedSlot.isBooked)')
+  const debitIndex = slotPath.indexOf('givePoints: { decrement: 1 }')
+  const createIndex = slotPath.indexOf('const booking = await tx.booking.create')
+  assert.ok(lockIndex >= 0 && lockIndex < takenIndex && takenIndex < createIndex)
+  assert.ok(takenIndex < debitIndex, 'a stale slot must fail before the GP debit')
+  assert.equal((slotPath.match(/givePoints: \{ decrement: 1 \}/g) ?? []).length, 1)
+  assert.equal((slotPath.match(/const booking = await tx\.booking\.create/g) ?? []).length, 1)
+  assert.match(slotPath, /mentorId: lockedSlot\.mentorId/)
+  assert.match(slotPath, /slotId: lockedSlot\.id/)
+  assert.match(slotPath, /startTime: lockedSlot\.startTime/)
+  assert.match(slotPath, /endTime: lockedSlot\.endTime/)
+  assert.match(slotPath, /data: \{ isBooked: true \}/)
+  assert.match(slotPath, /isolationLevel: 'ReadCommitted'/)
+})
+
+test('createBooking rejects linked LIVE and HYBRID before every business side effect while leaving EXERCISE_REVIEW eligible', () => {
+  const bookingSource = readFileSync('src/actions/booking.ts', 'utf8')
+  const createPath = bookingSource.slice(
+    bookingSource.indexOf('export async function createBooking'),
+    bookingSource.indexOf('export async function acceptBooking'),
+  )
+  const guardIndex = createPath.indexOf("learningSelection?.learningMode === 'LIVE'")
+  assert.ok(guardIndex >= 0)
+  assert.match(createPath, /learningSelection\?\.learningMode === 'LIVE' \|\| learningSelection\?\.learningMode === 'HYBRID'/)
+  assert.doesNotMatch(createPath.slice(0, createPath.indexOf('// ── Time-gate')), /EXERCISE_REVIEW/)
+  for (const sideEffect of [
+    'checkReviewGate(menteeId)',
+    'prisma.$transaction',
+    'givePoints: { decrement: 1 }',
+    'tx.booking.create',
+    'tx.transactionLog.create',
+    'createNotification(',
+  ]) {
+    assert.ok(
+      guardIndex < createPath.indexOf(sideEffect),
+      `LIVE/HYBRID guard must precede ${sideEffect}`,
+    )
+  }
+})
+
+test('Calendar/Meet, cancellation, dispute, fixed one-GP escrow, and cron remain intact', () => {
   const bookingSource = readFileSync('src/actions/booking.ts', 'utf8')
   const cronSource = readFileSync('src/app/api/cron/auto-complete/route.ts', 'utf8')
 
-  const lockIndex = bookingSource.indexOf('FOR UPDATE')
-  const takenIndex = bookingSource.indexOf('if (lockedSlot.isBooked)')
-  const createIndex = bookingSource.indexOf('const booking = await tx.booking.create')
-  assert.ok(lockIndex >= 0 && lockIndex < takenIndex && takenIndex < createIndex)
   assert.match(bookingSource, /createGoogleMeetForMentor\(/)
   assert.match(bookingSource, /status: BookingStatus\.CONFIRMED, meetingUrl/)
   assert.match(bookingSource, /status: BookingStatus\.CANCELLED/)

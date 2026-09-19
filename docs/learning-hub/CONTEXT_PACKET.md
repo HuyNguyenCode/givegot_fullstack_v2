@@ -10,7 +10,7 @@
 
 ## Current checkpoint
 
-- Tasks D1, C2, and E1 completed on 2026-09-17 after B2’s protected LearningSpace domain service work and C1’s invite backend.
+- Tasks D1, C2, and E1 completed after B2’s protected LearningSpace domain service work and C1’s invite backend. The narrow E1 AvailableSlot repair completed on 2026-09-18; F1 remains unstarted.
 - LearningSpace and LearningTopic have server-session-backed protected service/API handlers. Direct and confirmed-Booking creation create exactly two active members; a transaction-scoped advisory lock rejects a third active member.
 - Primary-skill changes are versioned and audited. Objective/definition updates use optimistic concurrency. Topics are free-form or canonically mapped, and archive state preserves historical Booking references.
 - Reuse suggestions return matching active pair spaces without forcing reuse or imposing pair-plus-skill uniqueness. Archived spaces remain readable to members and only restore is allowed among normal mutations.
@@ -19,9 +19,9 @@
 - Logged-out preview stores the raw token only in a ten-minute AES-GCM encrypted HttpOnly/SameSite=Lax continuation cookie, cleared after acceptance. No email is sent in C1.
 - D1 adds the server-session/member-authorized, mobile-first `/learning/[spaceId]` shell. It is read-only; it shows pair/skill/topics/objective/definition/Booking context, archive state, rebooking, and future artifact placeholders. At the D1 checkpoint, invite onboarding was not part of the shell; C2 subsequently delivered it. Resource, task, note, provider, fulfillment, settlement, Discover, social graph, and legacy Booking lifecycle work remain out of scope.
 - C2 adds the minimum Bring Your Pair onboarding UI: `/learning/new` creates a one-use link from an approved primary skill and optional objective, while `/learning/invite/[token]` previews active invite data, uses C1's encrypted login continuation, and accepts through the server-session endpoint. Stale links reveal no pair metadata; the new LearningSpace presents only the existing first-Booking action. Resource/task creation remains out of scope.
-- E1 carries LearningSpace context into both existing Booking creation paths only after server-session pair authorization and transaction-time validation. It snapshots the selected active topic, objective/definition, mode, and `NOT_STARTED` workflow state while preserving null fields for legacy bookings.
+- E1 carries LearningSpace context into Booking creation after server-session pair authorization and transaction-time validation. LIVE/HYBRID now select future unbooked mentor slots and use the existing `bookAvailableSlot` row-lock path; direct `createBooking` rejects those linked modes before side effects. EXERCISE_REVIEW and unlinked legacy creation retain their prior manual-time behavior.
 - LIVE, EXERCISE_REVIEW, and HYBRID now have executable required-artifact and completion-readiness contracts. Async and Hybrid timing is expressed from `deliveredAt`/artifact deadlines and not Meet `endTime`; no fulfillment transition, settlement, or cron behavior is implemented by E1.
-- Historical E1 verification recorded typecheck, targeted changed-file lint, 37 Learning Hub unit tests, 23 integration tests, all five legacy regressions, and production build as passing. The current observed full-lint result is 151 errors and 34 warnings; repository memory does not classify the delta from the Task 00 baseline. Targeted E1 TypeScript files have no recorded finding.
+- Current E1 repair verification records typecheck, targeted changed-file lint, 41 Learning Hub unit tests, 25 integration tests after route smoke, all five legacy regressions, and the 34-page production build as passing. Standard `tsx` still needs the documented temporary Windows `os.userInfo()` compatibility preload, which was removed. The earlier full-lint result remains 151 errors and 34 warnings with an unclassified Task 00 delta.
 
 ## Owner-owned dirty state before Task 00
 
@@ -82,7 +82,7 @@
 
 ## Next task
 
-Task E1 Booking and Learning Mode integration completed on 2026-09-17 with PASS WITH KNOWN LIMITATION. LearningSpace-originated Bookings select a mode and store authorized snapshots; unlinked Bookings remain legacy-compatible. Known limitations are the current full-lint result of 151 errors and 34 warnings with an open delta classification, and the Windows `tsx` host issue recorded in the historical E1 verification. E1 targeted lint is clean. F1 private storage infrastructure is the next task in registry order. Do not begin it, G1 artifacts, fulfillment, settlement, or mode-aware cron automatically.
+Task E1 Booking and Learning Mode integration plus its narrow AvailableSlot repair are complete with PASS WITH KNOWN LIMITATION. LearningSpace LIVE/HYBRID use the locked AvailableSlot path; EXERCISE_REVIEW and unlinked Bookings retain their E1/legacy-compatible paths. Known limitations are the earlier full-lint result of 151 errors and 34 warnings with an open delta classification, and the documented Windows `tsx` host issue. E1 targeted lint is clean. F1 private storage infrastructure is the next task in registry order and remains unstarted. Do not begin it, G1 artifacts, fulfillment, settlement, or mode-aware cron automatically.
 
 ## Completion contract
 

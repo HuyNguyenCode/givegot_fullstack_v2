@@ -9,7 +9,7 @@
 
 ## Current checkpoint and historical-count rule
 
-The current checkout checkpoint is 00, 01, A1, A2, B1, B2, C1, D1, and C2 PASS, with E1 PASS WITH KNOWN LIMITATION; F1 is next. Except where this section explicitly states a current observation, suite counts and command results below are historical evidence from their named task checkpoints, not cumulative current totals. The current observed full-lint result is 151 errors and 34 warnings; its delta from the Task 00 baseline remains unclassified.
+The current checkout checkpoint is 00, 01, A1, A2, B1, B2, C1, D1, and C2 PASS, with E1 plus its narrow AvailableSlot repair PASS WITH KNOWN LIMITATION; F1 remains next and unstarted. Except where this section explicitly states a current observation, suite counts and command results below are historical evidence from their named task checkpoints, not cumulative current totals. The current observed full-lint result remains the earlier 151 errors and 34 warnings; its delta from the Task 00 baseline remains unclassified.
 
 ## Test ladder
 
@@ -33,7 +33,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | LH 010 | B1, B2, D1 | `LH010-U` create/reuse decision | `LH010-I` pair membership; `LH010-L` old Booking/null compatibility | Discover/Booking creation still works | B1/B2 PASS; D1 PASS for authorized persistent-space shell and Booking context; C2 PASS for Bring Your Pair creation/onboarding UI and first-Booking action |
 | LH 011 | B1, B2, D1 | `LH011-U` normalize/rename/archive/map | `LH011-I` member auth; `LH011-L` topic/history provenance | Skill moderation/public catalog unchanged | B1/B2 PASS; D1 PASS for authorized topic display, empty/archived read states, and long-content UI; topic mutations remain B2 API scope |
 | LH 012 | B2, D1 | `LH012-U` objective/DoD validation/version | `LH012-I` member auth; `LH012-C` optimistic-lock conflict | Booking note and UI long-text behavior | B2 PASS; D1 PASS for objective/definition display, empty and long-Vietnamese UI; detail mutations remain B2 API scope |
-| LH 020 | E1, I1 | `LH020-U` mode/checklist rules | `LH020-I` Booking integration and immutable-after-delivery guard | `LH020-R` legacy Live/Calendar/Meet/cancellation | E1 PASS: three evidence/timing contracts, member-pair linkage, stable snapshots, null-mode compatibility, pre-delivery mode-change guard, and legacy provider/lifecycle regression; I1 fulfillment transitions remain pending |
+| LH 020 | E1, I1 | `LH020-U` mode/checklist rules | `LH020-I` Booking integration and immutable-after-delivery guard | `LH020-R` legacy Live/Calendar/Meet/cancellation | E1 PASS WITH KNOWN LIMITATION: LIVE/HYBRID use the locked AvailableSlot path with no manual fallback; EXERCISE_REVIEW and legacy manual creation remain compatible; three evidence/timing contracts, member-pair linkage, stable snapshots, null-mode compatibility, provider/lifecycle regression, and the early direct-create guard pass. I1 fulfillment transitions remain pending |
 | LH 030 | F2 | `LH030-U` HTTPS normalization/validation | `LH030-I` member CRUD; `LH030-S` XSS/SSRF/no-fetch | Safe external navigation and deleted link | PLACEHOLDER |
 | LH 031 | F1, F2 | `LH031-U` MIME/extension/size/key/quota | `LH031-I` signed upload/finalize; `LH031-S` spoof/path/expiry | Orphan cleanup and provider failure | PLACEHOLDER |
 | LH 032 | F1, F2 | `LH032-U` TTL/deleted-state rules | `LH032-I` download issuance; `LH032-S` non-member/IDOR | Archived member and expired URL | PLACEHOLDER |
@@ -148,3 +148,10 @@ The unit suite uses `node:test` via the existing `tsx` dependency. The integrati
 - `tests/learning-hub/integration/learning-booking-integration.test.ts` PASS: server-session-shaped pair authorization, outsider/mismatched-pair/topic denial, advisory lock, stable topic/objective snapshots, all three initial modes, legacy null-mode no-op, AvailableSlot lock ordering, Meet/Calendar acceptance source, cancellation/dispute reachability, fixed one-GP escrow, and unchanged cron source.
 - PASS: `npm run typecheck`; `npm run test:learning-hub` (37); `npm run test:learning-hub:integration` (23 after smoke); `npm run test:regression` (five scripts); targeted ESLint; and production build (34 pages).
 - Historical E1 result: full `npm run lint` reported 151 errors and 34 warnings, with no finding in E1 TypeScript files and no weakened assertion or lint scope. The current delta classification remains open.
+
+## E1 narrow AvailableSlot repair evidence
+
+- `tests/learning-hub/unit/learning-booking-scheduling-ui.test.ts` PASS: linked LIVE/HYBRID route to AvailableSlot, complete selection forwarding, empty/stale no-fallback behavior, EXERCISE_REVIEW and legacy manual routing, and the unchanged mentor-profile call.
+- `tests/learning-hub/integration/learning-booking-integration.test.ts` PASS: locked-slot mentor/time/slot authority, stale rejection before debit, one create/one debit structure under the row lock, early `createBooking` LIVE/HYBRID guard, EXERCISE_REVIEW eligibility, Calendar/Meet, cancellation/dispute, fixed GP, and unchanged cron.
+- PASS: `npm run typecheck`; `npm run test:learning-hub` (41 with documented temporary host preload); `npm run test:learning-hub:integration` (25 after smoke with the same preload); `npm run test:regression` (five scripts); targeted ESLint; and production build (34 pages).
+- KNOWN LIMITATION: standard `tsx` still fails before test discovery on this Windows host because `os.userInfo()` returns ENOMEM. No test was skipped or weakened; the temporary compatibility preload was removed. The prior full-lint count/delta remains visible and was not rerun for this narrow repair.
