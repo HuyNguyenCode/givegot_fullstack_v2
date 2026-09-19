@@ -1,9 +1,10 @@
 'use client'
 
 import { useUser } from '@/contexts/UserContext'
-import { useEffect, useState, use } from 'react'
+import { useCallback, useEffect, useState, use } from 'react'
 import { getMentorById } from '@/actions/mentor'
-import { createBooking } from '@/actions/booking'
+import { bookAvailableSlot, createBooking } from '@/actions/booking'
+import { getAvailableSlots } from '@/actions/slots'
 import { getLearningBookingContext } from '@/actions/learning-booking'
 import { LearningModeSelector } from '@/components/learning/LearningModeSelector'
 import type { LearningBookingContext } from '@/lib/learning-booking-service'
@@ -25,6 +26,8 @@ interface MentorWithSkills {
   } | undefined>
 }
 
+type AvailableSlot = Awaited<ReturnType<typeof getAvailableSlots>>[number]
+
 export default function BookSessionPage({ params, searchParams }: { params: Promise<{ mentorId: string }>; searchParams: Promise<{ learningSpaceId?: string }> }) {
   const { mentorId } = use(params)
   const { learningSpaceId } = use(searchParams)
@@ -42,6 +45,21 @@ export default function BookSessionPage({ params, searchParams }: { params: Prom
   const [learningMode, setLearningMode] = useState<LearningModeValue>('LIVE')
   const [topicId, setTopicId] = useState('')
   const [objective, setObjective] = useState('')
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([])
+  const [selectedSlotId, setSelectedSlotId] = useState('')
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const usesAvailableSlot = Boolean(
+    learningSpaceId && (learningMode === 'LIVE' || learningMode === 'HYBRID'),
+  )
+
+  const loadAvailableSlots = useCallback(async () => {
+    setSlotsLoading(true)
+    const slots = await getAvailableSlots(mentorId)
+    const now = new Date()
+    setAvailableSlots(slots.filter((slot) => !slot.isBooked && new Date(slot.startTime) > now))
+    setSelectedSlotId('')
+    setSlotsLoading(false)
+  }, [mentorId])
 
   useEffect(() => {
     async function loadMentor() {
@@ -74,6 +92,22 @@ export default function BookSessionPage({ params, searchParams }: { params: Prom
     return () => { cancelled = true }
   }, [learningSpaceId, mentorId])
 
+  useEffect(() => {
+    if (!usesAvailableSlot || !learningContext) return
+    let cancelled = false
+    async function loadSlots() {
+      setSlotsLoading(true)
+      const slots = await getAvailableSlots(mentorId)
+      if (cancelled) return
+      const now = new Date()
+      setAvailableSlots(slots.filter((slot) => !slot.isBooked && new Date(slot.startTime) > now))
+      setSelectedSlotId('')
+      setSlotsLoading(false)
+    }
+    void loadSlots()
+    return () => { cancelled = true }
+  }, [learningContext, mentorId, usesAvailableSlot])
+
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -81,11 +115,6 @@ export default function BookSessionPage({ params, searchParams }: { params: Prom
 
     if (currentUser.id === mentor.id) {
       setError('Bạn không thể đặt lịch với chính mình!')
-      return
-    }
-
-    if (!selectedDate || !selectedTime) {
-      setError('Vui lòng chọn cả ngày và giờ cho buổi học.')
       return
     }
 
@@ -99,26 +128,48 @@ export default function BookSessionPage({ params, searchParams }: { params: Prom
       return
     }
 
+    if (usesAvailableSlot && !selectedSlotId) {
+      setError('Vui lòng chọn một khung giờ trống của Mentor.')
+      return
+    }
+
+    if (!usesAvailableSlot && (!selectedDate || !selectedTime)) {
+      setError('Vui lòng chọn cả ngày và giờ cho buổi học.')
+      return
+    }
+
     setIsSubmitting(true)
     setError(null)
 
-    const startTime = new Date(`${selectedDate}T${selectedTime}:00`)
-    const endTime = new Date(startTime)
-    endTime.setHours(endTime.getHours() + 1)
-
-    const result = await createBooking(
-      mentor.id,
-      currentUser.id,
-      startTime,
-      endTime,
-      note,
-      learningContext ? {
+    const learningSelection = learningContext ? {
         learningSpaceId: learningContext.id,
         learningMode,
         topicId: topicId || null,
         objective: objective.trim() || null,
-      } : undefined,
-    )
+        definitionOfDone: learningContext.definitionOfDone,
+      } : undefined
+
+    let result
+    if (usesAvailableSlot) {
+      result = await bookAvailableSlot(
+        selectedSlotId,
+        currentUser.id,
+        note,
+        learningSelection,
+      )
+    } else {
+      const startTime = new Date(`${selectedDate}T${selectedTime}:00`)
+      const endTime = new Date(startTime)
+      endTime.setHours(endTime.getHours() + 1)
+      result = await createBooking(
+        mentor.id,
+        currentUser.id,
+        startTime,
+        endTime,
+        note,
+        learningSelection,
+      )
+    }
 
     if (result.success) {
       await refreshUser()
@@ -129,6 +180,10 @@ export default function BookSessionPage({ params, searchParams }: { params: Prom
       setError('Tài khoản của bạn đã bị hạn chế do Trust Score quá thấp. Vui lòng liên hệ hỗ trợ.')
     } else {
       setError(result.message)
+    }
+
+    if (!result.success && usesAvailableSlot) {
+      await loadAvailableSlots()
     }
 
     setIsSubmitting(false)
@@ -223,7 +278,10 @@ export default function BookSessionPage({ params, searchParams }: { params: Prom
                 ) : learningContext ? (
                   <div className="mt-4 space-y-5">
                     <p className="text-sm text-gray-700">Không gian: <span className="font-semibold">{learningContext.title}</span></p>
-                    <LearningModeSelector value={learningMode} onChange={setLearningMode} />
+                    <LearningModeSelector value={learningMode} onChange={(mode) => {
+                      setLearningMode(mode)
+                      setSelectedSlotId('')
+                    }} />
                     {learningContext.topics.length > 0 && (
                       <div>
                         <label htmlFor="learning-topic" className="block text-sm font-medium text-gray-700 mb-2">Chủ đề (không bắt buộc)</label>
@@ -290,36 +348,75 @@ export default function BookSessionPage({ params, searchParams }: { params: Prom
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
-                  Ngày học *
-                </label>
-                <input
-                  type="date"
-                  id="date"
-                  required
-                  min={minDate}
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                />
-              </div>
+            {usesAvailableSlot ? (
+              <fieldset className="rounded-xl border border-green-200 bg-green-50/50 p-4">
+                <legend className="px-1 text-sm font-semibold text-gray-900">Khung giờ trống của Mentor *</legend>
+                {learningContextLoading || slotsLoading ? (
+                  <p className="mt-2 text-sm text-gray-600" role="status">Đang tải các khung giờ trống…</p>
+                ) : availableSlots.length === 0 ? (
+                  <p className="mt-2 rounded-lg bg-white p-3 text-sm text-gray-700">
+                    Mentor hiện chưa có khung giờ trống. LIVE và HYBRID không thể đặt bằng ngày giờ tự nhập.
+                  </p>
+                ) : (
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {availableSlots.map((slot) => {
+                      const start = new Date(slot.startTime)
+                      const end = new Date(slot.endTime)
+                      const selected = selectedSlotId === slot.id
+                      return (
+                        <label
+                          key={slot.id}
+                          className={`cursor-pointer rounded-lg border p-3 transition ${selected ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-200' : 'border-green-300 bg-white hover:border-green-500'}`}
+                        >
+                          <input
+                            type="radio"
+                            name="available-slot"
+                            value={slot.id}
+                            checked={selected}
+                            onChange={() => setSelectedSlotId(slot.id)}
+                            className="mr-2 accent-purple-600"
+                          />
+                          <span className="font-medium text-gray-900">
+                            {start.toLocaleDateString('vi-VN')} · {start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}–{end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </fieldset>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
+                    Ngày học *
+                  </label>
+                  <input
+                    type="date"
+                    id="date"
+                    required
+                    min={minDate}
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
-                  Giờ bắt đầu *
-                </label>
-                <input
-                  type="time"
-                  id="time"
-                  required
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                />
+                <div>
+                  <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
+                    Thời gian dự kiến *
+                  </label>
+                  <input
+                    type="time"
+                    id="time"
+                    required
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-2">
@@ -351,7 +448,7 @@ export default function BookSessionPage({ params, searchParams }: { params: Prom
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || learningContextLoading || Boolean(learningSpaceId && !learningContext) || (currentUser?.givePoints ?? 0) < 1}
+                disabled={isSubmitting || (usesAvailableSlot && (slotsLoading || !selectedSlotId)) || learningContextLoading || Boolean(learningSpaceId && !learningContext) || (currentUser?.givePoints ?? 0) < 1}
                 className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Đang đặt lịch...' : 'Đặt lịch (1 điểm)'}

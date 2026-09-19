@@ -120,3 +120,11 @@ The baseline smoke command is `npm run test:learning-hub:integration`. It import
 - Existing cancellation, no-show, DISPUTED, wallet/ledger, and cron code remains reachable and unchanged. Source assertions confirm no `learningMode`-dependent amount or GivePoint branch and no mode-specific cron edit.
 - Typecheck, 37 unit tests, 23 integration tests, all five offline legacy regressions, targeted lint, and production build passed.
 
+## E1 narrow AvailableSlot repair evidence
+
+- LearningSpace LIVE/HYBRID expose only future unbooked mentor slots, have no manual-time fallback, and submit the selected slot plus authorized LearningSpace selection through `bookAvailableSlot`.
+- `createBooking` rejects linked LIVE/HYBRID before review-gate work, transaction entry, GP debit, Booking/TransactionLog creation, notification, or email; EXERCISE_REVIEW and unlinked legacy creation remain on their prior path.
+- The existing row lock, post-lock `isBooked` rejection, locked mentor/start/end authority, one Booking create, one GP debit, `slotId`, and slot update remain intact. Failed slot requests refresh availability.
+- The mentor-profile slot component, Calendar/Meet acceptance, cancellation/decline slot handling, no-show/dispute, GP/ledger, cron, chat, dashboard, and history code were unchanged.
+- PASS: typecheck; 41 unit tests; route smoke plus 25 integration tests; all five offline legacy regressions; targeted ESLint; and the 34-page production build. The standard `tsx` host limitation reproduced before discovery; suites passed with the documented temporary preload, which was removed.
+

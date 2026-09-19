@@ -2,17 +2,17 @@
 
 ## Checkpoint
 
-- Recorded: 2026-09-17, Asia/Saigon.
+- Recorded: 2026-09-18, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
 - Current repository HEAD: `b16dc162557496dc7d3464bc9ab346b5dee0492e` (`feat(learning-hub): add pair onboarding and learning mode booking / checkpoint C2 and E1 before scheduling repair`).
-- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, and C2 are PASS; E1 is PASS WITH KNOWN LIMITATION. C2 and E1 were checkpointed together in the current HEAD
+- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, and C2 are PASS; E1 plus its narrow AvailableSlot repair are PASS WITH KNOWN LIMITATION. C2 and the original E1 were checkpointed together in the current HEAD; the repair is in the current working tree.
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
 - Status: PASS WITH KNOWN LIMITATION (unclassified 151-error/34-warning full-lint delta and the documented Windows `tsx` host limitation).
-- Production behavior: a Booking started from a LearningSpace now carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. Each mode exposes a distinct required-artifact and completion-readiness contract. Legacy Booking creation remains valid with all Learning Hub fields null.
+- Production behavior: a Booking started from a LearningSpace carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. LIVE and HYBRID now select a future unbooked mentor AvailableSlot and use the existing locked slot path; EXERCISE_REVIEW retains the E1 manual-time `createBooking` path. Legacy Booking creation remains valid with all Learning Hub fields null.
 - Schema/migration behavior: unchanged from B1: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
-- API behavior: no new public route was added. `getLearningBookingContext` is a server action that derives identity from the session and returns context only when the actor and selected mentor are the two active members. Both existing Booking creation actions revalidate the linkage inside their database transaction.
+- API behavior: no new public route was added. `getLearningBookingContext` derives identity from the session and returns context only when the actor and selected mentor are the two active members. `bookAvailableSlot` revalidates linked selection inside its locked transaction; `createBooking` rejects linked LIVE/HYBRID immediately after authentication and before review-gate work or any business side effect.
 - Learning Hub implementation: B2/C1/D1/C2 remain intact. E1 adds LearningSpace-aware booking selection, mode contract evaluation, immutable Booking snapshots, and a member-authorized booking UI. It does not implement artifacts, delivery mutations, acceptance, settlement, or mode-aware cron.
-- Historical E1 verification recorded typecheck, targeted changed-file lint, 37 Learning Hub unit tests, route smoke plus 23 integration tests, all five legacy regressions, and production build as passing. The current observed full-lint result is 151 errors and 34 warnings; repository memory leaves the delta from the Task 00 baseline unclassified. No E1 TypeScript file has a recorded lint finding.
+- Current E1 repair verification records typecheck, targeted changed-file lint, 41 Learning Hub unit tests, route smoke plus 25 integration tests, all five legacy regressions, and production build as passing. The standard `tsx` commands still reproduce the documented Windows `os.userInfo()` ENOMEM before discovery and pass with the temporary one-command compatibility preload, which was removed. The observed full-lint result remains the earlier 151 errors and 34 warnings with an unclassified baseline delta; no full lint was requested or rerun for this repair.
 - Next safe task: F1 private storage infrastructure according to the task registry. Do not begin it automatically.
 
 ### OPEN PRODUCT DECISION — GivePoint quantity by learning mode
@@ -378,6 +378,16 @@ The following sections record the state and verification evidence at their named
 - Verification: `npm run typecheck` PASS; `npm run test:learning-hub` PASS (37); `npm run test:learning-hub:integration` PASS (23 after route smoke); `npm run test:regression` PASS (all five scripts); targeted ESLint PASS; `npm run build` PASS (34 generated pages, existing middleware deprecation warning only). At the E1 checkpoint, full `npm run lint` recorded 151 errors and 34 warnings, with no finding in an E1 TypeScript file. The current repository-memory delta classification remains open rather than treating that count as pre-existing. The standard `tsx` invocation reproduced the known Windows `os.userInfo()` ENOMEM host issue before discovery; the same commands passed with the previously documented temporary preload, which was removed.
 - Rollback: revert only the E1 source, test, and documentation changes. No schema or data rollback is required. Existing linked rows remain compatible because every E1 Booking field was introduced as nullable in B1.
 - Next assumptions: F1 may add private storage without changing E1 mode or GP contracts. G1 may use the EXERCISE_REVIEW/HYBRID artifact requirements after E1. I1-I3 still own fulfillment mutations, settlement enforcement, and mode-aware cron; do not infer settlement eligibility from this read-only evaluator alone.
+
+## E1 narrow AvailableSlot repair
+
+- Recorded: 2026-09-18, Asia/Saigon. Status: PASS WITH KNOWN LIMITATION.
+- Root cause confirmed: the LearningSpace CTA opened the legacy manual `/book/[mentorId]` form, and E1 passed linked LIVE/HYBRID selections to `createBooking`, which created arbitrary client-timed Bookings without `slotId`. The already-integrated `bookAvailableSlot` path was not exposed by that page.
+- LIVE/HYBRID now load only future unbooked slots from `getAvailableSlots`, render a required slot selector, submit the selected slot plus the complete LearningSpace selection to `bookAvailableSlot`, and refresh availability after a failed/stale attempt. Empty availability has no manual fallback.
+- `createBooking` now rejects linked LIVE/HYBRID immediately after server authentication, before time/review gates, Prisma transaction entry, GP debit, Booking/TransactionLog creation, notifications, or email. EXERCISE_REVIEW and unlinked legacy bookings keep their prior manual-time path.
+- The locked slot remains authoritative for mentor, start/end time, and `slotId`; `FOR UPDATE`, the post-lock `isBooked` check, one GP debit, one Booking create, and the slot update remain ordered in the existing transaction. The mentor-profile calendar component was not changed.
+- No schema, migration, BookingStatus, FulfillmentStatus, GP quantity, wallet/escrow, settlement, TransactionLog semantics, cron, provider integration, artifact, or fulfillment-state-machine change was made. F1 remains unstarted and next in registry order.
+- Verification: `npm run typecheck` PASS; `npm run test:learning-hub` PASS (41); route smoke plus `npm run test:learning-hub:integration` PASS (25); `npm run test:regression` PASS (all five scripts); targeted ESLint PASS; `npm run build` PASS (34 pages, existing middleware deprecation warning only). Standard `tsx` failed before discovery with the documented Windows `os.userInfo()` ENOMEM; both suites passed unchanged under the temporary compatibility preload, which was removed.
 
 ## Historical repository-memory and B2 realtime reconciliation
 
