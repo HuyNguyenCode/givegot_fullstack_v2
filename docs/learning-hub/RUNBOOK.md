@@ -23,7 +23,7 @@
 
 ## Baseline and test ladder
 
-Current Task 00 commands:
+Task 00 baseline commands:
 
 ```text
 npm run db:generate
@@ -38,12 +38,12 @@ node scripts/test-skill-approval.cjs
 node scripts/test-withdrawal-rejection.cjs
 ```
 
-Task 01 must add canonical package scripts for typecheck, Learning Hub unit/integration, and regression suites. Run `npm ci` only at a clean-install gate. Database-writing tests require an explicit disposable database and must never use production or print secrets.
+Task 01 added the canonical package scripts for typecheck, Learning Hub unit/integration, and regression suites. Run `npm ci` only at a clean-install gate. Database-writing tests require an explicit disposable database and must never use production or print secrets.
 
 Failure protocol:
 
 - Capture command, exit code, assertion/error, and fixture.
-- Compare with Task 00 baseline.
+- Compare with the applicable classified baseline: 77 errors/32 warnings for unrelated legacy debt and 151 errors/34 warnings for the current full repository until the required isolated B2/C1 lint repair completes.
 - Fix task-introduced failures in scope or report BLOCKED.
 - Keep pre-existing failures visible; never skip, weaken, or exclude tests merely to pass.
 - Run targeted coverage before the broader gate.
@@ -83,8 +83,20 @@ Failure protocol:
 - Use private bucket, random scoped key, short TTL, MIME/extension/size/quota allowlist.
 - Upload directly from browser; finalize only after verifying provider metadata.
 - Store `storageKey`, never a signed URL; soft delete metadata then purge idempotently.
+- Archived-space storage reads require an ACTIVE member of that archived space; archived spaces reject storage mutations.
+- F2 and later code must use the storage-service abstraction, never direct AWS SDK/S3 behavior.
 - Never expose service-role credentials in `NEXT_PUBLIC_` or logs.
 - Do not server-fetch arbitrary external URLs in P0.
+
+### F1 S3 setup and lifecycle
+
+- Deploy `infra/learning-storage.yaml` with a unique bucket name and the app's exact HTTPS origin. It blocks all four forms of public access, encrypts objects, retains the bucket on stack deletion, permits the browser's signed POST through CORS, and expires `pending/` objects after one day. Keep the bucket private; the API checks its four bucket-level public-access blocks before issuing credentials.
+- Set server-only `LEARNING_STORAGE_BUCKET` and `AWS_REGION`, and give the server an IAM role or server-only AWS credentials with `s3:GetBucketPublicAccessBlock`, `s3:ListBucket`, and `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` on this bucket's objects. No AWS key belongs in a `NEXT_PUBLIC_` variable or browser request. `s3:ListBucket` lets a missing object return a distinguishable 404 during finalize.
+- The signed POST lasts five minutes and binds one random `pending/spaces/{spaceId}/resources/{resourceId}/{uuid}.{ext}` key, exact MIME, and a maximum byte count. The browser submits the returned fields plus the file directly to S3, with the file part last, then calls finalize. The API accepts only PDF, JPEG, PNG, TXT, and Markdown, up to 20 MiB per file and 500 MiB reserved plus ready bytes per space. Office files wait for malware scanning.
+- Finalize uses S3 HEAD metadata, checks exact reserved MIME and byte count, copies the object to `spaces/{spaceId}/resources/{resourceId}/{uuid}.{ext}`, then checks the promoted object's metadata and PDF/JPEG/PNG signature or UTF-8 text prefix before conditionally marking READY. This staging copy means reuse of the signed POST cannot overwrite the downloadable object. A mismatched upload becomes QUARANTINED. A missing object remains PENDING until cleanup. Provider or database failure leaves it non-downloadable and eligible for retry or cleanup.
+- Downloads require a fresh server session and ACTIVE membership in the target space. An archived space remains readable only to its ACTIVE members. The at-most-ten-minute URL forces an attachment response with `application/octet-stream`; it is never persisted or logged. A soft delete immediately prevents new URLs and attempts to remove both final and staging copies. An already issued URL is an accepted bearer capability until its at-most-ten-minute expiry if provider deletion fails.
+- Vercel calls `/api/cron/learning-storage-cleanup` at minute 15 of each hour using `CRON_SECRET`. The bounded, idempotent job claims PENDING or QUARANTINED rows older than 15 minutes, removes both possible object keys, and retries any DELETED row whose storage key has not been cleared. S3's one-day `pending/` lifecycle is a backstop for a process crash or failed staging removal. Check the cron response and investigate repeated provider failures without logging keys, URLs, filenames, or file contents.
+- F1 adds file-boundary APIs only: `POST /api/learning/spaces/{spaceId}/files` accepts `fileName`, `mimeType`, `sizeBytes`; `POST .../{resourceId}/finalize` verifies and promotes; `POST .../{resourceId}/download` returns a signed URL; `DELETE .../{resourceId}` soft-deletes. F2 owns the resource list/detail UI and external links. No server-side arbitrary URL fetch is used.
 
 ## Cron and realtime procedure
 

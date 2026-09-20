@@ -9,7 +9,7 @@
 
 ## Current checkpoint and historical-count rule
 
-The current checkout checkpoint is 00, 01, A1, A2, B1, B2, C1, D1, and C2 PASS, with E1 plus its narrow AvailableSlot repair PASS WITH KNOWN LIMITATION; F1 remains next and unstarted. Except where this section explicitly states a current observation, suite counts and command results below are historical evidence from their named task checkpoints, not cumulative current totals. The current observed full-lint result remains the earlier 151 errors and 34 warnings; its delta from the Task 00 baseline remains unclassified.
+The current checkout checkpoint is 00, 01, A1, A2, B1, B2, C1, D1, and C2 PASS, with E1 plus its narrow AvailableSlot repair and F1 PASS WITH KNOWN LIMITATION; F2 is next. Except where this section explicitly states a current observation, suite counts and command results below are historical evidence from their named task checkpoints, not cumulative current totals. Later reconciliation classifies the current 151-error/34-warning full-lint result as 77 errors/32 warnings of unrelated legacy debt plus 74 errors/2 warnings introduced by B2/C1; F1 has zero lint findings. An isolated B2/C1 lint repair is required before F2.
 
 ## Test ladder
 
@@ -35,8 +35,8 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | LH 012 | B2, D1 | `LH012-U` objective/DoD validation/version | `LH012-I` member auth; `LH012-C` optimistic-lock conflict | Booking note and UI long-text behavior | B2 PASS; D1 PASS for objective/definition display, empty and long-Vietnamese UI; detail mutations remain B2 API scope |
 | LH 020 | E1, I1 | `LH020-U` mode/checklist rules | `LH020-I` Booking integration and immutable-after-delivery guard | `LH020-R` legacy Live/Calendar/Meet/cancellation | E1 PASS WITH KNOWN LIMITATION: LIVE/HYBRID use the locked AvailableSlot path with no manual fallback; EXERCISE_REVIEW and legacy manual creation remain compatible; three evidence/timing contracts, member-pair linkage, stable snapshots, null-mode compatibility, provider/lifecycle regression, and the early direct-create guard pass. I1 fulfillment transitions remain pending |
 | LH 030 | F2 | `LH030-U` HTTPS normalization/validation | `LH030-I` member CRUD; `LH030-S` XSS/SSRF/no-fetch | Safe external navigation and deleted link | PLACEHOLDER |
-| LH 031 | F1, F2 | `LH031-U` MIME/extension/size/key/quota | `LH031-I` signed upload/finalize; `LH031-S` spoof/path/expiry | Orphan cleanup and provider failure | PLACEHOLDER |
-| LH 032 | F1, F2 | `LH032-U` TTL/deleted-state rules | `LH032-I` download issuance; `LH032-S` non-member/IDOR | Archived member and expired URL | PLACEHOLDER |
+| LH 031 | F1, F2 | `LH031-U` MIME/extension/size/key/quota | `LH031-I` signed upload/finalize; `LH031-S` spoof/path/expiry | Orphan cleanup and provider failure | F1 PASS for mocked private provider boundary: allowlist, 20 MiB file cap, 500 MiB quota, random keys, session/member auth, provider HEAD and promotion, stale/orphan cleanup, traversal and provider failures. F2 UI/resource domain remains pending |
+| LH 032 | F1, F2 | `LH032-U` TTL/deleted-state rules | `LH032-I` download issuance; `LH032-S` non-member/IDOR | Archived member and expired URL | F1 PASS for mocked 10-minute signed attachment issuance, member/archived-space reads, nonmember denial, expiry timestamp, and deleted-state denial. F2 visible download flow remains pending |
 | LH 040 | G1 | `LH040-U` role/deadline/criteria | `LH040-I` create/update; `LH040-S` member/assignee auth | Notification and archived-space behavior | PLACEHOLDER |
 | LH 041 | G2 | `LH041-U` current Submission/revision rules | `LH041-I` text/link/file flow; `LH041-C` concurrent resubmit | Task status and attachment authorization | PLACEHOLDER |
 | LH 042 | G3 | `LH042-U` reviewed/revision outcomes | `LH042-I` reviewer auth and state; private content guard | `LH042-R` public Review/Trust unchanged | PLACEHOLDER |
@@ -55,9 +55,21 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1 | PASS: isolated clean/legacy/rollback execution; six BookingStatus rows retained; no backfill |
 | Mode transitions | All allowed/forbidden transitions for LIVE, EXERCISE_REVIEW, HYBRID | E1, I1 | E1 PASS for selection contracts and mode immutability after delivery; I1 transition mutations remain pending |
 | Settlement | Double click, concurrent request/cron, dispute, rollback, ledger reconciliation | I2, I3 | PLACEHOLDER |
-| Storage | MIME/extension mismatch, size/quota, orphan, expiry, delete, filename/path, provider failure | F1, F2 | PLACEHOLDER |
+| Storage | MIME/extension mismatch, size/quota, orphan, expiry, delete, filename/path, provider failure | F1, F2 | F1 PASS: 10 provider-mocked service integration cases; F2 resource UI and links remain pending |
 | UI/accessibility | Empty/loading/error, mobile, keyboard/focus/labels/contrast, long Vietnamese | C2, D1, F2, G2, K1 | C2/D1 PASS: route-local states; responsive/focus-visible shell and onboarding; Vietnamese labels, optional-objective form, back navigation, and unavailable-artifact actions hidden. Remaining task coverage pending |
 | Analytics/privacy | Event definitions, dedupe, raw counts, no private content | L1, M1 | PLACEHOLDER |
+
+## Task F1 storage evidence (2026-09-20)
+
+- `npm run typecheck`: PASS, exit 0. `npm run test:learning-hub`: PASS, 41 tests. `npm run test:learning-hub:integration`: PASS, route smoke plus 35 tests, including ten F1 provider-mocked cases. `npm run test:regression`: PASS, all five scripts. Targeted ESLint over F1 library/test TypeScript: PASS, zero findings. `npm run build`: PASS, 35 generated pages and the known middleware warning.
+- The F1 integration fixture uses an in-memory repository and mocked provider; it sends no data to S3, the configured database, or a production bucket. It covers unauthenticated and nonmember denial before provider access, MIME/extension/Office/SVG rejection, oversize/quota/traversal, five-minute upload and ten-minute download expiry, provider-confirmed finalize, archived-member read, deleted resource denial, missing/stale orphan, quarantine, deletion racing with finalize, and provider signing/promotion/removal failure.
+- The first production build failed on F1's collection route context type. The type was corrected and the full build passed. The standard Windows `tsx` run failed before test discovery with the previously documented `os.userInfo()` ENOMEM; the unchanged suites passed using a temporary compatibility preload, subsequently removed. Later lint reconciliation confirms F1 has zero findings; the 151-error/34-warning full-repository result is entirely 77/32 unrelated legacy debt plus 74/2 B2/C1 debt.
+
+## Later full-lint reconciliation (2026-09-20)
+
+- `npm run lint` reports 151 errors and 34 warnings. The unchanged unrelated legacy baseline is 77 errors and 32 warnings. The additional 74 errors and two warnings are genuine Learning Hub debt introduced by B2/C1, not pre-existing unrelated debt, newly visible untracked files, generated/temp files, or a lint-scope/configuration change.
+- B2 contributes 46 errors and one warning: `src/lib/learning-space-service.ts` (22/1), `src/lib/learning-space-route-handlers.ts` (5/0), and `tests/learning-hub/unit/learning-space-service.test.ts` (19/0). C1 contributes 28 errors and one warning: `src/lib/learning-invite-service.ts` (12/1), `src/lib/learning-invite-route-handlers.ts` (2/0), `tests/learning-hub/unit/learning-invite-service.test.ts` (13/0), and `tests/learning-hub/integration/learning-invite-continuation.test.ts` (1/0).
+- All 74 errors are `@typescript-eslint/no-explicit-any`; the two warnings are known unused variables. F1 files have zero lint findings. The lint script, ESLint configuration, and installed lint package versions did not change. Repair the B2/C1 findings in an isolated task before F2; subsequent work compares the full repository against 151 errors and 34 warnings until that repair lands.
 
 ## Historical B2 realtime reconciliation
 
@@ -141,13 +153,14 @@ The unit suite uses `node:test` via the existing `tsx` dependency. The integrati
 
 - PASS: tests/learning-hub/unit/learning-space-service.test.ts covers two-member capacity, repeated-pair spaces, non-forced reuse, session-bound non-member denial, 409 optimistic conflict, topic-reference preservation, primary-skill audit, and null legacy Booking compatibility.
 - PASS: npm run typecheck, npm run test:learning-hub (17), npm run test:learning-hub:integration (12), npm run test:regression (five scripts), and production build.
+- Later correction (2026-09-20): the full-repository result is now classified as 77/32 unrelated legacy debt plus 46/1 B2 and 28/1 C1 lint debt. This correction does not alter the historical command results above; complete the isolated B2/C1 repair before F2.
 
 ## Historical Task E1 evidence
 
 - `tests/learning-hub/unit/learning-mode-contracts.test.ts` PASS: exact LIVE, EXERCISE_REVIEW, and HYBRID artifact sets; delivery/review timing; dispute blocking; null legacy mode; and post-delivery mode immutability.
 - `tests/learning-hub/integration/learning-booking-integration.test.ts` PASS: server-session-shaped pair authorization, outsider/mismatched-pair/topic denial, advisory lock, stable topic/objective snapshots, all three initial modes, legacy null-mode no-op, AvailableSlot lock ordering, Meet/Calendar acceptance source, cancellation/dispute reachability, fixed one-GP escrow, and unchanged cron source.
 - PASS: `npm run typecheck`; `npm run test:learning-hub` (37); `npm run test:learning-hub:integration` (23 after smoke); `npm run test:regression` (five scripts); targeted ESLint; and production build (34 pages).
-- Historical E1 result: full `npm run lint` reported 151 errors and 34 warnings, with no finding in E1 TypeScript files and no weakened assertion or lint scope. The current delta classification remains open.
+- Historical E1 result: full `npm run lint` reported 151 errors and 34 warnings, with no finding in E1 TypeScript files and no weakened assertion or lint scope. Later reconciliation attributes the added 74 errors/two warnings to B2/C1, retains 77 errors/32 warnings as unrelated legacy debt, and confirms no lint-scope change.
 
 ## E1 narrow AvailableSlot repair evidence
 

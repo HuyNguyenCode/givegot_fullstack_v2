@@ -64,6 +64,8 @@ Protected reads and mutations derive identity from NextAuth `auth()` on the serv
 
 Database rows store metadata and `storageKey`, never a durable signed URL or file body. Browsers upload directly to a private provider with short-lived authorization; downloads are reauthorized. Arbitrary server-side URL fetching is excluded from P0.
 
+F1 implements this with a private AWS S3 bucket and a provider interface. A five-minute signed POST writes only to a random `pending/` key with MIME and size policy conditions. Provider-confirmed finalize copies to a separate random final key before READY, so replay of an upload credential cannot replace a downloadable object. Downloads use at-most-ten-minute signed attachment URLs after ACTIVE membership authorization; archived spaces remain readable only to their ACTIVE members. A provider-deletion failure can leave an already issued URL usable until that bounded expiry. The existing LearningResource schema is sufficient, and a guarded cron plus bucket lifecycle remove orphan staging objects. F2 and later code consume the provider-agnostic storage-service abstraction rather than depend directly on AWS SDK/S3 behavior.
+
 ## ADR 011 Separate private feedback from public reputation
 
 **Status:** Accepted

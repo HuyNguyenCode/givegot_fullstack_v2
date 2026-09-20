@@ -26,6 +26,12 @@ Run the rows affected by a task, then the full applicable gate before a block ch
 | Cron jobs | Secret, batch, retry, deterministic time, idempotency | A2, I3 | Clock and concurrent-cron tests |
 | VNPay/top-up/cash-out | Signature, state, balance, refund behavior | I2, N1 | Payment mock and withdrawal script |
 
+## Task F1 storage regression evidence
+
+- F1 changed only new storage routes/services, the private bucket template, package dependencies, and the new cleanup schedule. It did not edit Booking, AvailableSlot, Calendar/Meet, cancellation/no-show/dispute, GP/ledger, public Review/Trust, chat, notification, dashboard/history, or existing cron logic. Old Booking and resource rows remain valid because there is no migration or backfill.
+- `npm run test:regression` passed all five offline scripts. The 41-unit and 35-integration Learning Hub suites passed with mocked provider calls, including archived member access, nonmember/unauthenticated denial, deleted resource denial, and cleanup retry. Production build passed with 35 pages and the existing middleware warning.
+- Later lint reconciliation classifies 151 errors/34 warnings as 77/32 unrelated legacy debt plus 74/2 B2/C1 Learning Hub debt; F1 has zero findings. Complete the isolated B2/C1 lint repair before F2. This does not change the recorded F1 regression evidence or its pending production S3 configuration gate.
+
 ## Current executable regressions
 
 - `node scripts/test-cancellation-preview.cjs`

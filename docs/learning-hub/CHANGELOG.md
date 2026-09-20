@@ -1,5 +1,19 @@
 # Learning Hub Changelog
 
+## 2026-09-20 Repository-memory lint reconciliation
+
+- Later read-only diagnosis classifies the current 151-error/34-warning full-lint result: 77 errors/32 warnings are unrelated legacy debt, while B2 introduced 46 errors/one warning and C1 introduced 28 errors/one warning. All 74 Learning Hub errors are `@typescript-eslint/no-explicit-any`; the two warnings are known unused variables.
+- The diagnosis found no lint scope/configuration change, newly included untracked-file contribution, or generated/temp-file contribution. F1 files have zero lint findings.
+- An isolated B2/C1 lint repair is required before F2. Until that repair is complete, subsequent work compares full lint against 151 errors/34 warnings and does not describe the 74/2 as pre-existing unrelated debt.
+
+## 2026-09-20 Task F1 Private storage infrastructure
+
+- Added an S3-backed provider abstraction, private bucket CloudFormation template, server-session/member-authorized signed file APIs, and an hourly secret-protected orphan cleanup route.
+- Uploads use five-minute signed POST credentials, random staging keys, PDF/JPEG/PNG/TXT/Markdown allowlist, 20 MiB file and 500 MiB space caps. Finalize verifies S3 metadata and promoted file signatures before READY. Downloads use ten-minute signed attachment URLs after fresh membership authorization. Soft deletion blocks new URLs and retries object removal.
+- Reused the existing LearningResource schema and statuses with no migration, backfill, old-row mutation, Booking/GP/settlement change, or visible UI. F2 owns resource list/detail and external link UI.
+- Verification passed typecheck, 41 unit tests, 35 integration tests after route smoke, five legacy regression scripts, targeted ESLint, and the 35-page production build. Provider calls were mocked; no production upload occurred. Standard `tsx` still requires the documented temporary Windows host preload, which was removed. Later reconciliation confirms F1 has zero lint findings; the 151/34 full-lint result is 77/32 unrelated legacy debt plus 74/2 B2/C1 debt.
+- Rollback removes only F1 code/config/docs; if deployed with files already written, first stop writes and retain/export LearningResource rows and bucket objects. The private bucket template uses `Retain` and is not destroyed automatically.
+
 ## 2026-09-11 Task 00 Control plane and baseline
 
 ### Added
@@ -179,5 +193,5 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - LIVE/HYBRID now load future unbooked mentor slots, require a slot selection, submit the complete LearningSpace selection through the existing locked slot transaction, and refresh after stale failures. Empty availability has no manual fallback.
 - Added an early `createBooking` rejection for linked LIVE/HYBRID before review-gate work or any GP, Booking, ledger, notification, or email side effect. EXERCISE_REVIEW and unlinked legacy manual booking remain unchanged; the mentor-profile slot component was not modified.
 - No schema, migration, lifecycle, GP/pricing, wallet, settlement, provider, cron, artifact, or fulfillment-state-machine change. F1 remains unstarted.
-- PASS WITH KNOWN LIMITATION: typecheck; 41 unit tests; route smoke plus 25 integration tests; all five legacy regressions; targeted ESLint; and production build with 34 pages. Standard `tsx` reproduced the documented Windows `os.userInfo()` ENOMEM before discovery; suites passed under the temporary compatibility preload, which was removed. The earlier full-lint delta remains open and was not rerun.
+- PASS WITH KNOWN LIMITATION: typecheck; 41 unit tests; route smoke plus 25 integration tests; all five legacy regressions; targeted ESLint; and production build with 34 pages. Standard `tsx` reproduced the documented Windows `os.userInfo()` ENOMEM before discovery; suites passed under the temporary compatibility preload, which was removed. This narrow repair did not rerun full lint. Later reconciliation classifies the earlier 151-error/34-warning result as 77 errors/32 warnings of unrelated legacy debt plus 74 errors/2 warnings introduced by B2/C1.
 
