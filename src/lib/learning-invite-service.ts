@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { AuthorizationError, requireAuthenticatedUser } from '@/lib/server-authorization'
 import type { AuthenticatedUser } from '@/lib/server-authorization'
 import { prisma } from '@/lib/prisma'
-import type { Prisma } from '@prisma/client'
+import type { LearningInvite, LearningSpace, LearningSpaceMember, Prisma } from '@prisma/client'
 
 export class LearningInviteConflictError extends Error { readonly status = 409; constructor(message: string) { super(message) } }
 export class LearningInviteValidationError extends Error { readonly status = 400; constructor(message: string) { super(message) } }
@@ -24,14 +24,35 @@ const expiresAt = (value: unknown, now: Date) => {
   if (Number.isNaN(date.getTime()) || date <= now) throw new LearningInviteValidationError('expiresAt must be in the future')
   return date
 }
-const publicInvite = (invite: any) => {
+type InviteRecord = Pick<LearningInvite, 'id' | 'tokenHash' | 'inviterId' | 'acceptedById' | 'learningSpaceId' | 'primarySkillId' | 'objective' | 'status' | 'maxUses' | 'useCount' | 'expiresAt' | 'acceptedAt'>
+type PreviewInviteRecord = Pick<LearningInvite, 'status' | 'expiresAt' | 'useCount' | 'maxUses' | 'objective'> & { primarySkill?: { name: string } | null }
+type InviteSpaceRecord = Pick<LearningSpace, 'id' | 'state' | 'primarySkillId'> & { objective?: string | null }
+type ActiveMemberRecord = Pick<LearningSpaceMember, 'userId'>
+
+const publicInvite = (invite: InviteRecord) => {
   const { tokenHash: _tokenHash, ...safe } = invite
+  void _tokenHash
   return safe
 }
 
+export type LearningInviteTransaction = {
+  lock(key: string): Promise<unknown>
+  skillExists(id: string): Promise<boolean>
+  skill(id: string): Promise<{ id: string; name: string } | null>
+  createInvite(data: Prisma.LearningInviteUncheckedCreateInput): Promise<InviteRecord>
+  inviteById(id: string): Promise<InviteRecord | null>
+  inviteByHash(hash: string): Promise<InviteRecord | null>
+  expireInvite(id: string, at: Date): Promise<InviteRecord>
+  revokeInvite(id: string, at: Date): Promise<InviteRecord>
+  space(id: string | null): Promise<InviteSpaceRecord | null> | null
+  activeMembers(spaceId: string): Promise<ActiveMemberRecord[]>
+  createSpace(data: Prisma.LearningSpaceUncheckedCreateInput): Promise<InviteSpaceRecord>
+  createMember(spaceId: string, userId: string): Promise<ActiveMemberRecord>
+  acceptInvite(id: string, acceptedById: string, learningSpaceId: string, acceptedAt: Date): Promise<InviteRecord | null>
+}
 export interface LearningInviteRepository {
-  transaction<T>(fn: (transaction: any) => Promise<T>): Promise<T>
-  findInviteByHash(hash: string): Promise<any | null>
+  transaction<T>(fn: (transaction: LearningInviteTransaction) => Promise<T>): Promise<T>
+  findInviteByHash(hash: string): Promise<PreviewInviteRecord | null>
 }
 
 export function createLearningInviteService(deps: {
@@ -44,7 +65,7 @@ export function createLearningInviteService(deps: {
   const authenticate = deps.requireAuthenticatedUser ?? requireAuthenticatedUser
   const generateToken = deps.generateToken ?? rawToken
 
-  async function create(input: any) {
+  async function create(input: Record<string, unknown>) {
     const inviter = await authenticate()
     const primarySkillId = text(input.primarySkillId, 'primarySkillId', 191)
     const objective = optionalText(input.objective, 'objective')
@@ -96,7 +117,7 @@ export function createLearningInviteService(deps: {
     })
   }
 
-  async function accept(token: unknown, input: any = {}) {
+  async function accept(token: unknown, input: Record<string, unknown> = {}) {
     const recipient = await authenticate()
     const hash = tokenHash(text(token, 'token', 512))
     return deps.repository.transaction(async tx => {
@@ -115,7 +136,7 @@ export function createLearningInviteService(deps: {
       if (invite.inviterId === recipient.id) throw new LearningInviteConflictError('You cannot accept your own Learning invite')
       if (invite.useCount >= invite.maxUses) throw new LearningInviteConflictError('Learning invite usage limit has been reached')
 
-      let space: any
+      let space: InviteSpaceRecord | null
       const reuseSpaceId = input.reuseSpaceId == null ? null : text(input.reuseSpaceId, 'reuseSpaceId', 191)
       if (reuseSpaceId) {
         await tx.lock(reuseSpaceId)
@@ -124,9 +145,9 @@ export function createLearningInviteService(deps: {
         if (space.state !== 'ACTIVE') throw new LearningInviteConflictError('Only an active LearningSpace can be reused')
         if (space.primarySkillId !== invite.primarySkillId) throw new LearningInviteConflictError('LearningSpace primary skill does not match this invite')
         const members = await tx.activeMembers(reuseSpaceId)
-        if (!members.some((member: any) => member.userId === invite.inviterId)) throw new LearningInviteConflictError('The inviter is not an active member of this LearningSpace')
-        if (members.some((member: any) => member.userId !== invite.inviterId && member.userId !== recipient.id)) throw new LearningInviteConflictError('Reusing this LearningSpace would create a third active member')
-        if (!members.some((member: any) => member.userId === recipient.id)) await tx.createMember(reuseSpaceId, recipient.id)
+        if (!members.some(member => member.userId === invite.inviterId)) throw new LearningInviteConflictError('The inviter is not an active member of this LearningSpace')
+        if (members.some(member => member.userId !== invite.inviterId && member.userId !== recipient.id)) throw new LearningInviteConflictError('Reusing this LearningSpace would create a third active member')
+        if (!members.some(member => member.userId === recipient.id)) await tx.createMember(reuseSpaceId, recipient.id)
       } else {
         const skill = await tx.skill(invite.primarySkillId)
         if (!skill) throw new LearningInviteValidationError('Invite primary skill no longer exists')
@@ -144,18 +165,18 @@ export function createLearningInviteService(deps: {
   return { create, preview, revoke, accept }
 }
 
-function tx(client: Prisma.TransactionClient): any { return {
+function tx(client: Prisma.TransactionClient): LearningInviteTransaction { return {
   lock: (key: string) => client.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`,
   skillExists: async (id: string) => Boolean(await client.skill.findUnique({ where: { id }, select: { id: true } })),
   skill: (id: string) => client.skill.findUnique({ where: { id }, select: { id: true, name: true } }),
-  createInvite: (data: any) => client.learningInvite.create({ data }),
+  createInvite: (data: Prisma.LearningInviteUncheckedCreateInput) => client.learningInvite.create({ data }),
   inviteById: (id: string) => client.learningInvite.findUnique({ where: { id } }),
   inviteByHash: (hash: string) => client.learningInvite.findUnique({ where: { tokenHash: hash } }),
   expireInvite: (id: string, at: Date) => client.learningInvite.update({ where: { id }, data: { status: 'EXPIRED', updatedAt: at } }),
   revokeInvite: (id: string, at: Date) => client.learningInvite.update({ where: { id }, data: { status: 'REVOKED', revokedAt: at } }),
   space: (id: string | null) => id ? client.learningSpace.findUnique({ where: { id } }) : null,
   activeMembers: (learningSpaceId: string) => client.learningSpaceMember.findMany({ where: { learningSpaceId, status: 'ACTIVE' }, select: { userId: true } }),
-  createSpace: (data: any) => client.learningSpace.create({ data }),
+  createSpace: (data: Prisma.LearningSpaceUncheckedCreateInput) => client.learningSpace.create({ data }),
   createMember: (learningSpaceId: string, userId: string) => client.learningSpaceMember.create({ data: { learningSpaceId, userId } }),
   acceptInvite: async (id: string, acceptedById: string, learningSpaceId: string, acceptedAt: Date) => {
     const result = await client.learningInvite.updateMany({ where: { id, status: 'ACTIVE', useCount: { lt: 1 } }, data: { status: 'ACCEPTED', acceptedById, learningSpaceId, acceptedAt, useCount: { increment: 1 } } })

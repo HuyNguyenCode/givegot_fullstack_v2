@@ -10,9 +10,9 @@ const TOKEN = '4f_DdsMNjrFKri7cogT10OCcYDI3aaOdBvyNkYmNQjg'
 
 test('C1 preserves a logged-out invite only in a short-lived encrypted HttpOnly continuation cookie', async () => {
   let acceptedToken: string | null = null
-  const service: any = {
+  const service = {
     preview: async () => ({ invite: { id: 'invite-1' }, status: 'ACTIVE', canAccept: true }),
-    accept: async (token: string) => { acceptedToken = token; return { invite: { id: 'invite-1' }, space: { id: 'space-1' }, idempotent: false } },
+    accept: async (token: unknown) => { acceptedToken = token as string; return { invite: { id: 'invite-1' }, space: { id: 'space-1' }, idempotent: false } },
   }
   const preview = createLearningInvitePreviewHandlers(service, (response, token) => setLearningInviteContinuation(response, token, SECRET)).POST
   const previewResponse = await preview(new NextRequest('http://local/api/learning/invites/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: TOKEN }) }))

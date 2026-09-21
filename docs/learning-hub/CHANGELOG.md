@@ -1,10 +1,16 @@
 # Learning Hub Changelog
 
+## 2026-09-21 B2/C1 lint debt repair
+
+- Replaced the 74 B2/C1 `@typescript-eslint/no-explicit-any` findings and two known unused-variable warnings with precise request, route-context, Prisma-derived repository, and typed test-double boundaries across the seven audited files. No intended runtime, API, authorization, database, query, status-code, or side-effect-order behavior changed.
+- Verification passed targeted ESLint at 0 errors/0 warnings, typecheck, 41 Learning Hub unit tests, route smoke plus 35 integration tests, all five legacy regression scripts, and the 35-page production build. Full lint is 77 errors/32 warnings, exactly the unrelated legacy baseline.
+- The two `tsx` suites used the previously documented host-only temporary preload for the Windows `os.userInfo()` ENOMEM issue. The untracked helper was removed afterward and is not a product/runtime dependency.
+
 ## 2026-09-20 Repository-memory lint reconciliation
 
 - Later read-only diagnosis classifies the current 151-error/34-warning full-lint result: 77 errors/32 warnings are unrelated legacy debt, while B2 introduced 46 errors/one warning and C1 introduced 28 errors/one warning. All 74 Learning Hub errors are `@typescript-eslint/no-explicit-any`; the two warnings are known unused variables.
 - The diagnosis found no lint scope/configuration change, newly included untracked-file contribution, or generated/temp-file contribution. F1 files have zero lint findings.
-- An isolated B2/C1 lint repair is required before F2. Until that repair is complete, subsequent work compares full lint against 151 errors/34 warnings and does not describe the 74/2 as pre-existing unrelated debt.
+- An isolated B2/C1 lint repair was required before F2. The 2026-09-21 repair subsequently removed the 74/2 Learning Hub findings and restored full lint to the unrelated 77/32 legacy baseline.
 
 ## 2026-09-20 Task F1 Private storage infrastructure
 

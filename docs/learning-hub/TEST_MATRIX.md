@@ -9,7 +9,7 @@
 
 ## Current checkpoint and historical-count rule
 
-The current checkout checkpoint is 00, 01, A1, A2, B1, B2, C1, D1, and C2 PASS, with E1 plus its narrow AvailableSlot repair and F1 PASS WITH KNOWN LIMITATION; F2 is next. Except where this section explicitly states a current observation, suite counts and command results below are historical evidence from their named task checkpoints, not cumulative current totals. Later reconciliation classifies the current 151-error/34-warning full-lint result as 77 errors/32 warnings of unrelated legacy debt plus 74 errors/2 warnings introduced by B2/C1; F1 has zero lint findings. An isolated B2/C1 lint repair is required before F2.
+The current checkout checkpoint is 00, 01, A1, A2, B1, B2, C1, D1, and C2 PASS, with E1 plus its narrow AvailableSlot repair and F1 PASS WITH KNOWN LIMITATION; the isolated B2/C1 lint repair is VERIFIED and F2 is next. Except where this section explicitly states a current observation, suite counts and command results below are historical evidence from their named task checkpoints, not cumulative current totals. The repair restored full lint from the classified 151-error/34-warning result to the unrelated 77-error/32-warning legacy baseline; F1 has zero lint findings.
 
 ## Test ladder
 
@@ -70,6 +70,12 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 - `npm run lint` reports 151 errors and 34 warnings. The unchanged unrelated legacy baseline is 77 errors and 32 warnings. The additional 74 errors and two warnings are genuine Learning Hub debt introduced by B2/C1, not pre-existing unrelated debt, newly visible untracked files, generated/temp files, or a lint-scope/configuration change.
 - B2 contributes 46 errors and one warning: `src/lib/learning-space-service.ts` (22/1), `src/lib/learning-space-route-handlers.ts` (5/0), and `tests/learning-hub/unit/learning-space-service.test.ts` (19/0). C1 contributes 28 errors and one warning: `src/lib/learning-invite-service.ts` (12/1), `src/lib/learning-invite-route-handlers.ts` (2/0), `tests/learning-hub/unit/learning-invite-service.test.ts` (13/0), and `tests/learning-hub/integration/learning-invite-continuation.test.ts` (1/0).
 - All 74 errors are `@typescript-eslint/no-explicit-any`; the two warnings are known unused variables. F1 files have zero lint findings. The lint script, ESLint configuration, and installed lint package versions did not change. Repair the B2/C1 findings in an isolated task before F2; subsequent work compares the full repository against 151 errors and 34 warnings until that repair lands.
+
+## B2/C1 lint repair verification (2026-09-21)
+
+- Targeted ESLint across the seven repaired B2/C1 files: PASS, 0 errors/0 warnings. Full `npm run lint`: 77 errors/32 warnings, exactly the unrelated legacy baseline.
+- `npm run typecheck`: PASS. `npm run test:learning-hub`: PASS, 41 tests. `npm run test:learning-hub:integration`: PASS, route smoke plus 35 tests. `npm run test:regression`: PASS, all five scripts. `npm run build`: PASS, 35 generated pages with the existing middleware warning.
+- The `tsx` suites used the previously documented host-only `.codex-tsx-preload.cjs` containing `process.geteuid = () => 0` through `NODE_OPTIONS`. The untracked helper was removed after the suites and is not a product/runtime dependency. No test was skipped or weakened.
 
 ## Historical B2 realtime reconciliation
 
@@ -153,7 +159,7 @@ The unit suite uses `node:test` via the existing `tsx` dependency. The integrati
 
 - PASS: tests/learning-hub/unit/learning-space-service.test.ts covers two-member capacity, repeated-pair spaces, non-forced reuse, session-bound non-member denial, 409 optimistic conflict, topic-reference preservation, primary-skill audit, and null legacy Booking compatibility.
 - PASS: npm run typecheck, npm run test:learning-hub (17), npm run test:learning-hub:integration (12), npm run test:regression (five scripts), and production build.
-- Later correction (2026-09-20): the full-repository result is now classified as 77/32 unrelated legacy debt plus 46/1 B2 and 28/1 C1 lint debt. This correction does not alter the historical command results above; complete the isolated B2/C1 repair before F2.
+- Later correction (2026-09-20): the full-repository result is now classified as 77/32 unrelated legacy debt plus 46/1 B2 and 28/1 C1 lint debt. This correction does not alter the historical command results above; The isolated B2/C1 repair was subsequently verified on 2026-09-21 before F2
 
 ## Historical Task E1 evidence
 
