@@ -46,7 +46,7 @@ export type FileResource = {
 
 export interface LearningStorageRepository {
   access(spaceId: string, userId: string): Promise<{ state: LearningSpaceStatus } | null>
-  reserve(input: { spaceId: string; userId: string; id: string; title: string; key: string; mimeType: string; sizeBytes: number; quotaBytes: number }): Promise<FileResource>
+  reserve(input: { spaceId: string; userId: string; id: string; title: string; description: string | null; bookingId: string | null; topicId: string | null; key: string; mimeType: string; sizeBytes: number; quotaBytes: number }): Promise<FileResource>
   resource(spaceId: string, resourceId: string): Promise<FileResource | null>
   transition(resourceId: string, from: LearningResourceStatus, to: LearningResourceStatus, changes?: { storageKey?: string | null; deletedAt?: Date }): Promise<boolean>
   expiredPending(before: Date, limit: number): Promise<FileResource[]>
@@ -64,6 +64,12 @@ function validateFile(input: { fileName?: unknown; mimeType?: unknown; sizeBytes
   if (typeof input.sizeBytes !== 'number' || !Number.isSafeInteger(input.sizeBytes) || input.sizeBytes < 1) throw new LearningStorageError(400, 'Invalid file size')
   if (input.sizeBytes > LEARNING_FILE_MAX_BYTES) throw new LearningStorageError(413, 'File exceeds the 20 MB limit')
   return { title: name, extension, mimeType: expectedMime, sizeBytes: input.sizeBytes }
+}
+
+function optionalResourceText(value: unknown, field: string, max: number) {
+  if (value == null) return null
+  if (typeof value !== 'string' || value.trim().length > max) throw new LearningStorageError(400, `Invalid ${field}`)
+  return value.trim() || null
 }
 
 function finalKey(stagingKey: string) {
@@ -106,13 +112,13 @@ export function createLearningStorageService(deps: {
     return actor.id
   }
 
-  async function initiate(spaceId: string, input: { fileName?: unknown; mimeType?: unknown; sizeBytes?: unknown }) {
+  async function initiate(spaceId: string, input: { fileName?: unknown; mimeType?: unknown; sizeBytes?: unknown; description?: unknown; bookingId?: unknown; topicId?: unknown }) {
     const actorId = await authorize(spaceId, true)
     const file = validateFile(input)
     await provider.assertPrivateBucket()
     const id = uuid()
     const key = `pending/spaces/${spaceId}/resources/${id}/${uuid()}.${file.extension}`
-    await repository.reserve({ spaceId, userId: actorId, id, title: file.title, key, mimeType: file.mimeType, sizeBytes: file.sizeBytes, quotaBytes: LEARNING_SPACE_QUOTA_BYTES })
+    await repository.reserve({ spaceId, userId: actorId, id, title: file.title, description: optionalResourceText(input.description, 'description', 10_000), bookingId: optionalResourceText(input.bookingId, 'bookingId', 191), topicId: optionalResourceText(input.topicId, 'topicId', 191), key, mimeType: file.mimeType, sizeBytes: file.sizeBytes, quotaBytes: LEARNING_SPACE_QUOTA_BYTES })
     const expiresAt = new Date(now().getTime() + LEARNING_UPLOAD_TTL_MS)
     try {
       const upload = await provider.signUpload(key, file.mimeType, file.sizeBytes, expiresAt)
@@ -232,9 +238,11 @@ export const learningStorageRepository: LearningStorageRepository = {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.spaceId}))`
     const member = await tx.learningSpaceMember.findUnique({ where: { learningSpaceId_userId: { learningSpaceId: input.spaceId, userId: input.userId } }, select: { status: true, learningSpace: { select: { state: true } } } })
     if (member?.status !== 'ACTIVE' || member.learningSpace.state !== 'ACTIVE') throw new LearningStorageError(403, 'Active learning space membership required')
+    if (input.bookingId && !await tx.booking.findFirst({ where: { id: input.bookingId, learningSpaceId: input.spaceId }, select: { id: true } })) throw new LearningStorageError(400, 'Booking does not belong to this learning space')
+    if (input.topicId && !await tx.learningTopic.findFirst({ where: { id: input.topicId, learningSpaceId: input.spaceId }, select: { id: true } })) throw new LearningStorageError(400, 'Topic does not belong to this learning space')
     const totals = await tx.learningResource.aggregate({ where: { learningSpaceId: input.spaceId, kind: 'FILE', status: { in: ['PENDING', 'READY', 'QUARANTINED'] } }, _sum: { sizeBytes: true } })
     if ((totals._sum.sizeBytes ?? BigInt(0)) + BigInt(input.sizeBytes) > BigInt(input.quotaBytes)) throw new LearningStorageError(413, 'Learning space storage quota exceeded')
-    return tx.learningResource.create({ data: { id: input.id, learningSpaceId: input.spaceId, uploaderId: input.userId, kind: 'FILE', title: input.title, storageKey: input.key, mimeType: input.mimeType, sizeBytes: BigInt(input.sizeBytes), status: 'PENDING' } }) as Promise<FileResource>
+    return tx.learningResource.create({ data: { id: input.id, learningSpaceId: input.spaceId, uploaderId: input.userId, bookingId: input.bookingId, topicId: input.topicId, kind: 'FILE', title: input.title, description: input.description, storageKey: input.key, mimeType: input.mimeType, sizeBytes: BigInt(input.sizeBytes), status: 'PENDING' } }) as Promise<FileResource>
   }),
   resource: (spaceId, resourceId) => prisma.learningResource.findFirst({ where: { id: resourceId, learningSpaceId: spaceId, kind: 'FILE' } }) as Promise<FileResource | null>,
   transition: async (resourceId, from, to, changes) => (await prisma.learningResource.updateMany({ where: { id: resourceId, status: from }, data: { status: to, ...changes } })).count === 1,

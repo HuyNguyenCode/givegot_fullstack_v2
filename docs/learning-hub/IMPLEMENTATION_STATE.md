@@ -7,15 +7,16 @@
 - Latest committed checkpoint: `42b019e07912d64626e1620121011e81608d91ee`
   (`fix(learning-hub): restore slot booking for live and hybrid`),
   merged into `feature/learning-hub-mvp` by `3fe1370`.
-- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, and C2 are PASS; E1 plus its narrow AvailableSlot repair and F1 are PASS WITH KNOWN LIMITATION.
+- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, and F2 are complete. F2 implements LH 030, LH 031, and LH 032.
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Status: PASS WITH KNOWN LIMITATION (the isolated B2/C1 lint repair is verified and full lint is back to the unrelated 77-error/32-warning legacy baseline; the documented Windows `tsx` host limitation and private S3 deployment configuration remain).
+- Status: F2 PASS. The overall checkpoint retains the documented host/deployment limitations: the isolated B2/C1 lint repair is verified, full lint is the unrelated 77-error/32-warning legacy baseline, and private storage still requires its production provider configuration.
 - Production behavior: a Booking started from a LearningSpace carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. LIVE and HYBRID now select a future unbooked mentor AvailableSlot and use the existing locked slot path; EXERCISE_REVIEW retains the E1 manual-time `createBooking` path. Legacy Booking creation remains valid with all Learning Hub fields null.
 - Schema/migration behavior: unchanged from B1: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
-- API behavior: F1 adds session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. `getLearningBookingContext` and E1 Booking guards remain intact.
-- Learning Hub implementation: F1 uses an S3 provider adapter and private bucket template. Five-minute signed POST uploads reserve quota; finalize verifies provider metadata and promoted file signatures before READY; ten-minute download URLs require fresh active membership even for an archived space. A previously issued URL can remain usable until its at-most-ten-minute expiry if provider deletion fails. F2 resource UI/links must consume the storage-service abstraction and all fulfillment/settlement work remains pending.
-- Current verification: the isolated B2/C1 typing repair has targeted ESLint at 0 errors/0 warnings, typecheck, 41 Learning Hub unit tests, route smoke plus 35 integration tests, all five legacy regression scripts, and the 35-page production build passing. Full lint is 77 errors/32 warnings, exactly the unrelated legacy baseline. The two `tsx` suites used the previously documented host-only `process.geteuid` preload for the Windows `os.userInfo()` ENOMEM issue; the temporary untracked helper was removed and is not a product/runtime dependency.
-- Next safe task: F2 Resource domain and UI may follow under its own authorization. Do not begin it automatically.
+- API behavior: F1 provides session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. F2 adds member-authorized resource collection/item routes under `/api/learning/spaces/[spaceId]/resources`. `getLearningBookingContext` and E1 Booking guards remain intact.
+- Learning Hub implementation: F2 uses F1's provider-agnostic storage-service/API abstraction and does not import or depend directly on the AWS SDK or S3. HTTPS resources are normalized and never fetched server-side; private files retain F1's five-minute upload and ten-minute on-demand download boundary. Resource lists and activity return no signed URL or storage key. Fulfillment, settlement, notes, tasks, and submissions remain pending.
+- Current verification: F2 typecheck PASS; 44 Learning Hub unit tests PASS; 35 integration tests PASS; all five legacy regression scripts PASS; targeted ESLint PASS; production build PASS. Full lint remains 77 errors/32 warnings, exactly the unrelated legacy baseline after the verified B2/C1 repair. The host-only `process.geteuid` preload used for the documented Windows `tsx` issue was removed and is not a product/runtime dependency.
+- F2 Resource domain and UI completed on 2026-09-21. Active members can list, add, reopen, and delete their HTTPS links or F1 private files from LearningSpace. Resource metadata carries optional Booking/topic references; safe status, uploader, topic, time, and quota are displayed. Link/file deletion remains uploader-only and soft deletes preserve audit/provider cleanup. No server URL fetch, file parsing, raw video, Booking, fulfillment, or settlement behavior was added.
+- Next safe task: G1 — Learning Task Domain. Do not begin G1 or any later feature automatically.
 
 ### OPEN PRODUCT DECISION — GivePoint quantity by learning mode
 
@@ -91,7 +92,7 @@ Verified by source inventory and successful Next.js build:
 /wallet
 ```
 
-Current protected Learning Hub APIs are `POST /api/pusher/auth`, `/api/learning/spaces/*`, and `/api/learning/invites/*`. `/learning/[spaceId]` is the completed D1 LearningSpace UI route.
+Current protected Learning Hub APIs are `POST /api/pusher/auth`, `/api/learning/spaces/*` including F1 file and F2 resource routes, and `/api/learning/invites/*`. `/learning/[spaceId]` is the completed LearningSpace UI route with F2 resources.
 
 ## Current schema
 
@@ -152,7 +153,7 @@ Values were not read or recorded.
 - It conditionally changes status to COMPLETED in a transaction, credits the mentor one GivePoint, creates a BOOKING_COMPLETED TransactionLog, and sends best-effort notifications.
 - Mode-aware fulfillment and settlement remain I1-I3 scope; no Learning Hub mode/fulfillment predicate has been added to auto-complete.
 
-## Baseline command evidence
+## Historical Task 00 baseline command evidence
 
 | Command | Exit | Result |
 | --- | ---: | --- |

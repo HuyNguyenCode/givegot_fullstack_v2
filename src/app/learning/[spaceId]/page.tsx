@@ -5,6 +5,7 @@ import { loadLearningSpaceShell, type AuthorizedLearningSpaceShellData, type Lea
 import { learningSpaceRepository } from '@/lib/learning-space-service'
 import { isAuthorizationError, requireLearningSpaceMember } from '@/lib/server-authorization'
 import { prisma } from '@/lib/prisma'
+import { listLearningResources } from '@/lib/learning-resource-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,5 +43,6 @@ export default async function LearningSpacePage({ params, searchParams }: { para
   // Treat an inaccessible ID exactly like an absent record. This prevents a
   // route response from disclosing whether a private space exists.
   if (!space) notFound()
-  return <LearningSpaceShell space={space} showFirstValue={onboarding === 'invite'} />
+  const resourceData = await listLearningResources(spaceId)
+  return <LearningSpaceShell space={space} showFirstValue={onboarding === 'invite'} resources={resourceData.resources} quota={resourceData.quota} />
 }

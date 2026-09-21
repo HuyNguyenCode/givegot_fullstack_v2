@@ -16,7 +16,7 @@ function failure(error: unknown) {
 async function jsonObject(request: NextRequest) {
   const value: unknown = await request.json()
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new LearningStorageError(400, 'Invalid request body')
-  return value as { fileName?: unknown; mimeType?: unknown; sizeBytes?: unknown }
+  return value as { fileName?: unknown; mimeType?: unknown; sizeBytes?: unknown; description?: unknown; bookingId?: unknown; topicId?: unknown }
 }
 
 export function createLearningFileCollectionHandlers(service: Service) {

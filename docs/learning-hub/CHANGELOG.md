@@ -1,5 +1,11 @@
 # Learning Hub Changelog
 
+## 2026-09-21 Task F2 Resource domain and UI
+
+- Added member-authorized HTTPS resource routes and a LearningSpace resource UI. Links normalize HTTPS-only URLs and open safely; files continue to use F1 private direct upload/finalize and on-demand download.
+- Resource list/activity payloads exclude storage keys and signed URLs. Files retain lifecycle/deletion behavior and provider cleanup from F1; no arbitrary URL fetch, file parsing, raw video, Booking, or settlement change was added.
+- Added F2 tests for dangerous URL schemes, quota/empty/mobile/long-Vietnamese display, and private-boundary/activity contracts. Typecheck, 44 units, 35 integrations, five legacy regressions, targeted lint, and build passed.
+
 ## 2026-09-21 B2/C1 lint debt repair
 
 - Replaced the 74 B2/C1 `@typescript-eslint/no-explicit-any` findings and two known unused-variable warnings with precise request, route-context, Prisma-derived repository, and typed test-double boundaries across the seven audited files. No intended runtime, API, authorization, database, query, status-code, or side-effect-order behavior changed.

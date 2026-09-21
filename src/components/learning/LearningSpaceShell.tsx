@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { Archive, ArrowRight, BookOpen, CalendarDays, CheckSquare, History, NotebookPen, Users } from 'lucide-react'
 
 import type { AuthorizedLearningSpaceShellData } from '@/lib/learning-space-shell'
+import { LearningResources, type LearningResourceView } from '@/components/learning/LearningResources'
 
-type Props = { space: AuthorizedLearningSpaceShellData; showFirstValue?: boolean }
+type Props = { space: AuthorizedLearningSpaceShellData; showFirstValue?: boolean; resources?: LearningResourceView[]; quota?: { usedBytes: string; maxBytes: string } }
 
 const formatDate = (date: Date) => new Intl.DateTimeFormat('vi-VN', {
   dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh',
@@ -20,7 +21,7 @@ function Placeholder({ icon: Icon, title, detail }: { icon: typeof BookOpen; tit
   )
 }
 
-export function LearningSpaceShell({ space, showFirstValue = false }: Props) {
+export function LearningSpaceShell({ space, showFirstValue = false, resources = [], quota = { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) } }: Props) {
   const now = new Date()
   const nextBooking = space.bookings.find(booking => booking.endTime >= now && !['CANCELLED', 'MISSED'].includes(booking.status))
   const partner = space.members.find(member => member.id !== space.viewerId)
@@ -76,8 +77,9 @@ export function LearningSpaceShell({ space, showFirstValue = false }: Props) {
           {partner && <Link href={`/book/${partner.id}?learningSpaceId=${encodeURIComponent(space.id)}`} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{showFirstValue && !nextBooking ? 'Đặt buổi học đầu tiên' : 'Đặt buổi học tiếp theo'} <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>}
         </section>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Placeholder icon={BookOpen} title="Tài nguyên" detail="Liên kết và tệp riêng tư sẽ xuất hiện tại đây." />
+        <LearningResources spaceId={space.id} resources={resources} quota={quota} topics={space.topics} archived={archived} />
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Placeholder icon={CheckSquare} title="Công việc" detail="Việc cần làm và tiêu chí hoàn thành sẽ xuất hiện tại đây." />
           <Placeholder icon={NotebookPen} title="Ghi chú" detail="Ghi chú và phần tóm tắt chung sẽ xuất hiện tại đây." />
           <Placeholder icon={History} title="Lịch sử" detail="Hoạt động học tập có cấu trúc sẽ xuất hiện tại đây." />
