@@ -24,6 +24,22 @@ test('resource UI exposes quota, empty/error-safe states, and mobile-safe long V
   assert.match(empty, /Chưa có tài nguyên/)
 })
 
+test('ready LINK resource titles preserve the safe external-navigation contract', () => {
+  const title = `Tài liệu luyện phát âm tiếng Việt ${'rất dài '.repeat(70)}`
+  const html = renderToStaticMarkup(createElement(LearningResources, { spaceId: 'space', quota: { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) }, topics: [], archived: false, resources: [
+    { id: 'link', bookingId: null, topicId: null, kind: 'LINK', title, description: null, externalUrl: 'https://example.com/tai-lieu', mimeType: null, sizeBytes: null, status: 'READY', createdAt: new Date('2030-01-01T00:00:00.000Z'), uploaderName: 'An', topicLabel: null, canDelete: true },
+    { id: 'file', bookingId: null, topicId: null, kind: 'FILE', title: 'Tệp riêng tư.pdf', description: null, externalUrl: null, mimeType: 'application/pdf', sizeBytes: '1024', status: 'READY', createdAt: new Date('2030-01-01T00:00:00.000Z'), uploaderName: 'An', topicLabel: null, canDelete: true },
+  ] }))
+  assert.match(html, new RegExp(`<a href="https://example\\.com/tai-lieu" target="_blank" rel="noopener noreferrer"[^>]*>${title}</a>`))
+  assert.match(html, /Mở<svg/)
+  assert.match(html, /<p[^>]*>Liên kết · An/)
+  assert.match(html, /aria-label="Xóa Tài liệu luyện phát âm tiếng Việt/)
+  assert.match(html, /Tệp riêng tư\.pdf<\/p>/)
+  assert.match(html, /Tải<svg/)
+  assert.doesNotMatch(html, /storageKey|signedUrl|spaces\//)
+  assert.match(html, /break-words/)
+})
+
 test('resource contracts retain private boundaries and deduplicated activity semantics', async () => {
   const source = await import('node:fs/promises').then(fs => fs.readFile('src/lib/learning-resource-service.ts', 'utf8'))
   assert.match(source, /requireAuthenticatedUser/)
