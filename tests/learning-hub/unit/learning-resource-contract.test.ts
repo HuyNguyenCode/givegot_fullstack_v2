@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { createLearningLink, fileUploadReducer, formatFileSize, LearningResources, SelectedFileReview, uploadLearningFile } from '../../../src/components/learning/LearningResources'
+import { createLearningLink, deleteLearningResource, fetchLearningResources, fileUploadReducer, formatFileSize, LearningResources, SelectedFileReview, uploadLearningFile } from '../../../src/components/learning/LearningResources'
 import { normalizeExternalUrl } from '../../../src/lib/learning-resource-service'
 
 test('external resources accept normalized HTTPS only and reject dangerous schemes', () => {
@@ -137,6 +137,51 @@ test('link creation distinguishes a failed create from a saved link whose refres
   assert.match(source, /cause instanceof LearningResourceRefreshError/)
   assert.match(source, /Liên kết đã được lưu nhưng danh sách chưa thể cập nhật\./)
   assert.match(source, /setError\(cause\.message\)\s*\n\s*return true/)
+})
+
+test('resource deletion uses an anchored confirmation popover and preserves LINK and FILE DELETE contracts', async () => {
+  const calls: Array<{ input: string; init?: RequestInit }> = []
+  const request = (async (input: string | URL | Request, init?: RequestInit) => { calls.push({ input: String(input), init }); return new Response(null, { status: 204 }) }) as typeof fetch
+  const link = { id: 'link/id', kind: 'LINK' as const, title: 'Liên kết' }
+  const file = { id: 'file/id', kind: 'FILE' as const, title: 'Tệp riêng tư.pdf' }
+
+  await deleteLearningResource('space/id', link, request)
+  await deleteLearningResource('space/id', file, request)
+  assert.deepEqual(calls.map(call => call.input), [
+    '/api/learning/spaces/space%2Fid/resources/link%2Fid',
+    '/api/learning/spaces/space%2Fid/files/file%2Fid',
+  ])
+  assert.deepEqual(calls.map(call => call.init?.method), ['DELETE', 'DELETE'])
+
+  const failedRequest = (async () => Response.json({ error: 'Không thể xóa tài nguyên' }, { status: 502 })) as typeof fetch
+  await assert.rejects(() => deleteLearningResource('space', link, failedRequest), { message: 'Không thể xóa tài nguyên' })
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /role="dialog"/)
+  assert.match(source, /Xóa tài nguyên này\?/)
+  assert.match(source, /setDeleteCandidate\(resource\)/)
+  assert.match(source, /onClick=\{closeDeleteConfirmation\}/)
+  assert.match(source, /event\.key !== 'Escape'/)
+  assert.match(source, /Đang xóa\.\.\./)
+  assert.match(source, /setResourceItems\(items => items\.filter\(item => item\.id !== resource\.id\)\)/)
+  assert.match(source, /const deleteInFlight = useRef<string \| null>\(null\)/)
+  assert.match(source, /setDeleteError\('Không thể xóa tài nguyên\. Kiểm tra kết nối và thử lại\.'\)/)
+  assert.doesNotMatch(source, /window\.confirm|reloadPage|location\.reload|Failed to fetch/)
+})
+
+test('successful deletion revalidates the authoritative resource list and quota without client-side quota math', async () => {
+  const refreshed = { resources: [{ id: 'remaining-file', bookingId: null, topicId: null, kind: 'FILE', title: 'Còn lại.pdf', description: null, externalUrl: null, mimeType: 'application/pdf', sizeBytes: '5242880', status: 'READY', createdAt: '2030-01-01T00:00:00.000Z', uploaderName: 'An', topicLabel: null, canDelete: true }], quota: { usedBytes: '5242880', maxBytes: String(500 * 1024 * 1024) } }
+  const calls: Array<{ input: string; init?: RequestInit }> = []
+  const request = (async (input: string | URL | Request, init?: RequestInit) => { calls.push({ input: String(input), init }); return Response.json(refreshed) }) as typeof fetch
+
+  assert.deepEqual(await fetchLearningResources('space/id', request), refreshed)
+  assert.deepEqual(calls.map(call => call.input), ['/api/learning/spaces/space%2Fid/resources'])
+  assert.equal(calls[0].init?.cache, 'no-store')
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /const refreshed = await fetchLearningResources\(spaceId\)/)
+  assert.match(source, /setResourceItems\(refreshed\.resources\.map\(item => \(\{ \.\.\.item, createdAt: new Date\(item\.createdAt\) \}\)\)\)/)
+  assert.match(source, /setResourceQuota\(refreshed\.quota\)/)
+  assert.match(source, /Tài nguyên đã được xóa nhưng danh sách chưa thể cập nhật\./)
+  assert.doesNotMatch(source, /resourceQuota.*sizeBytes|sizeBytes.*resourceQuota|location\.reload/)
 })
 
 test('ready LINK resource titles preserve the safe external-navigation contract', () => {
