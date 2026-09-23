@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { LearningResources } from '../../../src/components/learning/LearningResources'
+import { fileUploadReducer, formatFileSize, LearningResources, SelectedFileReview, uploadLearningFile } from '../../../src/components/learning/LearningResources'
 import { normalizeExternalUrl } from '../../../src/lib/learning-resource-service'
 
 test('external resources accept normalized HTTPS only and reject dangerous schemes', () => {
@@ -22,6 +22,80 @@ test('resource UI exposes quota, empty/error-safe states, and mobile-safe long V
   assert.match(html, /min-h-10/)
   const empty = renderToStaticMarkup(createElement(LearningResources, { spaceId: 'space', quota: { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) }, topics: [], archived: false, resources: [] }))
   assert.match(empty, /Chưa có tài nguyên/)
+  assert.match(empty, /PDF, JPG, PNG, TXT hoặc Markdown; tối đa 20 MB/)
+  assert.match(empty, /accept="\.pdf,\.jpg,\.jpeg,\.png,\.txt,\.md,application\/pdf,image\/jpeg,image\/png,text\/plain,text\/markdown"/)
+})
+
+test('file upload selection is reviewable and removable before any upload starts', () => {
+  const file = new File([new Uint8Array(1536)], 'valid.pdf', { type: 'application/pdf' })
+  const empty = { phase: 'EMPTY' as const, file: null }
+  const selected = fileUploadReducer(empty, { type: 'SELECT', file })
+
+  assert.equal(selected.phase, 'SELECTED')
+  assert.equal(selected.file?.name, 'valid.pdf')
+  assert.equal(formatFileSize(selected.file!.size), '1.5 KB')
+  const review = renderToStaticMarkup(createElement(SelectedFileReview, { state: selected, busy: false, onRemove: () => undefined, onUpload: () => undefined }))
+  assert.match(review, /valid\.pdf/)
+  assert.match(review, /1\.5 KB/)
+  assert.match(review, /Bỏ chọn valid\.pdf/)
+  assert.match(review, />Tải lên<\/button>/)
+  assert.deepEqual(fileUploadReducer(selected, { type: 'REMOVE' }), empty)
+})
+
+test('file upload states prevent duplicate starts, preserve retry context, and clear on success', () => {
+  const file = new File(['%PDF-'], 'valid.pdf', { type: 'application/pdf' })
+  const selected = { phase: 'SELECTED' as const, file }
+  const uploading = fileUploadReducer(selected, { type: 'UPLOAD' })
+
+  assert.equal(uploading.phase, 'UPLOADING')
+  assert.strictEqual(fileUploadReducer(uploading, { type: 'UPLOAD' }), uploading)
+  const uploadingMarkup = renderToStaticMarkup(createElement(SelectedFileReview, { state: uploading, busy: true, onRemove: () => undefined, onUpload: () => undefined }))
+  assert.match(uploadingMarkup, /Đang tải lên\.\.\./)
+  assert.match(uploadingMarkup, /disabled=""/)
+  const failed = fileUploadReducer(uploading, { type: 'FAIL' })
+  assert.equal(failed.phase, 'ERROR')
+  assert.strictEqual(failed.file, file)
+  assert.match(renderToStaticMarkup(createElement(SelectedFileReview, { state: failed, busy: false, onRemove: () => undefined, onUpload: () => undefined })), />Thử lại<\/button>/)
+  assert.equal(fileUploadReducer(failed, { type: 'UPLOAD' }).phase, 'UPLOADING')
+  assert.deepEqual(fileUploadReducer(uploading, { type: 'SUCCEED' }), { phase: 'SUCCESS', file: null })
+})
+
+test('explicit upload completes the existing flow and refetches resources without a page reload', async () => {
+  const calls: Array<{ input: string; init?: RequestInit }> = []
+  const resource = { id: 'file-1', bookingId: null, topicId: null, kind: 'FILE' as const, title: 'valid.pdf', description: null, externalUrl: null, mimeType: 'application/pdf', sizeBytes: '5', status: 'READY' as const, createdAt: '2030-01-01T00:00:00.000Z', uploaderName: 'An', topicLabel: null, canDelete: true }
+  const responses = [
+    Response.json({ resourceId: 'file-1', upload: { url: 'https://upload.example.test', fields: { key: 'opaque', 'Content-Type': 'application/pdf' } } }, { status: 201 }),
+    new Response(null, { status: 204 }),
+    Response.json({ resourceId: 'file-1', status: 'READY' }),
+    Response.json({ resources: [resource], quota: { usedBytes: '5', maxBytes: String(500 * 1024 * 1024) } }),
+  ]
+  const request = (async (input: string | URL | Request, init?: RequestInit) => {
+    calls.push({ input: String(input), init })
+    return responses.shift()!
+  }) as typeof fetch
+
+  const result = await uploadLearningFile('space/id', new File(['%PDF-'], 'valid.pdf', { type: 'application/pdf' }), request)
+
+  assert.deepEqual(calls.map(call => call.input), [
+    '/api/learning/spaces/space%2Fid/files',
+    'https://upload.example.test',
+    '/api/learning/spaces/space%2Fid/files/file-1/finalize',
+    '/api/learning/spaces/space%2Fid/resources',
+  ])
+  assert.equal(calls[0].init?.method, 'POST')
+  assert.equal(calls[1].init?.method, 'POST')
+  assert.equal(calls[2].init?.method, 'POST')
+  assert.equal(calls[3].init?.cache, 'no-store')
+  assert.equal(result.resources[0].title, 'valid.pdf')
+  assert.doesNotMatch(uploadLearningFile.toString(), /location\.reload/)
+})
+
+test('file upload failures expose only the safe API error and remain retryable', async () => {
+  const request = (async () => Response.json({ error: 'Không thể cấp quyền tải tệp' }, { status: 502 })) as typeof fetch
+  await assert.rejects(
+    () => uploadLearningFile('space', new File(['%PDF-'], 'valid.pdf', { type: 'application/pdf' }), request),
+    { message: 'Không thể cấp quyền tải tệp' },
+  )
 })
 
 test('ready LINK resource titles preserve the safe external-navigation contract', () => {
