@@ -159,6 +159,8 @@ test('resource contracts retain private boundaries and deduplicated activity sem
   const source = await import('node:fs/promises').then(fs => fs.readFile('src/lib/learning-resource-service.ts', 'utf8'))
   assert.match(source, /requireAuthenticatedUser/)
   assert.match(source, /learningSpaceId_userId/)
+  assert.match(source, /findMany\(\{ where: \{ learningSpaceId: spaceId, status: \{ in: \['PENDING', 'READY', 'QUARANTINED'\] \} \}/)
+  assert.match(source, /uploaderId: actorId, status: \{ not: 'DELETED' \}.*data: \{ status: 'DELETED', deletedAt: new Date\(\) \}/)
   assert.match(source, /eventKey: `learning-resource:\$\{resource.id\}:created`/)
   assert.match(source, /metadata: \{ kind: 'LINK', status: 'READY' \}/)
   assert.doesNotMatch(source, /signDownload|storageKey.*return/)
