@@ -55,6 +55,16 @@ export async function uploadLearningFile(spaceId: string, file: File, request: t
   }
 }
 
+export async function createLearningLink(spaceId: string, form: FormData, request: typeof fetch = fetch) {
+  const base = `/api/learning/spaces/${encodeURIComponent(spaceId)}`
+  await responseJson(await request(`${base}/resources`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: form.get('url'), title: form.get('title'), description: form.get('description'), topicId: form.get('topicId') || null }) }))
+  try {
+    return await responseJson(await request(`${base}/resources`, { cache: 'no-store' })) as ResourceListResponse
+  } catch {
+    throw new LearningResourceRefreshError('Liên kết đã được lưu nhưng danh sách chưa thể cập nhật.')
+  }
+}
+
 export function SelectedFileReview({ state, busy, onRemove, onUpload }: { state: FileUploadState; busy: boolean; onRemove: () => void; onUpload: () => void }) {
   if (!state.file) return null
   return <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3" aria-live="polite">
@@ -86,10 +96,17 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
     setBusy(true)
     setError(null)
     try {
-      await responseJson(await fetch(`/api/learning/spaces/${encodeURIComponent(spaceId)}/resources`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: form.get('url'), title: form.get('title'), description: form.get('description'), topicId: form.get('topicId') || null }) }))
-      reloadPage()
+      const result = await createLearningLink(spaceId, form)
+      setResourceItems(result.resources.map(resource => ({ ...resource, createdAt: new Date(resource.createdAt) })))
+      setResourceQuota(result.quota)
+      return true
     } catch (cause) {
+      if (cause instanceof LearningResourceRefreshError) {
+        setError(cause.message)
+        return true
+      }
       setError(cause instanceof Error ? cause.message : 'Không thể thêm liên kết')
+      return false
     } finally {
       setBusy(false)
     }
@@ -150,7 +167,7 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
     {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     {fileUpload.phase === 'SUCCESS' && <p role="status" className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">Tệp đã được tải lên thành công.</p>}
     {!archived && <div className="mt-4 grid gap-4 lg:grid-cols-2">
-      <form action={addLink} className="rounded-xl bg-slate-50 p-4">
+      <form onSubmit={event => { event.preventDefault(); const form = event.currentTarget; void addLink(new FormData(form)).then(created => { if (created) form.reset() }) }} className="rounded-xl bg-slate-50 p-4">
         <h3 className="flex items-center gap-2 font-medium text-slate-900"><Link2 className="h-4 w-4" />Thêm liên kết HTTPS</h3>
         <label className="mt-3 block text-sm font-medium">Tiêu đề<input required name="title" maxLength={255} className="mt-1 w-full rounded-lg border border-slate-300 p-2" /></label>
         <label className="mt-3 block text-sm font-medium">Liên kết<input required name="url" type="url" placeholder="https://…" className="mt-1 w-full rounded-lg border border-slate-300 p-2" /></label>
@@ -165,6 +182,6 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
         <SelectedFileReview state={fileUpload} busy={busy} onRemove={clearSelectedFile} onUpload={() => void upload()} />
       </div>
     </div>}
-    {resourceItems.length === 0 ? <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Chưa có tài nguyên. Thêm một liên kết HTTPS hoặc tệp riêng tư để bắt đầu.</p> : <ul className="mt-5 space-y-3">{resourceItems.map(resource => <li key={resource.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl ? <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-slate-900 underline-offset-4 hover:text-purple-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{resource.title}</a> : <p className="break-words font-medium text-slate-900">{resource.title}</p>}{resource.description && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-600">{resource.description}</p>}<p className="mt-2 text-xs text-slate-500">{resource.kind === 'LINK' ? 'Liên kết' : resource.mimeType || 'Tệp'} · {resource.uploaderName} · {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(resource.createdAt))}{resource.topicLabel ? ` · ${resource.topicLabel}` : ''} · <span className={resource.status === 'READY' ? 'text-emerald-700' : resource.status === 'DELETED' ? 'text-slate-500' : 'text-amber-700'}>{labels[resource.status]}</span></p></div><div className="flex shrink-0 gap-2">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl && <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Mở<ExternalLink className="h-4 w-4" /></a>}{resource.status === 'READY' && resource.kind === 'FILE' && <button disabled={busy} onClick={() => void download(resource.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Tải<Download className="h-4 w-4" /></button>}{resource.canDelete && resource.status !== 'DELETED' && <button disabled={busy} onClick={() => void remove(resource)} aria-label={`Xóa ${resource.title}`} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-700"><Trash2 className="h-4 w-4" />Xóa</button>}</div></div></li>)}</ul>}
+    {resourceItems.length === 0 ? <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Chưa có tài nguyên. Thêm một liên kết HTTPS hoặc tệp riêng tư để bắt đầu.</p> : <ul className="mt-5 space-y-3">{resourceItems.map(resource => <li key={resource.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl ? <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-slate-900 underline-offset-4 hover:text-purple-700 hover:focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{resource.title}</a> : <p className="break-words font-medium text-slate-900">{resource.title}</p>}{resource.description && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-600">{resource.description}</p>}<p className="mt-2 text-xs text-slate-500">{resource.kind === 'LINK' ? 'Liên kết' : resource.mimeType || 'Tệp'} · {resource.uploaderName} · {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(resource.createdAt))}{resource.topicLabel ? ` · ${resource.topicLabel}` : ''} · <span className={resource.status === 'READY' ? 'text-emerald-700' : resource.status === 'DELETED' ? 'text-slate-500' : 'text-amber-700'}>{labels[resource.status]}</span></p></div><div className="flex shrink-0 gap-2">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl && <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Mở<ExternalLink className="h-4 w-4" /></a>}{resource.status === 'READY' && resource.kind === 'FILE' && <button disabled={busy} onClick={() => void download(resource.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Tải<Download className="h-4 w-4" /></button>}{resource.canDelete && resource.status !== 'DELETED' && <button disabled={busy} onClick={() => void remove(resource)} aria-label={`Xóa ${resource.title}`} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-700"><Trash2 className="h-4 w-4" />Xóa</button>}</div></div></li>)}</ul>}
   </section>
 }

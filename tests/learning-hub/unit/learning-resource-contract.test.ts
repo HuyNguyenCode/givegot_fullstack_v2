@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { fileUploadReducer, formatFileSize, LearningResources, SelectedFileReview, uploadLearningFile } from '../../../src/components/learning/LearningResources'
+import { createLearningLink, fileUploadReducer, formatFileSize, LearningResources, SelectedFileReview, uploadLearningFile } from '../../../src/components/learning/LearningResources'
 import { normalizeExternalUrl } from '../../../src/lib/learning-resource-service'
 
 test('external resources accept normalized HTTPS only and reject dangerous schemes', () => {
@@ -96,6 +96,47 @@ test('file upload failures expose only the safe API error and remain retryable',
     () => uploadLearningFile('space', new File(['%PDF-'], 'valid.pdf', { type: 'application/pdf' }), request),
     { message: 'Không thể cấp quyền tải tệp' },
   )
+})
+
+test('link creation revalidates local resources without native navigation and retains form validation', async () => {
+  const calls: Array<{ input: string; init?: RequestInit }> = []
+  const resource = { id: 'link-1', bookingId: null, topicId: null, kind: 'LINK' as const, title: 'Tài liệu', description: null, externalUrl: 'https://example.com/tai-lieu', mimeType: null, sizeBytes: null, status: 'READY' as const, createdAt: '2030-01-01T00:00:00.000Z', uploaderName: 'An', topicLabel: null, canDelete: true }
+  const responses = [Response.json({ id: 'link-1', status: 'READY' }, { status: 201 }), Response.json({ resources: [resource], quota: { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) } })]
+  const request = (async (input: string | URL | Request, init?: RequestInit) => { calls.push({ input: String(input), init }); return responses.shift()! }) as typeof fetch
+  const form = new FormData()
+  form.set('title', 'Tài liệu')
+  form.set('url', 'https://example.com/tai-lieu')
+
+  const result = await createLearningLink('space/id', form, request)
+
+  assert.deepEqual(calls.map(call => call.input), ['/api/learning/spaces/space%2Fid/resources', '/api/learning/spaces/space%2Fid/resources'])
+  assert.equal(calls[0].init?.method, 'POST')
+  assert.equal(calls[1].init?.cache, 'no-store')
+  assert.equal(result.resources[0].title, 'Tài liệu')
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /onSubmit=\{event => \{ event\.preventDefault\(\)/)
+  assert.doesNotMatch(source, /await createLearningLink\(spaceId, form\)\s*\n\s*reloadPage/)
+  assert.match(source, /<input required name="title"/)
+  assert.match(source, /<input required name="url" type="url"/)
+})
+
+test('link creation distinguishes a failed create from a saved link whose refresh fails', async () => {
+  const form = new FormData()
+  form.set('title', 'Tài liệu')
+  form.set('url', 'https://example.com/tai-lieu')
+  const createFailure = (async () => Response.json({ error: 'Không thể thêm liên kết' }, { status: 403 })) as typeof fetch
+  await assert.rejects(() => createLearningLink('space', form, createFailure), { message: 'Không thể thêm liên kết' })
+
+  const refreshFailureResponses = [Response.json({ id: 'link-1', status: 'READY' }, { status: 201 }), Response.json({ error: 'Danh sách tạm thời không khả dụng' }, { status: 502 })]
+  const refreshFailure = (async () => refreshFailureResponses.shift()!) as typeof fetch
+  await assert.rejects(
+    () => createLearningLink('space', form, refreshFailure),
+    { message: 'Liên kết đã được lưu nhưng danh sách chưa thể cập nhật.' },
+  )
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /cause instanceof LearningResourceRefreshError/)
+  assert.match(source, /Liên kết đã được lưu nhưng danh sách chưa thể cập nhật\./)
+  assert.match(source, /setError\(cause\.message\)\s*\n\s*return true/)
 })
 
 test('ready LINK resource titles preserve the safe external-navigation contract', () => {
