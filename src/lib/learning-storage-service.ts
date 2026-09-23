@@ -179,7 +179,7 @@ export function createLearningStorageService(deps: {
     await provider.assertPrivateBucket()
     const expiresAt = new Date(now().getTime() + LEARNING_DOWNLOAD_TTL_MS)
     try {
-      const url = await provider.signDownload(resource.storageKey, expiresAt)
+      const url = await provider.signDownload(resource.storageKey, resource.title, expiresAt)
       return { url, expiresAt: expiresAt.toISOString() }
     } catch { throw new LearningStorageError(502, 'Storage provider could not issue download credentials') }
   }

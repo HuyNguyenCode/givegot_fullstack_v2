@@ -13,6 +13,7 @@ import {
   type FileResource,
   type LearningStorageRepository,
 } from '../../../src/lib/learning-storage-service'
+import { downloadContentDisposition } from '../../../src/lib/learning-download-disposition'
 import type { LearningStorageProvider } from '../../../src/lib/learning-storage-provider'
 
 const start = new Date('2030-01-01T00:00:00.000Z')
@@ -83,8 +84,10 @@ function fixture() {
       if (content.has(source)) content.set(destination, content.get(source)!)
       if (deleteDuringPromote) [...rows.values()][0].status = 'DELETED'
     },
-    signDownload: async (_key, expiresAt) => {
+    signDownload: async (key, fileName, expiresAt) => {
       providerCalls += 1
+      assert.equal(key, 'spaces/space/resources/uuid-1/uuid-2.pdf')
+      assert.equal(fileName, 'notes.pdf')
       assert.equal(expiresAt.getTime() - clock, LEARNING_DOWNLOAD_TTL_MS)
       return `https://example.invalid/download?expires=${expiresAt.getTime()}`
     },
@@ -164,6 +167,12 @@ test('member upload finalizes only after provider confirmation, then member down
   assert.equal(pending.status, 'DELETED')
   assert.equal(pending.storageKey, null)
   await assert.rejects(() => f.service.download('space', issued.resourceId), { status: 404 })
+})
+
+test('download disposition uses the stored Unicode filename, never the randomized storage key', () => {
+  assert.equal(downloadContentDisposition('valid.pdf'), "attachment; filename=\"valid.pdf\"; filename*=UTF-8''valid.pdf")
+  assert.equal(downloadContentDisposition('Tài liệu tiếng Việt.pdf'), "attachment; filename=\"T_i li_u ti_ng Vi_t.pdf\"; filename*=UTF-8''T%C3%A0i%20li%E1%BB%87u%20ti%E1%BA%BFng%20Vi%E1%BB%87t.pdf")
+  assert.doesNotMatch(downloadContentDisposition('valid.pdf'), /uuid-1|spaces\//)
 })
 
 test('wrong provider MIME is quarantined; deleted resources cannot receive URLs', async () => {

@@ -11,6 +11,8 @@ import {
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
+import { downloadContentDisposition } from '@/lib/learning-download-disposition'
+
 export type StoredObject = { sizeBytes: number; mimeType: string }
 export type UploadCredential = { url: string; fields: Record<string, string>; expiresAt: string }
 
@@ -20,7 +22,7 @@ export interface LearningStorageProvider {
   stat(key: string): Promise<StoredObject | null>
   readPrefix(key: string, length: number): Promise<Uint8Array>
   promote(sourceKey: string, destinationKey: string, mimeType: string): Promise<void>
-  signDownload(key: string, expiresAt: Date): Promise<string>
+  signDownload(key: string, fileName: string, expiresAt: Date): Promise<string>
   remove(key: string): Promise<void>
 }
 
@@ -80,13 +82,13 @@ export function createS3LearningStorageProvider(config: { bucket: string; region
         MetadataDirective: 'REPLACE',
       }))
     },
-    async signDownload(key, expiresAt) {
+    async signDownload(key, fileName, expiresAt) {
       const seconds = Math.floor((expiresAt.getTime() - Date.now()) / 1000)
       if (seconds < 1 || seconds > DOWNLOAD_SECONDS) throw new Error('Invalid download expiry')
       return getSignedUrl(client, new GetObjectCommand({
         Bucket: config.bucket,
         Key: key,
-        ResponseContentDisposition: 'attachment',
+        ResponseContentDisposition: downloadContentDisposition(fileName),
         ResponseContentType: 'application/octet-stream',
       }), { expiresIn: seconds })
     },
@@ -105,7 +107,7 @@ export function configuredLearningStorageProvider(): LearningStorageProvider {
     stat: key => get().stat(key),
     readPrefix: (key, length) => get().readPrefix(key, length),
     promote: (sourceKey, destinationKey, mimeType) => get().promote(sourceKey, destinationKey, mimeType),
-    signDownload: (key, expiresAt) => get().signDownload(key, expiresAt),
+    signDownload: (key, fileName, expiresAt) => get().signDownload(key, fileName, expiresAt),
     remove: key => get().remove(key),
   }
 }
