@@ -8,12 +8,60 @@ type Props = { spaceId: string; resources: LearningResourceView[]; quota: { used
 type ResourceListResponse = { resources: Array<Omit<LearningResourceView, 'createdAt'> & { createdAt: string }>; quota: Props['quota'] }
 export type FileUploadState = { phase: 'EMPTY' | 'SELECTED' | 'UPLOADING' | 'SUCCESS' | 'ERROR'; file: File | null }
 type FileUploadAction = { type: 'SELECT'; file: File } | { type: 'REMOVE' } | { type: 'UPLOAD' } | { type: 'SUCCEED' } | { type: 'FAIL' }
+export type LearningResourceGroup = { id: string; label: string; resources: LearningResourceView[]; topicless: boolean }
+export const RESOURCE_GROUP_PAGE_SIZE = 5
 
 class LearningResourceRefreshError extends Error {}
 
 const initialFileUploadState: FileUploadState = { phase: 'EMPTY', file: null }
 const bytes = (value: string) => `${(Number(value) / (1024 * 1024)).toFixed(1)} MB`
 const labels = { PENDING: 'Đang chờ tải lên', READY: 'Sẵn sàng', QUARANTINED: 'Không thể sử dụng', DELETED: 'Đã xóa' } as const
+
+export function groupLearningResources(resources: LearningResourceView[], topics: Props['topics']): LearningResourceGroup[] {
+  const resourcesByTopicId = new Map<string, LearningResourceView[]>()
+  const unknownTopicGroups = new Map<string, LearningResourceGroup>()
+  const topicIds = new Set(topics.map(topic => topic.id))
+  const topicless: LearningResourceView[] = []
+
+  for (const resource of resources) {
+    if (!resource.topicId) {
+      topicless.push(resource)
+      continue
+    }
+    if (topicIds.has(resource.topicId)) {
+      const grouped = resourcesByTopicId.get(resource.topicId) ?? []
+      grouped.push(resource)
+      resourcesByTopicId.set(resource.topicId, grouped)
+      continue
+    }
+    const existing = unknownTopicGroups.get(resource.topicId)
+    if (existing) existing.resources.push(resource)
+    else {
+      if (!resource.topicLabel) throw new Error('A resource topic must include its label')
+      unknownTopicGroups.set(resource.topicId, { id: resource.topicId, label: resource.topicLabel, resources: [resource], topicless: false })
+    }
+  }
+
+  return [
+    ...topics.flatMap(topic => {
+      const grouped = resourcesByTopicId.get(topic.id)
+      return grouped ? [{ id: topic.id, label: topic.label, resources: grouped, topicless: false }] : []
+    }),
+    ...unknownTopicGroups.values(),
+    ...(topicless.length ? [{ id: 'topicless', label: 'Chưa gắn chủ đề', resources: topicless, topicless: true }] : []),
+  ]
+}
+
+export function paginateLearningResourceGroup(resources: LearningResourceView[], requestedPage: number) {
+  const pageCount = Math.max(1, Math.ceil(resources.length / RESOURCE_GROUP_PAGE_SIZE))
+  const page = Math.min(Math.max(1, requestedPage), pageCount)
+  const start = (page - 1) * RESOURCE_GROUP_PAGE_SIZE
+  return { page, pageCount, resources: resources.slice(start, start + RESOURCE_GROUP_PAGE_SIZE) }
+}
+
+export function clampResourceGroupPages(groups: LearningResourceGroup[], pages: Record<string, number>) {
+  return Object.fromEntries(groups.map(group => [group.id, paginateLearningResourceGroup(group.resources, pages[group.id] ?? 1).page]))
+}
 
 export function formatFileSize(value: number) {
   if (value < 1024) return `${value} B`
@@ -40,12 +88,12 @@ export async function fetchLearningResources(spaceId: string, request: typeof fe
   return await responseJson(await request(`${base}/resources`, { cache: 'no-store' })) as ResourceListResponse
 }
 
-export async function uploadLearningFile(spaceId: string, file: File, request: typeof fetch = fetch) {
+export async function uploadLearningFile(spaceId: string, file: File, request: typeof fetch = fetch, topicId: string | null = null) {
   const base = `/api/learning/spaces/${encodeURIComponent(spaceId)}`
   const init = await responseJson(await request(`${base}/files`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size, topicId: null }),
+    body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size, topicId }),
   })) as { resourceId: string; upload: { url: string; fields: Record<string, string> } }
   const form = new FormData()
   Object.entries(init.upload.fields).forEach(([key, value]) => form.append(key, value))
@@ -91,6 +139,9 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
   const [resourceItems, setResourceItems] = useState(resources)
   const [resourceQuota, setResourceQuota] = useState(quota)
   const [fileUpload, dispatchFileUpload] = useReducer(fileUploadReducer, initialFileUploadState)
+  const [fileTopicId, setFileTopicId] = useState('')
+  const [collapsedTopicIds, setCollapsedTopicIds] = useState<Set<string>>(() => new Set())
+  const [resourcePages, setResourcePages] = useState<Record<string, number>>({})
   const [deleteCandidate, setDeleteCandidate] = useState<LearningResourceView | null>(null)
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -101,6 +152,27 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
   const deletePopover = useRef<HTMLDivElement>(null)
   const deleteCancel = useRef<HTMLButtonElement>(null)
   const activeTopics = topics.filter(topic => topic.state === 'ACTIVE')
+  const resourceGroups = groupLearningResources(resourceItems, topics)
+
+  function toggleTopicGroup(topicId: string) {
+    setCollapsedTopicIds(current => {
+      const next = new Set(current)
+      if (next.has(topicId)) next.delete(topicId)
+      else next.add(topicId)
+      return next
+    })
+  }
+
+  function setResourceGroupPage(groupId: string, page: number) {
+    setResourcePages(current => ({ ...current, [groupId]: page }))
+  }
+
+  useEffect(() => {
+    setResourcePages(current => {
+      const next = clampResourceGroupPages(resourceGroups, current)
+      return Object.keys(current).length === Object.keys(next).length && Object.entries(next).every(([id, page]) => current[id] === page) ? current : next
+    })
+  }, [resourceItems, topics])
 
   function restoreDeleteTriggerFocus() {
     if (typeof window !== 'undefined') window.requestAnimationFrame(() => deleteTrigger.current?.focus())
@@ -173,10 +245,11 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
     setError(null)
     dispatchFileUpload({ type: 'UPLOAD' })
     try {
-      const result = await uploadLearningFile(spaceId, file)
+      const result = await uploadLearningFile(spaceId, file, fetch, fileTopicId || null)
       setResourceItems(result.resources.map(resource => ({ ...resource, createdAt: new Date(resource.createdAt) })))
       setResourceQuota(result.quota)
       dispatchFileUpload({ type: 'SUCCEED' })
+      setFileTopicId('')
       if (fileInput.current) fileInput.current.value = ''
     } catch (cause) {
       dispatchFileUpload({ type: cause instanceof LearningResourceRefreshError ? 'SUCCEED' : 'FAIL' })
@@ -237,6 +310,10 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
     }
   }
 
+  function renderResource(resource: LearningResourceView) {
+    return <li key={resource.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl ? <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-slate-900 underline-offset-4 hover:text-purple-700 hover:focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{resource.title}</a> : <p className="break-words font-medium text-slate-900">{resource.title}</p>}{resource.description && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-600">{resource.description}</p>}<p className="mt-2 text-xs text-slate-500">{resource.kind === 'LINK' ? 'Liên kết' : resource.mimeType || 'Tệp'} · {resource.uploaderName} · {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(resource.createdAt))}{resource.topicLabel ? ` · ${resource.topicLabel}` : ''} · <span className={resource.status === 'READY' ? 'text-emerald-700' : resource.status === 'DELETED' ? 'text-slate-500' : 'text-amber-700'}>{labels[resource.status]}</span></p></div><div className="flex shrink-0 gap-2">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl && <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Mở<ExternalLink className="h-4 w-4" /></a>}{resource.status === 'READY' && resource.kind === 'FILE' && <button disabled={busy} onClick={() => void download(resource.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Tải<Download className="h-4 w-4" /></button>}{resource.canDelete && resource.status !== 'DELETED' && <div className="relative"><button disabled={busy} onClick={event => openDeleteConfirmation(resource, event.currentTarget)} aria-label={`Xóa ${resource.title}`} aria-haspopup="dialog" aria-expanded={deleteCandidate?.id === resource.id} aria-controls={`delete-resource-${resource.id}`} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-700"><Trash2 className="h-4 w-4" />Xóa</button>{deleteCandidate?.id === resource.id && <div ref={deletePopover} id={`delete-resource-${resource.id}`} role="dialog" aria-label="Xác nhận xóa tài nguyên" className="absolute right-0 top-full z-10 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"><p className="text-sm font-medium text-slate-900">Xóa tài nguyên này?</p>{deleteError && <p role="alert" className="mt-2 text-sm text-red-700">{deleteError}</p>}<div className="mt-3 flex justify-end gap-2"><button ref={deleteCancel} type="button" disabled={deletingResourceId === resource.id} onClick={closeDeleteConfirmation} className="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:opacity-60">Hủy</button><button type="button" disabled={deletingResourceId === resource.id} onClick={() => void confirmRemove()} className="min-h-10 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 disabled:opacity-60">{deletingResourceId === resource.id ? 'Đang xóa...' : 'Xóa'}</button></div></div>}</div>}</div></div></li>
+  }
+
   return <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="resources-heading">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 id="resources-heading" className="text-base font-semibold text-slate-900">Tài nguyên</h2><p className="mt-1 text-sm text-slate-600">Đã dùng {bytes(resourceQuota.usedBytes)} / {bytes(resourceQuota.maxBytes)} kho riêng tư</p></div></div>
     {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -253,10 +330,19 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
       <div className="rounded-xl bg-slate-50 p-4">
         <h3 className="flex items-center gap-2 font-medium text-slate-900"><FileUp className="h-4 w-4" />Tải tệp riêng tư</h3>
         <p className="mt-2 text-sm leading-6 text-slate-600">PDF, JPG, PNG, TXT hoặc Markdown; tối đa 20 MB. Tệp không được đọc hoặc xem trước.</p>
+        <label className="mt-3 block text-sm font-medium">Chủ đề<select value={fileTopicId} disabled={busy || fileUpload.phase === 'UPLOADING'} onChange={event => setFileTopicId(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2"><option value="">Không gắn chủ đề</option>{activeTopics.map(topic => <option key={topic.id} value={topic.id}>{topic.label}</option>)}</select></label>
         {(fileUpload.phase === 'EMPTY' || fileUpload.phase === 'SUCCESS') && <label className="mt-3 block text-sm font-medium">Tệp<input ref={fileInput} disabled={busy} type="file" accept=".pdf,.jpg,.jpeg,.png,.txt,.md,application/pdf,image/jpeg,image/png,text/plain,text/markdown" className="mt-1 block w-full text-sm" onChange={event => { const file = event.currentTarget.files?.[0]; if (file) { setError(null); dispatchFileUpload({ type: 'SELECT', file }) } }} /></label>}
         <SelectedFileReview state={fileUpload} busy={busy} onRemove={clearSelectedFile} onUpload={() => void upload()} />
       </div>
     </div>}
-    {resourceItems.length === 0 ? <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Chưa có tài nguyên. Thêm một liên kết HTTPS hoặc tệp riêng tư để bắt đầu.</p> : <ul className="mt-5 space-y-3">{resourceItems.map(resource => <li key={resource.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl ? <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-slate-900 underline-offset-4 hover:text-purple-700 hover:focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{resource.title}</a> : <p className="break-words font-medium text-slate-900">{resource.title}</p>}{resource.description && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-600">{resource.description}</p>}<p className="mt-2 text-xs text-slate-500">{resource.kind === 'LINK' ? 'Liên kết' : resource.mimeType || 'Tệp'} · {resource.uploaderName} · {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(resource.createdAt))}{resource.topicLabel ? ` · ${resource.topicLabel}` : ''} · <span className={resource.status === 'READY' ? 'text-emerald-700' : resource.status === 'DELETED' ? 'text-slate-500' : 'text-amber-700'}>{labels[resource.status]}</span></p></div><div className="flex shrink-0 gap-2">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl && <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Mở<ExternalLink className="h-4 w-4" /></a>}{resource.status === 'READY' && resource.kind === 'FILE' && <button disabled={busy} onClick={() => void download(resource.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Tải<Download className="h-4 w-4" /></button>}{resource.canDelete && resource.status !== 'DELETED' && <div className="relative"><button disabled={busy} onClick={event => openDeleteConfirmation(resource, event.currentTarget)} aria-label={`Xóa ${resource.title}`} aria-haspopup="dialog" aria-expanded={deleteCandidate?.id === resource.id} aria-controls={`delete-resource-${resource.id}`} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-700"><Trash2 className="h-4 w-4" />Xóa</button>{deleteCandidate?.id === resource.id && <div ref={deletePopover} id={`delete-resource-${resource.id}`} role="dialog" aria-label="Xác nhận xóa tài nguyên" className="absolute right-0 top-full z-10 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"><p className="text-sm font-medium text-slate-900">Xóa tài nguyên này?</p>{deleteError && <p role="alert" className="mt-2 text-sm text-red-700">{deleteError}</p>}<div className="mt-3 flex justify-end gap-2"><button ref={deleteCancel} type="button" disabled={deletingResourceId === resource.id} onClick={closeDeleteConfirmation} className="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:opacity-60">Hủy</button><button type="button" disabled={deletingResourceId === resource.id} onClick={() => void confirmRemove()} className="min-h-10 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 disabled:opacity-60">{deletingResourceId === resource.id ? 'Đang xóa...' : 'Xóa'}</button></div></div>}</div>}</div></div></li>)}</ul>}
+    {resourceItems.length === 0 ? <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Chưa có tài nguyên. Thêm một liên kết HTTPS hoặc tệp riêng tư để bắt đầu.</p> : <div className="mt-5 space-y-4">{resourceGroups.map(group => {
+      const collapsed = !group.topicless && collapsedTopicIds.has(group.id)
+      const listId = `resource-topic-${group.id}`
+      const pagination = paginateLearningResourceGroup(group.resources, resourcePages[group.id] ?? 1)
+      return <section key={group.id} className="rounded-xl bg-slate-50 p-3">
+        {group.topicless ? <h3 className="px-1 text-sm font-semibold text-slate-900">{group.label} <span className="font-normal text-slate-500">{group.resources.length} tài nguyên</span></h3> : <h3><button type="button" onClick={() => toggleTopicGroup(group.id)} aria-expanded={!collapsed} aria-controls={listId} className="flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-1 text-left text-sm font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"><span>{group.label} <span className="font-normal text-slate-500">{group.resources.length} tài nguyên</span></span><span aria-hidden="true">{collapsed ? '▸' : '▾'}</span></button></h3>}
+        {!collapsed && <><ul id={listId} className="mt-3 space-y-3">{pagination.resources.map(renderResource)}</ul>{pagination.pageCount > 1 && <nav aria-label={`Phân trang ${group.label}`} className="mt-3 flex items-center justify-between gap-3"><button type="button" disabled={pagination.page === 1} onClick={() => setResourceGroupPage(group.id, pagination.page - 1)} className="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium disabled:opacity-50">← Trước</button><p className="text-sm text-slate-600">Trang {pagination.page} / {pagination.pageCount}</p><button type="button" disabled={pagination.page === pagination.pageCount} onClick={() => setResourceGroupPage(group.id, pagination.page + 1)} className="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium disabled:opacity-50">Sau →</button></nav>}</>}
+      </section>
+    })}</div>}
   </section>
 }

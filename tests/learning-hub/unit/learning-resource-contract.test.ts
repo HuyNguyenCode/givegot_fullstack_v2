@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { createLearningLink, deleteLearningResource, fetchLearningResources, fileUploadReducer, formatFileSize, LearningResources, SelectedFileReview, uploadLearningFile } from '../../../src/components/learning/LearningResources'
+import { clampResourceGroupPages, createLearningLink, deleteLearningResource, fetchLearningResources, fileUploadReducer, formatFileSize, groupLearningResources, LearningResources, paginateLearningResourceGroup, RESOURCE_GROUP_PAGE_SIZE, SelectedFileReview, uploadLearningFile } from '../../../src/components/learning/LearningResources'
 import { normalizeExternalUrl } from '../../../src/lib/learning-resource-service'
 
 test('external resources accept normalized HTTPS only and reject dangerous schemes', () => {
@@ -88,6 +88,92 @@ test('explicit upload completes the existing flow and refetches resources withou
   assert.equal(calls[3].init?.cache, 'no-store')
   assert.equal(result.resources[0].title, 'valid.pdf')
   assert.doesNotMatch(uploadLearningFile.toString(), /location\.reload/)
+})
+
+test('resources group by the supplied topic order, preserve row order, and keep topicless resources last', () => {
+  const resource = (id: string, topicId: string | null, topicLabel: string | null) => ({ id, bookingId: null, topicId, kind: id.startsWith('file') ? 'FILE' as const : 'LINK' as const, title: id, description: null, externalUrl: id.startsWith('file') ? null : 'https://example.com', mimeType: null, sizeBytes: null, status: 'READY' as const, createdAt: new Date('2030-01-01T00:00:00.000Z'), uploaderName: 'An', topicLabel, canDelete: true })
+  const topics = [
+    { id: 'topic-calculus', label: 'Tích phân', state: 'ACTIVE' as const },
+    { id: 'topic-extrema', label: 'Cực trị', state: 'ARCHIVED' as const },
+    { id: 'topic-empty', label: 'Không có tài nguyên', state: 'ACTIVE' as const },
+  ]
+  const resources = [resource('link-extrema-1', 'topic-extrema', 'Cực trị'), resource('file-calculus', 'topic-calculus', 'Tích phân'), resource('link-extrema-2', 'topic-extrema', 'Cực trị'), resource('file-topicless', null, null)]
+
+  const groups = groupLearningResources(resources, topics)
+
+  assert.deepEqual(groups.map(group => [group.id, group.label, group.resources.map(item => item.id)]), [
+    ['topic-calculus', 'Tích phân', ['file-calculus']],
+    ['topic-extrema', 'Cực trị', ['link-extrema-1', 'link-extrema-2']],
+    ['topicless', 'Chưa gắn chủ đề', ['file-topicless']],
+  ])
+  assert.equal(groups.some(group => group.id === 'topic-empty'), false)
+  const html = renderToStaticMarkup(createElement(LearningResources, { spaceId: 'space', quota: { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) }, topics, archived: false, resources }))
+  assert.match(html, /Tích phân.*1 tài nguyên/)
+  assert.match(html, /Cực trị.*2 tài nguyên/)
+  assert.match(html, /Chưa gắn chủ đề.*1 tài nguyên/)
+  assert.ok(html.indexOf('Tích phân') < html.indexOf('Cực trị'))
+  assert.ok(html.indexOf('link-extrema-1') < html.indexOf('link-extrema-2'))
+  const afterDeletingExtrema = groupLearningResources(resources.filter(item => item.topicId !== 'topic-extrema'), topics)
+  assert.equal(afterDeletingExtrema.some(group => group.id === 'topic-extrema'), false)
+})
+
+test('topic-group controls are local, independently collapsible, and do not add progressive disclosure', async () => {
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /const \[collapsedTopicIds, setCollapsedTopicIds\] = useState<Set<string>>/)
+  assert.match(source, /function toggleTopicGroup\(topicId: string\)/)
+  assert.match(source, /aria-expanded=\{!collapsed\}/)
+  assert.match(source, /resourceGroups\.map\(group =>/)
+  assert.doesNotMatch(source, /Xem thêm|visibleResourceCount|loadMore/)
+})
+
+test('resource pagination is independent per group, pages five rows at a time, and clamps after authoritative replacement', async () => {
+  const resource = (id: number, topicId: string | null = 'topic-a') => ({ id: `resource-${id}`, bookingId: null, topicId, kind: id % 2 ? 'LINK' as const : 'FILE' as const, title: `Tài nguyên ${id}`, description: null, externalUrl: id % 2 ? 'https://example.com' : null, mimeType: null, sizeBytes: null, status: 'READY' as const, createdAt: new Date('2030-01-01T00:00:00.000Z'), uploaderName: 'An', topicLabel: topicId ? 'Chủ đề A' : null, canDelete: true })
+  const six = Array.from({ length: 6 }, (_, index) => resource(index + 1))
+  const eleven = Array.from({ length: 11 }, (_, index) => resource(index + 1))
+  assert.equal(RESOURCE_GROUP_PAGE_SIZE, 5)
+  assert.deepEqual(paginateLearningResourceGroup(six.slice(0, 5), 1), { page: 1, pageCount: 1, resources: six.slice(0, 5) })
+  assert.deepEqual(paginateLearningResourceGroup(six, 1).resources.map(item => item.id), ['resource-1', 'resource-2', 'resource-3', 'resource-4', 'resource-5'])
+  assert.deepEqual(paginateLearningResourceGroup(six, 2).resources.map(item => item.id), ['resource-6'])
+  assert.equal(paginateLearningResourceGroup(six, 1).pageCount, 2)
+  assert.deepEqual([1, 2, 3].map(page => paginateLearningResourceGroup(eleven, page).resources.length), [5, 5, 1])
+  const topic = [{ id: 'topic-a', label: 'Chủ đề A', state: 'ACTIVE' as const }]
+  const sixMarkup = renderToStaticMarkup(createElement(LearningResources, { spaceId: 'space', quota: { usedBytes: '0', maxBytes: '1' }, topics: topic, archived: false, resources: six }))
+  assert.match(sixMarkup, /Chủ đề A.*6 tài nguyên/)
+  assert.match(sixMarkup, new RegExp('Trang 1 / 2'))
+  assert.match(sixMarkup, new RegExp('disabled=""[^>]*>← Trước</button>'))
+  assert.doesNotMatch(sixMarkup, /Tài nguyên 6/)
+  const fiveMarkup = renderToStaticMarkup(createElement(LearningResources, { spaceId: 'space', quota: { usedBytes: '0', maxBytes: '1' }, topics: topic, archived: false, resources: six.slice(0, 5) }))
+  assert.doesNotMatch(fiveMarkup, /Trang 1/)
+
+  const groups = groupLearningResources([...eleven, ...Array.from({ length: 6 }, (_, index) => resource(index + 20, null))], topic)
+  assert.deepEqual(clampResourceGroupPages(groups, { 'topic-a': 3, topicless: 2 }), { 'topic-a': 3, topicless: 2 })
+  assert.deepEqual(clampResourceGroupPages(groupLearningResources(eleven.slice(0, 10), topic), { 'topic-a': 3, topicless: 2 }), { 'topic-a': 2 })
+
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /const \[resourcePages, setResourcePages\] = useState<Record<string, number>>\(\{\}\)/)
+  assert.match(source, /clampResourceGroupPages\(groupLearningResources\(resourceItems, topics\), current\)/)
+  assert.match(source, /← Trước/)
+  assert.match(source, /Trang \{pagination\.page\} \/ \{pagination\.pageCount\}/)
+  assert.match(source, /Sau →/)
+  assert.doesNotMatch(source, /Xem thêm|loadMore|page=|limit=/)
+})
+
+test('file upload can optionally associate the same active topic selector used by links', async () => {
+  const calls: Array<{ input: string; init?: RequestInit }> = []
+  const responses = [
+    Response.json({ resourceId: 'file-1', upload: { url: 'https://upload.example.test', fields: { key: 'opaque' } } }, { status: 201 }),
+    new Response(null, { status: 204 }),
+    Response.json({ resourceId: 'file-1', status: 'READY' }),
+    Response.json({ resources: [], quota: { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) } }),
+  ]
+  const request = (async (input: string | URL | Request, init?: RequestInit) => { calls.push({ input: String(input), init }); return responses.shift()! }) as typeof fetch
+
+  await uploadLearningFile('space', new File(['%PDF-'], 'valid.pdf', { type: 'application/pdf' }), request, 'topic-1')
+  assert.match(String(calls[0].init?.body), /"topicId":"topic-1"/)
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /const \[fileTopicId, setFileTopicId\] = useState\(''\)/)
+  assert.match(source, /uploadLearningFile\(spaceId, file, fetch, fileTopicId \|\| null\)/)
+  assert.match(source, /<option value="">Không gắn chủ đề<\/option>\{activeTopics\.map/)
 })
 
 test('file upload failures expose only the safe API error and remain retryable', async () => {
