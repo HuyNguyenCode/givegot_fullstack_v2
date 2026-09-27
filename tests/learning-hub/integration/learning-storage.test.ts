@@ -26,12 +26,18 @@ function fixture() {
   let failSign = false
   let failPromote = false
   let failRemove = false
+  let failActivityWrite = false
   let deleteDuringPromote = false
   const rows = new Map<string, FileResource>()
+  const activities: Array<{ learningSpaceId: string; actorId: string; eventType: string; entityType: string; entityId: string; eventKey: string; metadata: Record<string, string> }> = []
   const objects = new Map<string, { sizeBytes: number; mimeType: string }>()
   const content = new Map<string, Uint8Array>()
   const removed: string[] = []
   let nextId = 0
+  const recordActivity = async (activity: Parameters<LearningStorageRepository['recordResourceCreated']>[0]) => {
+    if (failActivityWrite) throw new Error('activity database unavailable')
+    if (!activities.some(existing => existing.eventKey === activity.eventKey)) activities.push(activity)
+  }
   const repository: LearningStorageRepository = {
     access: async (_spaceId, userId) => userId === 'member' ? { state: archived ? 'ARCHIVED' : 'ACTIVE' } : null,
     reserve: async input => {
@@ -50,6 +56,24 @@ function fixture() {
       if (changes?.deletedAt) row.deletedAt = changes.deletedAt
       return true
     },
+    transitionReadyWithActivity: async ({ resourceId, storageKey, activity }) => {
+      const row = rows.get(resourceId)
+      if (!row || row.status !== 'PENDING') return false
+      const priorStorageKey = row.storageKey
+      const activityCount = activities.length
+      row.status = 'READY'
+      row.storageKey = storageKey
+      try {
+        await recordActivity(activity)
+      } catch (error) {
+        row.status = 'PENDING'
+        row.storageKey = priorStorageKey
+        activities.splice(activityCount)
+        throw error
+      }
+      return true
+    },
+    recordResourceCreated: recordActivity,
     expiredPending: async before => [...rows.values()].filter(row => ['PENDING', 'QUARANTINED'].includes(row.status) && row.createdAt < before),
     deletedFiles: async () => [...rows.values()].filter(row => row.status === 'DELETED' && row.storageKey),
   }
@@ -102,8 +126,58 @@ function fixture() {
     now: () => new Date(clock), uuid: () => `uuid-${++nextId}`,
   })
   const valid = { fileName: 'notes.pdf', mimeType: 'application/pdf', sizeBytes: 1024 }
-  return { service, valid, rows, objects, removed, setContent: (key: string, bytes: Uint8Array) => { content.set(key, bytes) }, setActor: (value: string | null) => { actor = value }, setArchived: (value: boolean) => { archived = value }, advance: (ms: number) => { clock += ms }, canOpenSignedUrl: (url: string) => clock < Number(new URL(url).searchParams.get('expires')), calls: () => providerCalls, failSign: () => { failSign = true }, failPromote: () => { failPromote = true }, deleteDuringPromote: () => { deleteDuringPromote = true }, setFailRemove: (value: boolean) => { failRemove = value } }
+  return { service, valid, rows, activities, objects, removed, setContent: (key: string, bytes: Uint8Array) => { content.set(key, bytes) }, setActor: (value: string | null) => { actor = value }, setArchived: (value: boolean) => { archived = value }, advance: (ms: number) => { clock += ms }, canOpenSignedUrl: (url: string) => clock < Number(new URL(url).searchParams.get('expires')), calls: () => providerCalls, failSign: () => { failSign = true }, failPromote: () => { failPromote = true }, deleteDuringPromote: () => { deleteDuringPromote = true }, setFailRemove: (value: boolean) => { failRemove = value }, failActivityWrite: (value: boolean) => { failActivityWrite = value } }
 }
+
+test('FILE finalize to READY records one privacy-safe resource-created activity and retries dedupe it', async () => {
+  const f = fixture()
+  const issued = await f.service.initiate('space', f.valid)
+  const row = f.rows.get(issued.resourceId)!
+  f.objects.set(row.storageKey!, { sizeBytes: 1024, mimeType: 'application/pdf' })
+
+  await f.service.finalize('space', issued.resourceId)
+  await f.service.finalize('space', issued.resourceId)
+
+  assert.deepEqual(f.activities, [{
+    learningSpaceId: 'space',
+    actorId: 'member',
+    eventType: 'LEARNING_RESOURCE_CREATED',
+    entityType: 'LearningResource',
+    entityId: issued.resourceId,
+    eventKey: `learning-resource:${issued.resourceId}:created`,
+    metadata: { kind: 'FILE', status: 'READY' },
+  }])
+  assert.doesNotMatch(JSON.stringify(f.activities), /storageKey|pending\/|spaces\/|X-Amz-|signature|credential|upload\.example/i)
+})
+
+test('an activity write failure rolls back READY and a retry creates one activity', async () => {
+  const f = fixture()
+  const issued = await f.service.initiate('space', f.valid)
+  const row = f.rows.get(issued.resourceId)!
+  f.objects.set(row.storageKey!, { sizeBytes: 1024, mimeType: 'application/pdf' })
+  f.failActivityWrite(true)
+
+  await assert.rejects(() => f.service.finalize('space', issued.resourceId), /activity database unavailable/)
+  assert.equal(row.status, 'PENDING')
+  assert.deepEqual(f.activities, [])
+
+  f.failActivityWrite(false)
+  await f.service.finalize('space', issued.resourceId)
+  await f.service.finalize('space', issued.resourceId)
+  assert.equal(row.status, 'READY')
+  assert.equal(f.activities.length, 1)
+})
+
+test('failed or quarantined FILE finalize never records a READY resource-created activity', async () => {
+  const f = fixture()
+  const issued = await f.service.initiate('space', f.valid)
+  const row = f.rows.get(issued.resourceId)!
+  f.objects.set(row.storageKey!, { sizeBytes: 1024, mimeType: 'text/html' })
+
+  await assert.rejects(() => f.service.finalize('space', issued.resourceId), { status: 409 })
+  assert.equal(row.status, 'QUARANTINED')
+  assert.deepEqual(f.activities, [])
+})
 
 test('unauthenticated and nonmember requests stop before storage metadata or credentials', async () => {
   const f = fixture()

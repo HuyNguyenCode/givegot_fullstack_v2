@@ -44,11 +44,15 @@ export type FileResource = {
   deletedAt: Date | null
 }
 
+type ResourceCreatedActivity = { learningSpaceId: string; actorId: string; eventType: 'LEARNING_RESOURCE_CREATED'; entityType: 'LearningResource'; entityId: string; eventKey: string; metadata: { kind: 'FILE'; status: 'READY' } }
+
 export interface LearningStorageRepository {
   access(spaceId: string, userId: string): Promise<{ state: LearningSpaceStatus } | null>
   reserve(input: { spaceId: string; userId: string; id: string; title: string; description: string | null; bookingId: string | null; topicId: string | null; key: string; mimeType: string; sizeBytes: number; quotaBytes: number }): Promise<FileResource>
   resource(spaceId: string, resourceId: string): Promise<FileResource | null>
   transition(resourceId: string, from: LearningResourceStatus, to: LearningResourceStatus, changes?: { storageKey?: string | null; deletedAt?: Date }): Promise<boolean>
+  transitionReadyWithActivity(input: { resourceId: string; storageKey: string; activity: ResourceCreatedActivity }): Promise<boolean>
+  recordResourceCreated(input: ResourceCreatedActivity): Promise<void>
   expiredPending(before: Date, limit: number): Promise<FileResource[]>
   deletedFiles(limit: number): Promise<FileResource[]>
 }
@@ -133,7 +137,12 @@ export function createLearningStorageService(deps: {
     const actorId = await authorize(spaceId, true)
     const resource = await repository.resource(spaceId, resourceId)
     if (!resource || resource.kind !== 'FILE' || resource.uploaderId !== actorId || !resource.storageKey) throw new LearningStorageError(404, 'File resource not found')
-    if (resource.status === 'READY') return { resourceId, status: 'READY' as const }
+    const activity: ResourceCreatedActivity = { learningSpaceId: spaceId, actorId, eventType: 'LEARNING_RESOURCE_CREATED', entityType: 'LearningResource', entityId: resourceId, eventKey: `learning-resource:${resourceId}:created`, metadata: { kind: 'FILE', status: 'READY' } }
+    const recordReadyActivity = () => repository.recordResourceCreated(activity)
+    if (resource.status === 'READY') {
+      await recordReadyActivity()
+      return { resourceId, status: 'READY' as const }
+    }
     if (resource.status !== 'PENDING') throw new LearningStorageError(409, 'File is not pending')
     if (now().getTime() > resource.createdAt.getTime() + LEARNING_ORPHAN_GRACE_MS) throw new LearningStorageError(409, 'Upload reservation expired')
     const expected = Number(resource.sizeBytes)
@@ -161,10 +170,13 @@ export function createLearningStorageService(deps: {
       await repository.transition(resourceId, 'PENDING', 'QUARANTINED')
       throw new LearningStorageError(409, 'Uploaded file content does not match its type')
     }
-    const updated = await repository.transition(resourceId, 'PENDING', 'READY', { storageKey: key })
+    const updated = await repository.transitionReadyWithActivity({ resourceId, storageKey: key, activity })
     if (!updated) {
       const current = await repository.resource(spaceId, resourceId)
-      if (current?.status === 'READY') return { resourceId, status: 'READY' as const }
+      if (current?.status === 'READY') {
+        await recordReadyActivity()
+        return { resourceId, status: 'READY' as const }
+      }
       try { await provider.remove(key) } catch { /* cron retries pending or deleted reservations */ }
       throw new LearningStorageError(409, 'Upload reservation changed')
     }
@@ -246,6 +258,19 @@ export const learningStorageRepository: LearningStorageRepository = {
   }),
   resource: (spaceId, resourceId) => prisma.learningResource.findFirst({ where: { id: resourceId, learningSpaceId: spaceId, kind: 'FILE' } }) as Promise<FileResource | null>,
   transition: async (resourceId, from, to, changes) => (await prisma.learningResource.updateMany({ where: { id: resourceId, status: from }, data: { status: to, ...changes } })).count === 1,
+  transitionReadyWithActivity: input => prisma.$transaction(async tx => {
+    const updated = await tx.learningResource.updateMany({ where: { id: input.resourceId, status: 'PENDING' }, data: { status: 'READY', storageKey: input.storageKey } })
+    if (!updated.count) return false
+    await tx.learningActivity.upsert({ where: { eventKey: input.activity.eventKey }, create: input.activity, update: {} })
+    return true
+  }),
+  recordResourceCreated: async input => {
+    await prisma.learningActivity.upsert({
+      where: { eventKey: input.eventKey },
+      create: input,
+      update: {},
+    })
+  },
   expiredPending: (before, limit) => prisma.learningResource.findMany({ where: { kind: 'FILE', status: { in: ['PENDING', 'QUARANTINED'] }, createdAt: { lt: before } }, take: limit, orderBy: { createdAt: 'asc' } }) as Promise<FileResource[]>,
   deletedFiles: limit => prisma.learningResource.findMany({ where: { kind: 'FILE', status: 'DELETED', storageKey: { not: null } }, take: limit, orderBy: { updatedAt: 'desc' } }) as Promise<FileResource[]>,
 }
