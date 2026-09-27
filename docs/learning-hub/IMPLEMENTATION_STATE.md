@@ -18,6 +18,12 @@
 - F2 Resource domain and UI completed on 2026-09-21. Active members can list, add, reopen, and delete their HTTPS links or F1 private files from LearningSpace. Resource metadata carries optional Booking/topic references; safe status, uploader, topic, time, and quota are displayed. Link/file deletion remains uploader-only and soft deletes preserve audit/provider cleanup. No server URL fetch, file parsing, raw video, Booking, fulfillment, or settlement behavior was added.
 - Next safe task: G1 — Learning Task Domain. Do not begin G1 or any later feature automatically.
 
+### OWNER DECISION — EXERCISE_REVIEW scheduling semantics
+
+For `EXERCISE_REVIEW` only, `Booking.startTime` and `Booking.endTime` remain unchanged legacy compatibility fields required by the current Booking path. They are not synchronous mentor availability, mandatory online attendance, `LearningTask.dueAt`, a submission or feedback deadline, fulfillment-completion evidence, a review-window start, or GivePoint-settlement eligibility. `LearningTask.dueAt` is an independent task deadline; `Submission.submittedAt`, `SubmissionReview.reviewedAt`, `Booking.deliveredAt`, and the later fulfillment lifecycle are the authoritative async workflow timestamps.
+
+This documentation decision makes no production change: AvailableSlot semantics, legacy Booking scheduling, Calendar/Meet, auto-complete cron, settlement, and GivePoint pricing remain unchanged. Whether EXERCISE_REVIEW should stop consuming an AvailableSlot is deferred as a separate product/architecture decision. G1/G2/G3 must not alter those boundaries. I1/I2/I3 retain the existing responsibility to enforce that EXERCISE_REVIEW does not settle from `endTime`.
+
 ### OPEN PRODUCT DECISION — GivePoint quantity by learning mode
 
 The GP quantity for EXERCISE_REVIEW and HYBRID remains intentionally unresolved. E1 preserves the existing integer one-GP Booking escrow and ledger semantics for every mode. It adds no mode-specific pricing, fractional GP, or time-based calculation from preparation, task, document, video, or feedback work. Wallet, settlement, TransactionLog, and cron behavior are unchanged. An owner decision is required before any future task changes GP quantity by mode.

@@ -96,6 +96,16 @@ Settlement uses an eligible-state conditional claim inside a transaction, update
 
 Reuse Calendar/Meet, Pusher, email, Prisma/PostgreSQL, and existing GivePoint/Review/Trust capabilities. GiveGot owns workflow, authorization, state, audit, and reputation. Provider failure must not erase committed domain state.
 
+## ADR 016 EXERCISE_REVIEW legacy Booking timestamps are not async workflow timing
+
+**Status:** Accepted
+
+For `EXERCISE_REVIEW` only, `Booking.startTime` and `Booking.endTime` remain unchanged legacy compatibility fields because the existing Booking path requires them. They do not represent synchronous mentor availability, mandatory online attendance, a `LearningTask.dueAt` deadline, a submission deadline, a feedback deadline, fulfillment-completion evidence, a review-window start, or GivePoint-settlement eligibility.
+
+`LearningTask.dueAt` is the independent task deadline. `Submission.submittedAt`, `SubmissionReview.reviewedAt`, `Booking.deliveredAt`, and the later fulfillment lifecycle are the authoritative timestamps for the asynchronous workflow. In particular, no EXERCISE_REVIEW fulfillment or settlement decision may derive from `Booking.endTime`.
+
+This decision changes neither AvailableSlot nor legacy Booking scheduling semantics, Calendar/Meet, auto-complete cron, settlement, or GivePoint pricing. Whether EXERCISE_REVIEW should stop consuming an `AvailableSlot` is a separate deferred product/architecture decision and is not decided or implemented here. G1, G2, and G3 must preserve those boundaries; I1, I2, and I3 retain ownership of enforcement that EXERCISE_REVIEW never settles based on `endTime`.
+
 ## Open owner decisions
 
 - Final async review window; 72 hours from `deliveredAt` is the default proposal.
@@ -104,3 +114,4 @@ Reuse Calendar/Meet, Pusher, email, Prisma/PostgreSQL, and existing GivePoint/Re
 - Office uploads enter P1 only after malware scanning.
 - GivePoint totals are hidden by default until owner review.
 - GivePoint quantity by learning mode remains an owner decision. E1 preserves the existing Booking amount and introduces no mode-specific pricing; do not market GivePoint as a low hourly wage.
+- Whether EXERCISE_REVIEW should stop consuming an `AvailableSlot` remains a separate deferred product/architecture decision. ADR 016 does not change current legacy Booking scheduling.

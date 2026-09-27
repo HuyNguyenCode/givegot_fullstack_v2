@@ -44,6 +44,7 @@
 - No hard unique constraint for pair plus primary skill; suggest reuse but allow another space.
 - Exactly two active members in MVP; roles live on Booking/Task, not permanent membership.
 - P0 modes are LIVE, EXERCISE_REVIEW, and HYBRID, each with distinct evidence and completion rules.
+- For EXERCISE_REVIEW only, `Booking.startTime`/`endTime` are unchanged legacy compatibility fields, not synchronous availability/attendance or async workflow timing. `LearningTask.dueAt` is independent; `Submission.submittedAt`, `SubmissionReview.reviewedAt`, `Booking.deliveredAt`, and fulfillment lifecycle state are authoritative. The separate question of whether EXERCISE_REVIEW should stop consuming an AvailableSlot is deferred; G1/G2/G3 do not change it, and I1/I2/I3 own endTime-independent settlement enforcement.
 - BookingStatus and FulfillmentStatus are separate.
 - Old rows and Bookings with future Learning Hub fields null remain valid.
 - Private SubmissionReview is separate from public Review and Trust Score.
