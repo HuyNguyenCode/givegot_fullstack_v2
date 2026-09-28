@@ -730,6 +730,7 @@ model LearningTask {
   acceptanceCriteria String?            @db.Text
   dueAt              DateTime?
   status             LearningTaskStatus @default(OPEN)
+  version            Int                @default(1)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @default(now()) @updatedAt
 

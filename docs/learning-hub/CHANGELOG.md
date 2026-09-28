@@ -1,5 +1,17 @@
 # Learning Hub Changelog
 
+## 2026-09-28 — G1 completion and verification
+
+- Diagnosed the F2 resource-pagination blocker as an implementation-coupled source assertion and repaired only that test assertion; production pagination behavior did not change.
+- Prisma generation now passes. Migration 005 forward rehearsal and rollback rehearsal passed on approved staging; forward SQL was reapplied after rollback, leaving staging in the post-G1 schema state.
+- Final verification passed 62 Learning Hub unit tests, 39 integration tests, all five legacy regression scripts, Prisma generate/validate, targeted ESLint, and production build. G1 status is PASS; the next safe task is G2 — Submission workflow.
+
+## 2026-09-27 — G1 Learning Task Domain
+
+- Added LH 040 task create/list/update service and protected API with server-session actor, active pair and Booking/topic ownership checks, archived-space write denial, independent future dueAt, required acceptance criteria, and optimistic version conflicts.
+- Added additive `LearningTask.version` migration and rollback SQL. G1 status actions permit assignee start and creator cancellation; submission, review, and completion remain reserved for later tasks. No UI, notifications, Booking scheduling, fulfillment, settlement, or GivePoint changes.
+- Targeted G1 unit tests, integration route smoke, legacy regression, typecheck, Prisma validate, targeted lint, and production build passed. Full unit suite has a resource-pagination failure in unchanged F2 code. Prisma generation hit the Windows DLL lock; database migration execution awaits an explicit disposable database.
+
 ## 2026-09-21 Task F2 Resource domain and UI
 
 - Added member-authorized HTTPS resource routes and a LearningSpace resource UI. Links normalize HTTPS-only URLs and open safely; files continue to use F1 private direct upload/finalize and on-demand download.

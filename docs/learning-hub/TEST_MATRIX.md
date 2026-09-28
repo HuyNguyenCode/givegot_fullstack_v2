@@ -9,7 +9,7 @@
 
 ## Current checkpoint and historical-count rule
 
-The current checkout checkpoint through F2 is complete. F2 implements LH 030, LH 031, and LH 032 with typecheck PASS, 44 Learning Hub unit tests PASS, 35 integration tests PASS, all five legacy regressions PASS, targeted ESLint PASS, and production build PASS. The verified B2/C1 repair leaves full lint at the unrelated 77-error/32-warning legacy baseline. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. The next safe task is G1 — Learning Task Domain.
+The current checkout checkpoint through G1 is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair leaves full lint at the unrelated 77-error/32-warning legacy baseline. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. The next safe task is G2 — Submission workflow.
 
 ## Test ladder
 
@@ -37,7 +37,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | LH 030 | F2 | `LH030-U` HTTPS normalization/validation | `LH030-I` member CRUD; `LH030-S` XSS/SSRF/no-fetch | Safe external navigation and deleted link | PASS: normalized HTTPS-only links; dangerous schemes rejected; membership, space-scoped references, uploader-only soft delete, safe navigation, and no-fetch policy covered. |
 | LH 031 | F1, F2 | `LH031-U` MIME/extension/size/key/quota | `LH031-I` signed upload/finalize; `LH031-S` spoof/path/expiry | Orphan cleanup and provider failure | PASS: F1 provider boundary plus F2 quota/lifecycle/uploader/topic/time UI and direct private upload/finalize flow. |
 | LH 032 | F1, F2 | `LH032-U` TTL/deleted-state rules | `LH032-I` download issuance; `LH032-S` non-member/IDOR | Archived member and expired URL | PASS: F2 requests F1 download only after user action; lists/activity exclude signed URLs/storage keys and F1 denies deleted files. |
-| LH 040 | G1 | `LH040-U` role/deadline/criteria | `LH040-I` create/update; `LH040-S` member/assignee auth | Notification and archived-space behavior | PLACEHOLDER |
+| LH 040 | G1 | `LH040-U` role/deadline/criteria | `LH040-I` create/update; `LH040-S` member/assignee auth | Archived-space read/write; no G1 notification | PASS: create/list/version-checked edit, active-pair/Booking/topic checks, independent dueAt, and START/CANCEL-only transitions. Prisma generate/validate, 62 unit tests, 39 integration tests, five legacy regressions, targeted ESLint, build, and migration 005 forward/rollback rehearsals passed. |
 | LH 041 | G2 | `LH041-U` current Submission/revision rules | `LH041-I` text/link/file flow; `LH041-C` concurrent resubmit | Task status and attachment authorization | PLACEHOLDER |
 | LH 042 | G3 | `LH042-U` reviewed/revision outcomes | `LH042-I` reviewer auth and state; private content guard | `LH042-R` public Review/Trust unchanged | PLACEHOLDER |
 | LH 050 | H1 | `LH050-U` scope/visibility/version | `LH050-I` note CRUD/member auth; `LH050-C` lost update | Archived read, XSS, long Vietnamese | PLACEHOLDER |
@@ -52,7 +52,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | Suite | Cases | Owner | Status |
 | --- | --- | --- | --- |
 | Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, B2, M1 | A1 PASS for server session/chat/admin; A2 PASS for private conversation/user authorization; B2 PASS for active LearningSpace membership, including readable archived spaces, while nonmembers/inactive memberships are denied; M1 cases remain |
-| Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1 | PASS: isolated clean/legacy/rollback execution; six BookingStatus rows retained; no backfill |
+| Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1, G1 | PASS: B1 migration 004 PASS; G1 migration 005 forward/rollback rehearsal PASS; staging restored post-G1. |
 | Mode transitions | All allowed/forbidden transitions for LIVE, EXERCISE_REVIEW, HYBRID | E1, I1 | E1 PASS for selection contracts and mode immutability after delivery; I1 transition mutations remain pending |
 | Settlement | Double click, concurrent request/cron, dispute, rollback, ledger reconciliation | I2, I3 | PLACEHOLDER |
 | Storage | MIME/extension mismatch, size/quota, orphan, expiry, delete, filename/path, provider failure | F1, F2 | PASS: F1's 10 provider-mocked service cases plus F2 resource link/file UI, quota/lifecycle display, on-demand download, and no-storage-key/no-signed-URL list/activity boundary. F2 consumes F1's abstraction and has no direct S3 dependency. |
@@ -70,7 +70,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 - `npm run typecheck`: PASS. `npm run test:learning-hub`: PASS, 44 tests. `npm run test:learning-hub:integration`: PASS, 35 tests after route smoke. `npm run test:regression`: PASS, all five scripts. Targeted ESLint: PASS. `npm run build`: PASS.
 - LH 030, LH 031, and LH 032 are implemented. Coverage includes HTTPS normalization and dangerous-scheme rejection, participant authorization inherited and enforced at the resource/file boundaries, upload-finalize ownership, deleted-file denial, quota and safe lifecycle display, empty/error/mobile states, long Vietnamese filenames, privacy-safe resource activity dedupe, and LearningSpace page regression.
 - Resource lists and LearningActivity metadata contain no signed URL or private storage key. Downloads remain issued only on demand through F1 after authorization. F2 consumes the F1 storage abstraction/API and has no direct AWS SDK or S3 dependency.
-- Fulfillment, settlement, notes, tasks, and submissions remain pending. The next safe task is G1 — Learning Task Domain.
+- Historical F2 checkpoint wording: fulfillment, settlement, notes, tasks, and submissions were pending and G1 was next. G1 is now complete; Submission remains G2 scope.
 
 ## Later full-lint reconciliation (2026-09-20)
 
@@ -101,7 +101,9 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 
 ## Canonical commands
 
-Task 01 created and self-tested the core commands. B1 adds `npm run test:learning-hub:migration`, which requires a local explicit `DISPOSABLE_TEST_DATABASE_URL`, refuses shared/remote endpoints, and never prints secrets. The credential-free B1 execution used isolated in-memory PostgreSQL and removed its temporary runtime afterward.
+Task 01 created and self-tested the core commands. B1 adds `npm run test:learning-hub:migration`, which requires an explicit local `DISPOSABLE_TEST_DATABASE_URL`, refuses shared/remote endpoints, and never prints secrets. The credential-free B1 migration verification used isolated in-memory PostgreSQL and removed its temporary runtime afterward.
+
+G1 migration 005 was additionally rehearsed manually against the owner-approved staging database through `DIRECT_URL`. That staging rehearsal is separate from the canonical disposable-database migration test command and does not change its safety requirements.
 
 ## Historical Task 01 canonical commands
 

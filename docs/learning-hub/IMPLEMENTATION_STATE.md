@@ -1,22 +1,32 @@
 # Learning Hub Implementation State
 
+## Task G1 completion (2026-09-28)
+
+- Status: PASS. LH 040 is complete. The F2 resource-pagination blocker was an implementation-coupled source assertion; its test-only repair retained production pagination behavior.
+
+- LH 040 task domain adds protected task list/create/update APIs under `/api/learning/spaces/[spaceId]/tasks`. The server session supplies creator/actor identity. Both task participants must be distinct active, unsuspended space members; optional Booking must belong to the space and contain both participants; optional topic must be active in the space. Archived spaces remain readable and reject task writes.
+- Task fields are title, description, required acceptance criteria, independent optional future `dueAt`, optional Booking/topic, creator, assignee, status, timestamps, and an additive integer version. Creator may edit an OPEN task and request `CANCEL` for OPEN/IN_PROGRESS; assignee may request `START` for OPEN. The server maps those actions to states; client-supplied status is rejected. Submission, review, and completed states remain unavailable to G1 client mutations.
+- Migration `005_learning_task_version.sql` adds only `LearningTask.version INTEGER NOT NULL DEFAULT 1` and does not backfill Booking. Forward and rollback rehearsals passed on the approved staging `DIRECT_URL`; forward SQL was reapplied after rollback, leaving staging in the post-G1 schema state. Existing Booking scheduling, AvailableSlot, Calendar/Meet, cron, fulfillment, settlement, GivePoint, and notifications are unchanged.
+- Final verification: `npm run db:generate`, `npx prisma validate`, `npm run typecheck`, targeted ESLint, and production build passed. `npm run test:learning-hub` passed 62/62; `npm run test:learning-hub:integration` passed 39/39; all five legacy regression scripts passed. Migration 005 forward and rollback rehearsals passed.
+- G2 may rely on G1 task ownership, active pair checks, status/version conditional updates, and independent dueAt, but must implement Submission transitions separately. No notification, submission, review, or settlement side effect exists in G1.
+
 ## Checkpoint
 
-- Recorded: 2026-09-21, Asia/Saigon.
+- Recorded: 2026-09-28, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
 - Latest committed checkpoint: `42b019e07912d64626e1620121011e81608d91ee`
   (`fix(learning-hub): restore slot booking for live and hybrid`),
   merged into `feature/learning-hub-mvp` by `3fe1370`.
-- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, and F2 are complete. F2 implements LH 030, LH 031, and LH 032.
+- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, F2, and G1 are complete. F2 implements LH 030, LH 031, and LH 032; G1 implements LH 040.
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Status: F2 PASS. The overall checkpoint retains the documented host/deployment limitations: the isolated B2/C1 lint repair is verified, full lint is the unrelated 77-error/32-warning legacy baseline, and private storage still requires its production provider configuration.
+- Status: G1 PASS. The overall checkpoint retains the documented host/deployment limitations: the isolated B2/C1 lint repair is verified, full lint is the unrelated 77-error/32-warning legacy baseline, and private storage still requires its production provider configuration.
 - Production behavior: a Booking started from a LearningSpace carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. LIVE and HYBRID now select a future unbooked mentor AvailableSlot and use the existing locked slot path; EXERCISE_REVIEW retains the E1 manual-time `createBooking` path. Legacy Booking creation remains valid with all Learning Hub fields null.
-- Schema/migration behavior: unchanged from B1: ten Learning Hub models plus eight nullable Booking fields; named additive migration 004 with rollback SQL/note and no historical backfill.
-- API behavior: F1 provides session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. F2 adds member-authorized resource collection/item routes under `/api/learning/spaces/[spaceId]/resources`. `getLearningBookingContext` and E1 Booking guards remain intact.
-- Learning Hub implementation: F2 uses F1's provider-agnostic storage-service/API abstraction and does not import or depend directly on the AWS SDK or S3. HTTPS resources are normalized and never fetched server-side; private files retain F1's five-minute upload and ten-minute on-demand download boundary. Resource lists and activity return no signed URL or storage key. Fulfillment, settlement, notes, tasks, and submissions remain pending.
-- Current verification: F2 typecheck PASS; 44 Learning Hub unit tests PASS; 35 integration tests PASS; all five legacy regression scripts PASS; targeted ESLint PASS; production build PASS. Full lint remains 77 errors/32 warnings, exactly the unrelated legacy baseline after the verified B2/C1 repair. The host-only `process.geteuid` preload used for the documented Windows `tsx` issue was removed and is not a product/runtime dependency.
+- Schema/migration behavior: ten Learning Hub models plus eight nullable Booking fields; additive migrations 004 and 005 with paired rollback SQL/notes and no Booking backfill. Migration 005 adds only `LearningTask.version` with default 1.
+- API behavior: F1 provides session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. F2 adds member-authorized resource collection/item routes under `/api/learning/spaces/[spaceId]/resources`. G1 adds protected task list/create and item-update routes under `/api/learning/spaces/[spaceId]/tasks`; `getLearningBookingContext` and E1 Booking guards remain intact.
+- Learning Hub implementation: F2 uses F1's provider-agnostic storage-service/API abstraction and does not import or depend directly on the AWS SDK or S3. G1 provides task create/list/version-checked edit with active-pair, Booking/topic ownership, START/CANCEL transition, and independent dueAt rules. Resource lists and activity return no signed URL or storage key. Submission, review, fulfillment, settlement, and notes remain pending.
+- Current verification: G1 Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regression scripts, targeted ESLint, production build, and migration 005 forward/rollback rehearsals passed. Full lint remains 77 errors/32 warnings, exactly the unrelated legacy baseline after the verified B2/C1 repair. The host-only `process.geteuid` preload used for the documented Windows `tsx` issue was removed and is not a product/runtime dependency.
 - F2 Resource domain and UI completed on 2026-09-21. Active members can list, add, reopen, and delete their HTTPS links or F1 private files from LearningSpace. Resource metadata carries optional Booking/topic references; safe status, uploader, topic, time, and quota are displayed. Link/file deletion remains uploader-only and soft deletes preserve audit/provider cleanup. No server URL fetch, file parsing, raw video, Booking, fulfillment, or settlement behavior was added.
-- Next safe task: G1 — Learning Task Domain. Do not begin G1 or any later feature automatically.
+- Next safe task: G2 — Submission workflow. Do not begin G2 or any later feature automatically.
 
 ### OWNER DECISION — EXERCISE_REVIEW scheduling semantics
 
@@ -98,7 +108,7 @@ Verified by source inventory and successful Next.js build:
 /wallet
 ```
 
-Current protected Learning Hub APIs are `POST /api/pusher/auth`, `/api/learning/spaces/*` including F1 file and F2 resource routes, and `/api/learning/invites/*`. `/learning/[spaceId]` is the completed LearningSpace UI route with F2 resources.
+Current protected Learning Hub APIs are `POST /api/pusher/auth`, `/api/learning/spaces/*` including F1 file, F2 resource, and G1 task routes, and `/api/learning/invites/*`. `/learning/[spaceId]` is the completed LearningSpace UI route with F2 resources.
 
 ## Current schema
 
@@ -118,7 +128,7 @@ Only `prisma/migrations-manual/` exists:
 - `002_skill_embedding_readiness.sql`: additive BR-11 readiness fields, audit backup, vector eligibility check; explicitly reviewed/manual.
 - `003_withdrawal_rejection_atomic_refund.sql`: adds `REFUND_WITHDRAWAL_REJECTED` to TransactionType.
 
-Migration 004 adds the B1 domain additively and has paired executable rollback SQL plus a production rollback note. No ambiguous historical row is backfilled.
+Migration 004 adds the B1 domain additively and has paired executable rollback SQL plus a production rollback note. Migration 005 adds `LearningTask.version INTEGER NOT NULL DEFAULT 1`, with `005_learning_task_version.rollback.sql` and its rollback note. No ambiguous historical row is backfilled.
 
 ## Current scripts
 
