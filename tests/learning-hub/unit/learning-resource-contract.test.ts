@@ -151,7 +151,8 @@ test('resource pagination is independent per group, pages five rows at a time, a
 
   const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
   assert.match(source, /const \[resourcePages, setResourcePages\] = useState<Record<string, number>>\(\{\}\)/)
-  assert.match(source, /useEffect\(\(\) => \{\s+setResourcePages\(current => \{\s+const next = clampResourceGroupPages\([^,]+, current\)[\s\S]*?\}\)\s+\}, \[resourceItems, topics\]\)/)
+  assert.match(source, /const resourceGroups = useMemo\(\(\) => groupLearningResources\(resourceItems, topics\), \[resourceItems, topics\]\)/)
+  assert.match(source, /useEffect\(\(\) => \{\s+setResourcePages\(current => \{\s+const next = clampResourceGroupPages\(resourceGroups, current\)[\s\S]*?\}\)\s+\}, \[resourceGroups\]\)/)
   assert.match(source, /← Trước/)
   assert.match(source, /Trang \{pagination\.page\} \/ \{pagination\.pageCount\}/)
   assert.match(source, /Sau →/)

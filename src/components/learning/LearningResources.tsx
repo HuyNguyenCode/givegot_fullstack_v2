@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { Download, ExternalLink, FileUp, Link2, LoaderCircle, Trash2, X } from 'lucide-react'
 
 export type LearningResourceView = { id: string; bookingId: string | null; topicId: string | null; kind: 'LINK' | 'FILE'; title: string; description: string | null; externalUrl: string | null; mimeType: string | null; sizeBytes: string | null; status: 'PENDING' | 'READY' | 'QUARANTINED' | 'DELETED'; createdAt: Date; uploaderName: string; topicLabel: string | null; canDelete: boolean }
@@ -152,7 +152,7 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
   const deletePopover = useRef<HTMLDivElement>(null)
   const deleteCancel = useRef<HTMLButtonElement>(null)
   const activeTopics = topics.filter(topic => topic.state === 'ACTIVE')
-  const resourceGroups = groupLearningResources(resourceItems, topics)
+  const resourceGroups = useMemo(() => groupLearningResources(resourceItems, topics), [resourceItems, topics])
 
   function toggleTopicGroup(topicId: string) {
     setCollapsedTopicIds(current => {
@@ -172,7 +172,7 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
       const next = clampResourceGroupPages(resourceGroups, current)
       return Object.keys(current).length === Object.keys(next).length && Object.entries(next).every(([id, page]) => current[id] === page) ? current : next
     })
-  }, [resourceItems, topics])
+  }, [resourceGroups])
 
   function restoreDeleteTriggerFocus() {
     if (typeof window !== 'undefined') window.requestAnimationFrame(() => deleteTrigger.current?.focus())

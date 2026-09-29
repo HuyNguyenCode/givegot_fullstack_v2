@@ -7,7 +7,7 @@
 - Edit window: first submit is permitted when a task is OPEN or IN_PROGRESS and has no Submission. The submission then becomes read-only in SUBMITTED. Resubmission is permitted only when both task and current Submission are REVISION_REQUESTED, by the same session assignee. CANCELLED, COMPLETED, REVIEWED, archived, and inconsistent states reject writes. G3 will own transitions into REVISION_REQUESTED.
 - The first submit sets submittedAt and revisionCount=1. Resubmission updates the same row, advances submittedAt, and increments revisionCount once. A conditional task version/status claim within a serializable transaction protects concurrent submits; one privacy-safe LearningActivity event per revision has a unique event key and no submitted content, URL, or storage key.
 - The LearningSpace form lists tasks, offers mobile text, HTTPS URL, and READY file selection, shows loading/errors, blocks duplicate clicks, and retains draft fields after validation or request failure. A successful submit displays the current revision and removes editing until a revision request.
-- Verification: typecheck, targeted ESLint, Learning Hub unit and integration suites, all five legacy regressions, and production build passed. The unit runner required the documented temporary Windows getEUID preload because the host's tsx temporary-directory initialization raises uv_os_get_passwd ENOMEM without it; the helper was removed after tests. Full repository lint reports 77 errors/33 warnings: the documented 77/32 unrelated legacy baseline plus one warning in unchanged LearningResources.tsx. No G2 file has a lint finding.
+- Verification: typecheck, targeted ESLint, Learning Hub unit and integration suites, all five legacy regressions, and production build passed. The unit runner required the documented temporary Windows getEUID preload because the host's tsx temporary-directory initialization raises uv_os_get_passwd ENOMEM without it; the helper was removed after tests. The pre-repair full lint result was 77 errors/33 warnings; audit confirmed the extra `react-hooks/exhaustive-deps` warning in `LearningResources.tsx` pre-dated G2 and was unrelated. The follow-up micro-repair memoized `resourceGroups`, updated its dependency, and restored full lint to 77 errors/32 warnings. No G2 file has a lint finding.
 - G3 may rely on the current Submission row and must set both task and Submission to REVISION_REQUESTED to reopen editing. It must preserve the G2 event-key/revision convention and keep private feedback separate from public Review/Trust.
 
 ## Task G1 completion (2026-09-28)
@@ -22,19 +22,18 @@
 
 ## Checkpoint
 
-- Recorded: 2026-09-28, Asia/Saigon.
+- Recorded: 2026-09-29, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
-- Latest committed checkpoint: `31e2c71bc6d8d5d88e3c038e1884bfbb2699a5eb`
-  (`fix(learning-hub): add learning task domain`),
-  merged into `feature/learning-hub-mvp` by `3fe1370`.
+- Latest committed checkpoint: `14f1611ecf8d977a828d6c52f2c79712e3a5fba8`
+  (`feat(learning-hub): add submission workflow`).
 - Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, F2, G1, and G2 are complete. F2 implements LH 030, LH 031, and LH 032; G1 implements LH 040; G2 implements LH 041.
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Status: G2 PASS. The overall checkpoint retains the documented host/deployment limitations: the isolated B2/C1 lint repair is verified, current full lint is 77 errors/33 warnings in unchanged files (versus the documented 77/32 baseline), and private storage still requires its production provider configuration.
+- Status: G2 PASS. The overall checkpoint retains the documented host/deployment limitations: the isolated B2/C1 lint repair and the subsequent `LearningResources.tsx` dependency micro-repair are verified, current full lint is 77 errors/32 warnings of unrelated legacy baseline debt, and private storage still requires its production provider configuration.
 - Production behavior: a Booking started from a LearningSpace carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. LIVE and HYBRID now select a future unbooked mentor AvailableSlot and use the existing locked slot path; EXERCISE_REVIEW retains the E1 manual-time `createBooking` path. Legacy Booking creation remains valid with all Learning Hub fields null.
 - Schema/migration behavior: ten Learning Hub models plus eight nullable Booking fields; additive migrations 004 and 005 with paired rollback SQL/notes and no Booking backfill. Migration 005 adds only `LearningTask.version` with default 1.
-- API behavior: F1 provides session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. F2 adds member-authorized resource collection/item routes under `/api/learning/spaces/[spaceId]/resources`. G1 adds protected task list/create and item-update routes under `/api/learning/spaces/[spaceId]/tasks`; `getLearningBookingContext` and E1 Booking guards remain intact.
+- API behavior: F1 provides session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. F2 adds member-authorized resource collection/item routes under `/api/learning/spaces/[spaceId]/resources`. G1 adds protected task list/create and item-update routes under `/api/learning/spaces/[spaceId]/tasks`; G2 adds the session-backed current-submission route under `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`; `getLearningBookingContext` and E1 Booking guards remain intact.
 - Learning Hub implementation: F2 uses F1's provider-agnostic storage-service/API abstraction and does not import or depend directly on the AWS SDK or S3. G1 provides task create/list/version-checked edit with active-pair, Booking/topic ownership, START/CANCEL transition, and independent dueAt rules. Resource lists and activity return no signed URL or storage key. G2 implements current Submission; review, fulfillment, settlement, and notes remain pending.
-- Current verification: G1 Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regression scripts, targeted ESLint, production build, and migration 005 forward/rollback rehearsals passed. Full lint remains 77 errors/32 warnings, exactly the unrelated legacy baseline after the verified B2/C1 repair. The host-only `process.geteuid` preload used for the documented Windows `tsx` issue was removed and is not a product/runtime dependency.
+- Current verification: G2 typecheck, targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, all five legacy regression scripts, production build, and `git diff --check` passed. Full lint is 77 errors/32 warnings, exactly the unrelated legacy baseline after the verified B2/C1 repair and the `LearningResources.tsx` dependency micro-repair. The host-only `process.geteuid` preload used for the documented Windows `tsx` issue was removed and is not a product/runtime dependency.
 - F2 Resource domain and UI completed on 2026-09-21. Active members can list, add, reopen, and delete their HTTPS links or F1 private files from LearningSpace. Resource metadata carries optional Booking/topic references; safe status, uploader, topic, time, and quota are displayed. Link/file deletion remains uploader-only and soft deletes preserve audit/provider cleanup. No server URL fetch, file parsing, raw video, Booking, fulfillment, or settlement behavior was added.
 - Next safe task: G3 — Submission review. Do not begin G3 or any later feature automatically.
 
@@ -118,7 +117,7 @@ Verified by source inventory and successful Next.js build:
 /wallet
 ```
 
-Current protected Learning Hub APIs are `POST /api/pusher/auth`, `/api/learning/spaces/*` including F1 file, F2 resource, and G1 task routes, and `/api/learning/invites/*`. `/learning/[spaceId]` is the completed LearningSpace UI route with F2 resources.
+Current protected Learning Hub APIs are `POST /api/pusher/auth`, `/api/learning/spaces/*` including F1 file, F2 resource, G1 task, and G2 current-submission routes, and `/api/learning/invites/*`. The G2 current-submission route is `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`. `/learning/[spaceId]` is the completed LearningSpace UI route with F2 resources and G2 submissions.
 
 ## Current schema
 

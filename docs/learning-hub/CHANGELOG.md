@@ -1,9 +1,16 @@
+# Learning Hub Changelog
+
+## 2026-09-29 — LearningResources dependency micro-repair
+
+- Audited the additional `react-hooks/exhaustive-deps` warning in `src/components/learning/LearningResources.tsx` and confirmed it pre-dated G2 and was unrelated to G2.
+- Memoized `resourceGroups` from `resourceItems` and `topics`, made the pagination effect depend on the stable memoized value, and updated the learning-resource pagination contract test.
+- Targeted ESLint, 71 Learning Hub unit tests, 39 Learning Hub integration tests, typecheck, all five legacy regressions, production build, and `git diff --check` passed. Full repository lint returned to 77 errors/32 warnings, the unrelated legacy baseline.
+
 ## 2026-09-28 — G2 current Submission workflow
 
 - Added session-assignee-only current Submission GET/POST, HTTPS/text/READY same-space file validation, first-submit and revision-requested edit windows, transactional task claim, revision count, and content-free deduplicated activity.
 - Added the mobile LearningSpace submission form with loading, file selection, duplicate-click guard, and draft-preserving validation.
 - No migration or change to legacy Booking, reviewer outcome, GP, settlement, notifications, or cron. Typecheck, targeted lint, Learning Hub suites, legacy regressions, and build passed.
-# Learning Hub Changelog
 
 ## 2026-09-28 — G1 completion and verification
 
