@@ -1,3 +1,8 @@
+## 2026-09-28 — G2 current Submission workflow
+
+- Added session-assignee-only current Submission GET/POST, HTTPS/text/READY same-space file validation, first-submit and revision-requested edit windows, transactional task claim, revision count, and content-free deduplicated activity.
+- Added the mobile LearningSpace submission form with loading, file selection, duplicate-click guard, and draft-preserving validation.
+- No migration or change to legacy Booking, reviewer outcome, GP, settlement, notifications, or cron. Typecheck, targeted lint, Learning Hub suites, legacy regressions, and build passed.
 # Learning Hub Changelog
 
 ## 2026-09-28 — G1 completion and verification
@@ -218,4 +223,3 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - Added an early `createBooking` rejection for linked LIVE/HYBRID before review-gate work or any GP, Booking, ledger, notification, or email side effect. EXERCISE_REVIEW and unlinked legacy manual booking remain unchanged; the mentor-profile slot component was not modified.
 - No schema, migration, lifecycle, GP/pricing, wallet, settlement, provider, cron, artifact, or fulfillment-state-machine change. F1 remains unstarted.
 - PASS WITH KNOWN LIMITATION: typecheck; 41 unit tests; route smoke plus 25 integration tests; all five legacy regressions; targeted ESLint; and production build with 34 pages. Standard `tsx` reproduced the documented Windows `os.userInfo()` ENOMEM before discovery; suites passed under the temporary compatibility preload, which was removed. This narrow repair did not rerun full lint. Later reconciliation classifies the earlier 151-error/34-warning result as 77 errors/32 warnings of unrelated legacy debt plus 74 errors/2 warnings introduced by B2/C1.
-

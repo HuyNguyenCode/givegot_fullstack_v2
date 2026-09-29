@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { Archive, ArrowRight, BookOpen, CalendarDays, CheckSquare, History, NotebookPen, Users } from 'lucide-react'
+import { Archive, ArrowRight, BookOpen, CalendarDays, History, NotebookPen, Users } from 'lucide-react'
 
 import type { AuthorizedLearningSpaceShellData } from '@/lib/learning-space-shell'
 import { LearningResources, type LearningResourceView } from '@/components/learning/LearningResources'
+import { LearningSubmissions } from '@/components/learning/LearningSubmissions'
 
 type Props = { space: AuthorizedLearningSpaceShellData; showFirstValue?: boolean; resources?: LearningResourceView[]; quota?: { usedBytes: string; maxBytes: string } }
 
@@ -80,7 +81,7 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
         <LearningResources spaceId={space.id} resources={resources} quota={quota} topics={space.topics} archived={archived} />
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <Placeholder icon={CheckSquare} title="Công việc" detail="Việc cần làm và tiêu chí hoàn thành sẽ xuất hiện tại đây." />
+          <LearningSubmissions spaceId={space.id} viewerId={space.viewerId} archived={archived} resources={resources} />
           <Placeholder icon={NotebookPen} title="Ghi chú" detail="Ghi chú và phần tóm tắt chung sẽ xuất hiện tại đây." />
           <Placeholder icon={History} title="Lịch sử" detail="Hoạt động học tập có cấu trúc sẽ xuất hiện tại đây." />
         </div>

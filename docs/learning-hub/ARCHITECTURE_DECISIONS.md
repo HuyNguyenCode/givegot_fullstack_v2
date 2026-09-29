@@ -115,3 +115,9 @@ This decision changes neither AvailableSlot nor legacy Booking scheduling semant
 - GivePoint totals are hidden by default until owner review.
 - GivePoint quantity by learning mode remains an owner decision. E1 preserves the existing Booking amount and introduces no mode-specific pricing; do not market GivePoint as a low hourly wage.
 - Whether EXERCISE_REVIEW should stop consuming an `AvailableSlot` remains a separate deferred product/architecture decision. ADR 016 does not change current legacy Booking scheduling.
+
+## ADR 017 Current Submission edit window
+
+**Status:** Accepted for G2 MVP
+
+A task has one current Submission. The assignee may create it only while the active task is OPEN or IN_PROGRESS, then both task and Submission enter SUBMITTED and content is locked. A later revision request must set both records to REVISION_REQUESTED before the same assignee may replace content/link/attachment. Resubmission updates the current row, increments revisionCount once, and writes a uniquely keyed, content-free activity event in the same transaction. G2 does not decide reviewer outcomes or settlement.

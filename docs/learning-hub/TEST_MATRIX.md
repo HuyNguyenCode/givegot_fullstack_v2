@@ -9,7 +9,7 @@
 
 ## Current checkpoint and historical-count rule
 
-The current checkout checkpoint through G1 is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair leaves full lint at the unrelated 77-error/32-warning legacy baseline. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. The next safe task is G2 — Submission workflow.
+The current checkout checkpoint through G2 is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair established a 77-error/32-warning unrelated legacy baseline; G2 observes 77 errors/33 warnings, with the extra warning in unchanged LearningResources.tsx and no G2 lint finding. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. The next safe task is G3 — Submission review.
 
 ## Test ladder
 
@@ -38,7 +38,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | LH 031 | F1, F2 | `LH031-U` MIME/extension/size/key/quota | `LH031-I` signed upload/finalize; `LH031-S` spoof/path/expiry | Orphan cleanup and provider failure | PASS: F1 provider boundary plus F2 quota/lifecycle/uploader/topic/time UI and direct private upload/finalize flow. |
 | LH 032 | F1, F2 | `LH032-U` TTL/deleted-state rules | `LH032-I` download issuance; `LH032-S` non-member/IDOR | Archived member and expired URL | PASS: F2 requests F1 download only after user action; lists/activity exclude signed URLs/storage keys and F1 denies deleted files. |
 | LH 040 | G1 | `LH040-U` role/deadline/criteria | `LH040-I` create/update; `LH040-S` member/assignee auth | Archived-space read/write; no G1 notification | PASS: create/list/version-checked edit, active-pair/Booking/topic checks, independent dueAt, and START/CANCEL-only transitions. Prisma generate/validate, 62 unit tests, 39 integration tests, five legacy regressions, targeted ESLint, build, and migration 005 forward/rollback rehearsals passed. |
-| LH 041 | G2 | `LH041-U` current Submission/revision rules | `LH041-I` text/link/file flow; `LH041-C` concurrent resubmit | Task status and attachment authorization | PLACEHOLDER |
+| LH 041 | G2 | `LH041-U` current Submission/revision rules | `LH041-I` text/link/file flow; `LH041-C` concurrent resubmit | Task status and attachment authorization | PASS: first submit, revision gating/count, session author, wrong-space/non-ready file, unsafe URL, empty input, closed task, concurrent claims, event dedupe, mobile draft/validation controls; unit/integration/regression/typecheck/lint/build passed. |
 | LH 042 | G3 | `LH042-U` reviewed/revision outcomes | `LH042-I` reviewer auth and state; private content guard | `LH042-R` public Review/Trust unchanged | PLACEHOLDER |
 | LH 050 | H1 | `LH050-U` scope/visibility/version | `LH050-I` note CRUD/member auth; `LH050-C` lost update | Archived read, XSS, long Vietnamese | PLACEHOLDER |
 | LH 060 | H2 | `LH060-U` event shape/dedupe/redaction | `LH060-I` ordered authorized activity query | `LH060-R` chat remains separate | PLACEHOLDER |
@@ -56,7 +56,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | Mode transitions | All allowed/forbidden transitions for LIVE, EXERCISE_REVIEW, HYBRID | E1, I1 | E1 PASS for selection contracts and mode immutability after delivery; I1 transition mutations remain pending |
 | Settlement | Double click, concurrent request/cron, dispute, rollback, ledger reconciliation | I2, I3 | PLACEHOLDER |
 | Storage | MIME/extension mismatch, size/quota, orphan, expiry, delete, filename/path, provider failure | F1, F2 | PASS: F1's 10 provider-mocked service cases plus F2 resource link/file UI, quota/lifecycle display, on-demand download, and no-storage-key/no-signed-URL list/activity boundary. F2 consumes F1's abstraction and has no direct S3 dependency. |
-| UI/accessibility | Empty/loading/error, mobile, keyboard/focus/labels/contrast, long Vietnamese | C2, D1, F2, G2, K1 | C2/D1/F2 PASS for their owned route states, responsive/focus-visible UI, labels, quota/empty/error states, safe resource actions, and long Vietnamese content. G2/K1 coverage remains pending. |
+| UI/accessibility | Empty/loading/error, mobile, keyboard/focus/labels/contrast, long Vietnamese | C2, D1, F2, G2, K1 | C2/D1/F2 PASS for their owned route states, responsive/focus-visible UI, labels, quota/empty/error states, safe resource actions, and long Vietnamese content. G2 PASS for mobile form, loading/error retry, file selection, duplicate-click guard, and draft-preserving validation; K1 coverage remains pending. |
 | Analytics/privacy | Event definitions, dedupe, raw counts, no private content | L1, M1 | PLACEHOLDER |
 
 ## Task F1 storage evidence (2026-09-20)
@@ -70,7 +70,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 - `npm run typecheck`: PASS. `npm run test:learning-hub`: PASS, 44 tests. `npm run test:learning-hub:integration`: PASS, 35 tests after route smoke. `npm run test:regression`: PASS, all five scripts. Targeted ESLint: PASS. `npm run build`: PASS.
 - LH 030, LH 031, and LH 032 are implemented. Coverage includes HTTPS normalization and dangerous-scheme rejection, participant authorization inherited and enforced at the resource/file boundaries, upload-finalize ownership, deleted-file denial, quota and safe lifecycle display, empty/error/mobile states, long Vietnamese filenames, privacy-safe resource activity dedupe, and LearningSpace page regression.
 - Resource lists and LearningActivity metadata contain no signed URL or private storage key. Downloads remain issued only on demand through F1 after authorization. F2 consumes the F1 storage abstraction/API and has no direct AWS SDK or S3 dependency.
-- Historical F2 checkpoint wording: fulfillment, settlement, notes, tasks, and submissions were pending and G1 was next. G1 is now complete; Submission remains G2 scope.
+- Historical F2 checkpoint wording: fulfillment, settlement, notes, tasks, and submissions were pending and G1 was next. G1 and G2 are now complete; Submission review remains G3 scope.
 
 ## Later full-lint reconciliation (2026-09-20)
 
