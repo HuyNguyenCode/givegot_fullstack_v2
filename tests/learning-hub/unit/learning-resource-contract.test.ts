@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { clampResourceGroupPages, createLearningLink, deleteLearningResource, fetchLearningResources, fileUploadReducer, formatFileSize, groupLearningResources, LearningResources, paginateLearningResourceGroup, RESOURCE_GROUP_PAGE_SIZE, SelectedFileReview, uploadLearningFile } from '../../../src/components/learning/LearningResources'
+import { clampResourceGroupPages, createLearningLink, deleteLearningResource, fetchLearningResources, fileUploadReducer, finalizeLearningFileUpload, formatFileSize, groupLearningResources, hasCurrentLearningUploadCredential, initiateLearningFileUpload, LearningResources, paginateLearningResourceGroup, RESOURCE_GROUP_PAGE_SIZE, SelectedFileReview, uploadLearningFile, uploadLearningFileToProvider } from '../../../src/components/learning/LearningResources'
 import { normalizeExternalUrl } from '../../../src/lib/learning-resource-service'
 
 test('external resources accept normalized HTTPS only and reject dangerous schemes', () => {
@@ -64,7 +64,7 @@ test('explicit upload completes the existing flow and refetches resources withou
   const calls: Array<{ input: string; init?: RequestInit }> = []
   const resource = { id: 'file-1', bookingId: null, topicId: null, kind: 'FILE' as const, title: 'valid.pdf', description: null, externalUrl: null, mimeType: 'application/pdf', sizeBytes: '5', status: 'READY' as const, createdAt: '2030-01-01T00:00:00.000Z', uploaderName: 'An', topicLabel: null, canDelete: true }
   const responses = [
-    Response.json({ resourceId: 'file-1', upload: { url: 'https://upload.example.test', fields: { key: 'opaque', 'Content-Type': 'application/pdf' } } }, { status: 201 }),
+    Response.json({ resourceId: 'file-1', upload: { url: 'https://upload.example.test', fields: { key: 'opaque', 'Content-Type': 'application/pdf' }, expiresAt: '2099-01-01T00:00:00.000Z' } }, { status: 201 }),
     new Response(null, { status: 204 }),
     Response.json({ resourceId: 'file-1', status: 'READY' }),
     Response.json({ resources: [resource], quota: { usedBytes: '5', maxBytes: String(500 * 1024 * 1024) } }),
@@ -88,6 +88,34 @@ test('explicit upload completes the existing flow and refetches resources withou
   assert.equal(calls[3].init?.cache, 'no-store')
   assert.equal(result.resources[0].title, 'valid.pdf')
   assert.doesNotMatch(uploadLearningFile.toString(), /location\.reload/)
+})
+
+test('staged F1 client upload exposes the READY resource ID and refuses expired credentials', async () => {
+  const calls: Array<{ input: string; init?: RequestInit }> = []
+  const responses = [
+    Response.json({ resourceId: 'ready-file', upload: { url: 'https://upload.example.test', fields: { key: 'opaque' }, expiresAt: '2099-01-01T00:00:00.000Z' } }, { status: 201 }),
+    new Response(null, { status: 204 }),
+    Response.json({ resourceId: 'ready-file', status: 'READY' }),
+  ]
+  const request = (async (input: string | URL | Request, init?: RequestInit) => { calls.push({ input: String(input), init }); return responses.shift()! }) as typeof fetch
+  const file = new File(['%PDF-'], `Tài liệu bài nộp ${'rất dài '.repeat(20)}.pdf`, { type: 'application/pdf' })
+
+  const reservation = await initiateLearningFileUpload('space/id', file, request)
+  assert.equal(reservation.resourceId, 'ready-file')
+  assert.equal(hasCurrentLearningUploadCredential(reservation.upload, Date.parse('2030-01-01T00:00:00.000Z')), true)
+  await uploadLearningFileToProvider(file, reservation.upload, request, Date.parse('2030-01-01T00:00:00.000Z'))
+  assert.deepEqual(await finalizeLearningFileUpload('space/id', reservation.resourceId, request), { resourceId: 'ready-file', status: 'READY' })
+  assert.deepEqual(calls.map(call => call.input), [
+    '/api/learning/spaces/space%2Fid/files',
+    'https://upload.example.test',
+    '/api/learning/spaces/space%2Fid/files/ready-file/finalize',
+  ])
+
+  await assert.rejects(
+    () => uploadLearningFileToProvider(file, { ...reservation.upload, expiresAt: '2030-01-01T00:00:00.000Z' }, request, Date.parse('2030-01-01T00:00:00.001Z')),
+    /đã hết hạn/,
+  )
+  assert.equal(calls.length, 3)
 })
 
 test('resources group by the supplied topic order, preserve row order, and keep topicless resources last', () => {
@@ -162,7 +190,7 @@ test('resource pagination is independent per group, pages five rows at a time, a
 test('file upload can optionally associate the same active topic selector used by links', async () => {
   const calls: Array<{ input: string; init?: RequestInit }> = []
   const responses = [
-    Response.json({ resourceId: 'file-1', upload: { url: 'https://upload.example.test', fields: { key: 'opaque' } } }, { status: 201 }),
+    Response.json({ resourceId: 'file-1', upload: { url: 'https://upload.example.test', fields: { key: 'opaque' }, expiresAt: '2099-01-01T00:00:00.000Z' } }, { status: 201 }),
     new Response(null, { status: 204 }),
     Response.json({ resourceId: 'file-1', status: 'READY' }),
     Response.json({ resources: [], quota: { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) } }),

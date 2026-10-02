@@ -9,6 +9,7 @@ type ResourceListResponse = { resources: Array<Omit<LearningResourceView, 'creat
 export type FileUploadState = { phase: 'EMPTY' | 'SELECTED' | 'UPLOADING' | 'SUCCESS' | 'ERROR'; file: File | null }
 type FileUploadAction = { type: 'SELECT'; file: File } | { type: 'REMOVE' } | { type: 'UPLOAD' } | { type: 'SUCCEED' } | { type: 'FAIL' }
 export type LearningResourceGroup = { id: string; label: string; resources: LearningResourceView[]; topicless: boolean }
+export type LearningFileUploadReservation = { resourceId: string; upload: { url: string; fields: Record<string, string>; expiresAt: string } }
 export const RESOURCE_GROUP_PAGE_SIZE = 5
 
 class LearningResourceRefreshError extends Error {}
@@ -88,19 +89,38 @@ export async function fetchLearningResources(spaceId: string, request: typeof fe
   return await responseJson(await request(`${base}/resources`, { cache: 'no-store' })) as ResourceListResponse
 }
 
-export async function uploadLearningFile(spaceId: string, file: File, request: typeof fetch = fetch, topicId: string | null = null) {
+export async function initiateLearningFileUpload(spaceId: string, file: File, request: typeof fetch = fetch, topicId: string | null = null) {
   const base = `/api/learning/spaces/${encodeURIComponent(spaceId)}`
-  const init = await responseJson(await request(`${base}/files`, {
+  return await responseJson(await request(`${base}/files`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size, topicId }),
-  })) as { resourceId: string; upload: { url: string; fields: Record<string, string> } }
+  })) as LearningFileUploadReservation
+}
+
+export function hasCurrentLearningUploadCredential(upload: LearningFileUploadReservation['upload'], now = Date.now()) {
+  const expiresAt = Date.parse(upload.expiresAt)
+  return Number.isFinite(expiresAt) && expiresAt > now
+}
+
+export async function uploadLearningFileToProvider(file: File, upload: LearningFileUploadReservation['upload'], request: typeof fetch = fetch, now = Date.now()) {
+  if (!hasCurrentLearningUploadCredential(upload, now)) throw new Error('Quyền tải tệp đã hết hạn. Hãy thử lại để nhận quyền mới.')
   const form = new FormData()
-  Object.entries(init.upload.fields).forEach(([key, value]) => form.append(key, value))
+  Object.entries(upload.fields).forEach(([key, value]) => form.append(key, value))
   form.append('file', file)
-  const put = await request(init.upload.url, { method: 'POST', body: form })
+  const put = await request(upload.url, { method: 'POST', body: form })
   if (!put.ok) throw new Error('Tải tệp lên kho riêng tư thất bại')
-  await responseJson(await request(`${base}/files/${encodeURIComponent(init.resourceId)}/finalize`, { method: 'POST' }))
+}
+
+export async function finalizeLearningFileUpload(spaceId: string, resourceId: string, request: typeof fetch = fetch) {
+  const base = `/api/learning/spaces/${encodeURIComponent(spaceId)}`
+  return await responseJson(await request(`${base}/files/${encodeURIComponent(resourceId)}/finalize`, { method: 'POST' })) as { resourceId: string; status: 'READY' }
+}
+
+export async function uploadLearningFile(spaceId: string, file: File, request: typeof fetch = fetch, topicId: string | null = null) {
+  const reservation = await initiateLearningFileUpload(spaceId, file, request, topicId)
+  await uploadLearningFileToProvider(file, reservation.upload, request)
+  await finalizeLearningFileUpload(spaceId, reservation.resourceId, request)
   try {
     return await fetchLearningResources(spaceId, request)
   } catch {
