@@ -1,5 +1,9 @@
 # Learning Hub Implementation Plan
 
+## D0 dependency note (updated 2026-10-07)
+
+D0a is COMPLETE: the additive purpose schema, migration 006, guarded rollback, focused tests, and disposable TEST rehearsal passed. D0b purpose assignment is next. D0c follows with scoped resource reads. Later D0 UI work owns the four-section LearningSpace and submission-flow redesign after those reads are correct. G3 remains a separate task and must not become the active next task before the current D0 redesign path is resolved. The registry and historical task evidence below retain their original sequence.
+
 ## Execution rules
 
 - Run tasks sequentially from the latest documented checkpoint. Do not begin the next task automatically.
@@ -7,7 +11,7 @@
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Current checkpoint: B2, C1, D1, C2, and E1 are complete. F1 is the next task in registry order.
+- Current checkpoint: work through G2 plus D0a is complete. D0b is the next dependency-ordered task; D0c and later D0 UI redesign follow. G3 remains separate and is not active.
 
 ## Task registry
 

@@ -43,7 +43,7 @@ Task 01 added the canonical package scripts for typecheck, Learning Hub unit/int
 Failure protocol:
 
 - Capture command, exit code, assertion/error, and fixture.
-- Compare with the applicable classified baseline: 77 errors/32 warnings for unrelated legacy debt and 151 errors/34 warnings for the current full repository until the required isolated B2/C1 lint repair completes.
+- Compare with the applicable classified baseline: the current unrelated legacy baseline is 77 errors/32 warnings. Preserve historical task-specific counts where documented; do not reinterpret them as the current repository baseline.
 - Fix task-introduced failures in scope or report BLOCKED.
 - Keep pre-existing failures visible; never skip, weaken, or exclude tests merely to pass.
 - Run targeted coverage before the broader gate.
@@ -67,6 +67,12 @@ Failure protocol:
 - Validate on a clean disposable DB and a representative legacy copy.
 - Run Prisma generate/validate, migration tests, legacy dashboard/history tests, and rollback rehearsal.
 - Stop if Prisma generation remains blocked or rollback cannot be described and exercised.
+
+### D0a resource purpose record (complete 2026-10-07)
+
+Migration 006 adds only `LearningResourcePurpose` and a non-null `LearningResource.purpose` column whose database default is `LEGACY_UNCLASSIFIED`; unknown legacy intent is never inferred. The paired rollback refuses to drop the column while any `MATERIAL` or `SUBMISSION_ATTACHMENT` row exists, so classified data is preserved and roll-forward is preferred after classified writes begin.
+
+The full clean, representative-legacy, guarded-rollback, safe-rollback, and injected-failure atomicity rehearsal passed on a disposable TEST database on 2026-10-07, including temporary-object cleanup. The WSL, TLS, project-reference, role, and preflight mechanics used to reach that one D0a test environment are historical verifier details, not reusable Learning Hub architecture or requirements for future migrations. Any shared staging or production application of migration 006 still follows the general migration procedure above, including backup, legacy-row inspection, reviewed SQL, rollback planning, and post-application verification.
 
 ## Settlement procedure
 

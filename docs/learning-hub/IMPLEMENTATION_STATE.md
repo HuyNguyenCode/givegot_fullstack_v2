@@ -1,5 +1,13 @@
 # Learning Hub Implementation State
 
+## D0a resource-purpose schema foundation (verified 2026-10-07)
+
+- Status: PASS. `LearningResourcePurpose` has `MATERIAL`, `SUBMISSION_ATTACHMENT`, and `LEGACY_UNCLASSIFIED`; `LearningResource.purpose` is non-null with a database default of `LEGACY_UNCLASSIFIED`. Manual migration 006 creates only that enum and column in a transaction. It does not infer or update old intent, alter relationships/storage keys, or touch Booking, Task, or Submission.
+- The paired rollback takes an exclusive resource-table lock and aborts if any classified row exists; after classified writes, retain the additive column and prefer roll-forward unless an explicit preservation plan is approved. The approved disposable Supabase TEST rehearsal passed clean and representative legacy forward paths, old-writer defaults, explicit classifications, invalid-enum rejection, relationship preservation, classified-row rollback refusal, safe rollback, injected forward failure atomicity, and run-owned cleanup.
+- The first live rehearsal exposed a verifier-only defect: JavaScript replacement-string processing collapsed the injected PostgreSQL `DO $$` guard to invalid `DO $` for transaction-bearing SQL. A replacement callback now preserves the dollar quotes, and a focused regression assertion covers them. Migration 006 and its rollback were unchanged.
+- Verification: Prisma schema validation/generation, 21 focused D0a tests, `npm run typecheck`, targeted lint and schema-parity checks, and the complete rehearsal all passed. The Supabase intermediate `X509_STRICT` Key Usage result occurred only in an additional diagnostic after normal certificate-chain and hostname verification passed; it is not a D0a product or migration limitation, so the final status is plain `PASS`.
+- No F1 initiation/finalize/download/delete, F2 service/API/UI, G1, G2, provider, quota, Booking, GP, settlement, or cron behavior changed. D0b purpose assignment is the next dependency-ordered slice; D0c owns scoped reads; later D0 work owns the LearningSpace four-section and submission-flow redesign. G3 remains separate, is not started, and is not the active next task. The historical G2 checkpoint below remains its original evidence.
+
 ## Task G2 completion (2026-09-28)
 
 - Status: PASS. LH 041 adds one current Submission per task through a session-backed GET/POST task endpoint and a mobile LearningSpace submission form. No schema, migration, Booking, reviewer outcome, GivePoint, settlement, notification, or cron behavior changes.
@@ -20,22 +28,22 @@
 - Final verification: `npm run db:generate`, `npx prisma validate`, `npm run typecheck`, targeted ESLint, and production build passed. `npm run test:learning-hub` passed 62/62; `npm run test:learning-hub:integration` passed 39/39; all five legacy regression scripts passed. Migration 005 forward and rollback rehearsals passed.
 - G2 may rely on G1 task ownership, active pair checks, status/version conditional updates, and independent dueAt, but must implement Submission transitions separately. No notification, submission, review, or settlement side effect exists in G1.
 
-## Checkpoint
+## Current checkpoint
 
-- Recorded: 2026-09-29, Asia/Saigon.
+- Recorded: 2026-10-07, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
-- Latest committed checkpoint: `14f1611ecf8d977a828d6c52f2c79712e3a5fba8`
-  (`feat(learning-hub): add submission workflow`).
-- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, F2, G1, and G2 are complete. F2 implements LH 030, LH 031, and LH 032; G1 implements LH 040; G2 implements LH 041.
+- Latest committed checkpoint: `b9cf25172d6895d45589fbdd6abed42a489ba25c`
+  (`fix(learning-hub): support direct file attachment in G2 submissions`).
+- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, F2, G1, G2, and D0a are complete. F2 implements LH 030, LH 031, and LH 032; G1 implements LH 040; G2 implements LH 041; D0a supplies the resource-purpose schema foundation. No D0b, D0c, later D0 UI, or G3 implementation is recorded here.
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Status: G2 PASS. The overall checkpoint retains the documented host/deployment limitations: the isolated B2/C1 lint repair and the subsequent `LearningResources.tsx` dependency micro-repair are verified, current full lint is 77 errors/32 warnings of unrelated legacy baseline debt, and private storage still requires its production provider configuration.
+- Status: D0a PASS. Historical G1/G2 evidence remains recorded below and their runtime behavior is unchanged. The checkpoint retains the unrelated legacy lint baseline and private-storage deployment limitation recorded by their owning tasks.
 - Production behavior: a Booking started from a LearningSpace carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. LIVE and HYBRID now select a future unbooked mentor AvailableSlot and use the existing locked slot path; EXERCISE_REVIEW retains the E1 manual-time `createBooking` path. Legacy Booking creation remains valid with all Learning Hub fields null.
-- Schema/migration behavior: ten Learning Hub models plus eight nullable Booking fields; additive migrations 004 and 005 with paired rollback SQL/notes and no Booking backfill. Migration 005 adds only `LearningTask.version` with default 1.
+- Schema/migration behavior: ten Learning Hub models plus eight nullable Booking fields; additive migrations 004, 005, and 006 with paired rollback SQL/notes and no Booking backfill. Migration 005 adds only `LearningTask.version` with default 1. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with database default `LEGACY_UNCLASSIFIED`; its rollback refuses classified rows.
 - API behavior: F1 provides session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. F2 adds member-authorized resource collection/item routes under `/api/learning/spaces/[spaceId]/resources`. G1 adds protected task list/create and item-update routes under `/api/learning/spaces/[spaceId]/tasks`; G2 adds the session-backed current-submission route under `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`; `getLearningBookingContext` and E1 Booking guards remain intact.
 - Learning Hub implementation: F2 uses F1's provider-agnostic storage-service/API abstraction and does not import or depend directly on the AWS SDK or S3. G1 provides task create/list/version-checked edit with active-pair, Booking/topic ownership, START/CANCEL transition, and independent dueAt rules. Resource lists and activity return no signed URL or storage key. G2 implements current Submission; review, fulfillment, settlement, and notes remain pending.
-- Current verification: G2 typecheck, targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, all five legacy regression scripts, production build, and `git diff --check` passed. Full lint is 77 errors/32 warnings, exactly the unrelated legacy baseline after the verified B2/C1 repair and the `LearningResources.tsx` dependency micro-repair. The host-only `process.geteuid` preload used for the documented Windows `tsx` issue was removed and is not a product/runtime dependency.
+- Current verification: historical G2 typecheck, targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, all five legacy regression scripts, production build, and `git diff --check` passed. D0a added 21 focused passing tests and the successful full disposable TEST rehearsal. Full lint remains the unrelated historical baseline recorded by G2.
 - F2 Resource domain and UI completed on 2026-09-21. Active members can list, add, reopen, and delete their HTTPS links or F1 private files from LearningSpace. Resource metadata carries optional Booking/topic references; safe status, uploader, topic, time, and quota are displayed. Link/file deletion remains uploader-only and soft deletes preserve audit/provider cleanup. No server URL fetch, file parsing, raw video, Booking, fulfillment, or settlement behavior was added.
-- Next safe task: G3 — Submission review. Do not begin G3 or any later feature automatically.
+- Next dependency-ordered task: D0b purpose assignment. D0c scoped resource reads follow D0b, and the LearningSpace four-section/submission-flow redesign follows scoped reads. G3 remains separate, is not started, and is not the active next task.
 
 ### OWNER DECISION — EXERCISE_REVIEW scheduling semantics
 
@@ -127,6 +135,8 @@ Booking keeps its legacy mentor/mentee, slot, schedule, BookingStatus, note, mee
 
 BookingStatus remains exactly `PENDING`, `CONFIRMED`, `COMPLETED`, `CANCELLED`, `MISSED`, and `DISPUTED`. FulfillmentStatus is a separate nullable lifecycle with `NOT_STARTED`, `IN_PROGRESS`, `DELIVERED`, `REVISION_REQUESTED`, `ACCEPTED`, and `SETTLED`.
 
+`LearningResource.purpose` uses `LearningResourcePurpose` (`MATERIAL`, `SUBMISSION_ATTACHMENT`, `LEGACY_UNCLASSIFIED`), is non-null, and defaults at the database layer to `LEGACY_UNCLASSIFIED`. D0a supplies only this schema foundation; D0b assigns purpose on writes and D0c applies purpose-aware scoped reads.
+
 The data source is PostgreSQL with `DATABASE_URL`, `DIRECT_URL`, and the pgvector extension. The repository uses Prisma 5.22.0 and notes `prisma db push`; it has no standard `prisma/migrations` history.
 
 ## Current migrations
@@ -137,7 +147,7 @@ Only `prisma/migrations-manual/` exists:
 - `002_skill_embedding_readiness.sql`: additive BR-11 readiness fields, audit backup, vector eligibility check; explicitly reviewed/manual.
 - `003_withdrawal_rejection_atomic_refund.sql`: adds `REFUND_WITHDRAWAL_REJECTED` to TransactionType.
 
-Migration 004 adds the B1 domain additively and has paired executable rollback SQL plus a production rollback note. Migration 005 adds `LearningTask.version INTEGER NOT NULL DEFAULT 1`, with `005_learning_task_version.rollback.sql` and its rollback note. No ambiguous historical row is backfilled.
+Migration 004 adds the B1 domain additively and has paired executable rollback SQL plus a production rollback note. Migration 005 adds `LearningTask.version INTEGER NOT NULL DEFAULT 1`, with `005_learning_task_version.rollback.sql` and its rollback note. Migration 006 adds `LearningResourcePurpose` and non-null `LearningResource.purpose` with `LEGACY_UNCLASSIFIED` as the database default; its guarded rollback refuses classified rows. The full clean, legacy, rollback, and atomic-failure rehearsal passed on the disposable Supabase TEST project on 2026-10-07. No ambiguous historical row is inferred or reclassified.
 
 ## Current scripts
 

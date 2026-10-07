@@ -1,5 +1,10 @@
 # Learning Hub Test Matrix
 
+## D0a verification checkpoint (completed 2026-10-07)
+
+- PASS: Prisma schema generation and validation, `npm run typecheck`, 21 focused D0a tests after the verifier regression repair, targeted ESLint, and `git diff --check`. Prisma's schema-to-schema SQL diff creates exactly the proposed enum and non-null legacy-default column; the reviewed manual SQL wraps those statements in a transaction.
+- PASS: the guarded verifier completed migration 006 clean and representative legacy database execution, classified/old-writer insert checks, unknown-enum rejection, rollback success/refusal, injected-failure atomicity, and run-owned cleanup on the approved disposable Supabase TEST project. The first attempt exposed and then regression-covered a verifier-only `DO $$` replacement-string defect; migration 006 and rollback SQL were unchanged. The final full rehearsal exited successfully. Historical B1/G1/F1/F2/G2 results below are unchanged.
+
 ## Status vocabulary
 
 - `BASELINE PASS` or `BASELINE FAIL`: command executed during Task 00.
@@ -9,7 +14,7 @@
 
 ## Current checkpoint and historical-count rule
 
-The current checkout checkpoint through G2 is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair established a 77-error/32-warning unrelated legacy baseline. After the isolated `LearningResources.tsx` dependency micro-repair, current full lint is restored to 77 errors/32 warnings; targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, typecheck, all five legacy regressions, production build, and `git diff --check` passed. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. The next safe task is G3 — Submission review.
+The current checkout checkpoint through G2 and D0a is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair established a 77-error/32-warning unrelated legacy baseline. After the isolated `LearningResources.tsx` dependency micro-repair, current full lint is restored to 77 errors/32 warnings; targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, typecheck, all five legacy regressions, production build, and `git diff --check` passed. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. D0b purpose assignment is next; D0c scoped reads follow, then the later D0 LearningSpace four-section/submission-flow redesign. G3 remains separate and is not the active next task.
 
 ## Test ladder
 
@@ -52,7 +57,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | Suite | Cases | Owner | Status |
 | --- | --- | --- | --- |
 | Authorization | Unauthenticated, suspended, spoofed actor, non-member IDOR, archived member, admin reason/audit | A1, A2, B2, M1 | A1 PASS for server session/chat/admin; A2 PASS for private conversation/user authorization; B2 PASS for active LearningSpace membership, including readable archived spaces, while nonmembers/inactive memberships are denied; M1 cases remain |
-| Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1, G1 | PASS: B1 migration 004 PASS; G1 migration 005 forward/rollback rehearsal PASS; staging restored post-G1. |
+| Migration | Clean DB, representative legacy rows, nullable Booking fields, rollback, no row loss | B1, G1, D0a | PASS: B1 migration 004; G1 migration 005 forward/rollback with staging restored post-G1; D0a migration 006 clean/legacy forward, guarded/safe rollback, defaults/classifications, relationship preservation, injected-failure atomicity, and cleanup. |
 | Mode transitions | All allowed/forbidden transitions for LIVE, EXERCISE_REVIEW, HYBRID | E1, I1 | E1 PASS for selection contracts and mode immutability after delivery; I1 transition mutations remain pending |
 | Settlement | Double click, concurrent request/cron, dispute, rollback, ledger reconciliation | I2, I3 | PLACEHOLDER |
 | Storage | MIME/extension mismatch, size/quota, orphan, expiry, delete, filename/path, provider failure | F1, F2 | PASS: F1's 10 provider-mocked service cases plus F2 resource link/file UI, quota/lifecycle display, on-demand download, and no-storage-key/no-signed-URL list/activity boundary. F2 consumes F1's abstraction and has no direct S3 dependency. |

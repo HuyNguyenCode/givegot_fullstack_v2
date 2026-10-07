@@ -97,7 +97,7 @@ Future schema is additive. Names may follow repository conventions, but relation
 - LearningTopic: free-form/normalized label, optional skillId, state, creator, provenance.
 - Booking additions: nullable learningSpaceId, topicId, learningMode, objective, definitionOfDone, fulfillmentStatus, deliveredAt, acceptedAt.
 - LearningInvite: inviter, token hash, primary skill, expiry, use/revoke/accept state.
-- LearningResource: space, optional Booking/topic, uploader, kind, title, `storageKey` or external URL, MIME/size/status, soft delete.
+- LearningResource: space, optional Booking/topic, uploader, kind, title, `storageKey` or external URL, MIME/size/status, explicit MATERIAL or SUBMISSION_ATTACHMENT purpose, and soft delete. Existing rows with unknown intent remain LEGACY_UNCLASSIFIED; topic absence does not establish purpose.
 - LearningTask: space, optional Booking/topic, creator, assignee, title, description, acceptance criteria, due time, status.
 - Submission: one current record per task in MVP, author, content/link/attachment, revision count, status, submitted time.
 - SubmissionReview: one current review per Submission in MVP, reviewer, private content, outcome, reviewed time.

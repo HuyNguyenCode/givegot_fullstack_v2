@@ -1,5 +1,9 @@
 # Learning Hub Regression Checklist
 
+## D0a schema-only boundary (completed 2026-10-07)
+
+The D0a diff changes only the LearningResource schema foundation, migration 006/rollback, focused verifier/tests, and repository memory. Prisma diff parity, validation, typecheck, 21 focused D0a tests after the verifier repair, targeted ESLint, and diff checks passed. The disposable TEST rehearsal passed clean and representative-legacy forward migration, old-writer defaults, explicit classifications, invalid-enum rejection, relationship preservation, classified-row rollback refusal, safe rollback, injected-failure atomicity, and temporary-schema cleanup. D0a was schema-only and did not change F1/F2/G1/G2 or any legacy runtime path, so their historical regression evidence remains valid. D0b may proceed separately as the next task.
+
 ## Use
 
 Run the rows affected by a task, then the full applicable gate before a block checkpoint. Preserve legacy behavior for rows without Learning Hub fields. Do not weaken, delete, skip, or snapshot-update an assertion merely to obtain a pass.

@@ -561,6 +561,12 @@ enum LearningResourceStatus {
   DELETED
 }
 
+enum LearningResourcePurpose {
+  MATERIAL
+  SUBMISSION_ATTACHMENT
+  LEGACY_UNCLASSIFIED
+}
+
 enum LearningTaskStatus {
   OPEN
   IN_PROGRESS
@@ -702,6 +708,7 @@ model LearningResource {
   mimeType        String?
   sizeBytes       BigInt?
   status          LearningResourceStatus @default(PENDING)
+  purpose         LearningResourcePurpose @default(LEGACY_UNCLASSIFIED)
   deletedAt       DateTime?
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @default(now()) @updatedAt

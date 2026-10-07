@@ -1,5 +1,9 @@
 # Learning Hub Context Packet
 
+## D0a resource-purpose checkpoint (verified 2026-10-07)
+
+D0a is complete. The additive `LearningResource.purpose` enum uses `MATERIAL`, `SUBMISSION_ATTACHMENT`, and `LEGACY_UNCLASSIFIED`; the non-null database default preserves unknown legacy intent and older writers. Migration 006 and its guarded rollback passed clean, representative-legacy, classification/default, relationship, rollback, atomic-failure, and cleanup rehearsal on a disposable TEST database; their SQL was unchanged during final rehearsal debugging. F1/F2/G1/G2 runtime behavior is unchanged. D0b purpose assignment is next, D0c owns scoped reads, and later D0 UI work owns the LearningSpace four-section and submission-flow redesign. G3 remains separate and unstarted while this D0 path is resolved.
+
 ## G2 completion update (2026-09-28)
 
 LH 041 is complete. One current Submission per task accepts text, a safe HTTPS link, and/or a READY same-space FILE resource reference. First submit is allowed from OPEN/IN_PROGRESS; only a dual task/Submission REVISION_REQUESTED state reopens editing. The session assignee owns submissions, revisionCount starts at 1 and increments once per resubmit, and a content-free deduplicated activity event records each revision. The task version/status claim is transactional and serializable. The mobile form retains failed drafts. No reviewer outcome, GP, Booking, or settlement behavior changed. G3 owns revision-request transitions and feedback.
@@ -91,7 +95,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
     - G1 task list/create/update routes,
     - G2 current-submission route: `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`, and `/api/learning/invites/*`.
 - Schema has 27 models, including the ten Learning Hub domain models. Booking has eight nullable Learning Hub fields and keeps its original status enum unchanged.
-- Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. Additive migration 005 adds only `LearningTask.version` with default 1 and has executable rollback SQL plus a rollback note. Neither migration backfills Booking.
+- Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. Additive migration 005 adds only `LearningTask.version` with default 1 and has executable rollback SQL plus a rollback note. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with the `LEGACY_UNCLASSIFIED` database default, plus its guarded rollback. None backfills Booking.
 - Canonical commands include `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, `test:learning-hub:migration`, and `test:regression`.
 
 ## Environment names only
@@ -100,7 +104,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Next task
 
-G1 Learning Tasks and G2 current Submission are complete. G2 verification passed typecheck, targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, all five legacy regressions, production build, and `git diff --check`. The current full lint baseline is 77 errors/32 warnings of unrelated legacy debt after the verified B2/C1 repair and the `LearningResources.tsx` dependency micro-repair. Review remains G3 scope. The next safe task is G3 — Submission review.
+G1 Learning Tasks, G2 current Submission, and D0a resource-purpose schema foundation are complete. G2 verification passed typecheck, targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, all five legacy regressions, production build, and `git diff --check`; D0a's focused tests and full disposable TEST rehearsal also passed. The current full lint baseline is 77 errors/32 warnings of unrelated legacy debt. D0b purpose assignment is next, followed by D0c scoped resource reads and later D0 LearningSpace four-section/submission-flow redesign. G3 Review remains separate and must not start before the active D0 redesign path is resolved.
 
 ## Completion contract
 

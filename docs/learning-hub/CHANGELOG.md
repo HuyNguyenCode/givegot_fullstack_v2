@@ -1,5 +1,12 @@
 # Learning Hub Changelog
 
+## 2026-10-07 — D0a resource-purpose schema foundation
+
+- Added `LearningResourcePurpose`, a non-null legacy-default purpose column, transactional manual migration 006, guarded rollback and production note, focused static tests, and a disposable-database migration verifier. When applied, existing rows retain their data and receive `LEGACY_UNCLASSIFIED`; no intent is inferred.
+- Verified 2026-10-07 on the approved disposable Supabase TEST project: clean/legacy forward and rollback, old-writer defaults, explicit classifications, invalid-enum rejection, relationship preservation, classified rollback refusal, injected-failure atomicity, and cleanup passed. Repaired only the verifier's transaction-prologue insertion so PostgreSQL `DO $$` dollar quotes remain literal; migration 006 and rollback SQL were unchanged.
+- Prisma binary-engine generation, validation, typecheck, 21 focused D0a tests after the verifier repair, targeted ESLint, static migration/schema parity, and diff checks passed. No shared staging/production database or storage provider was touched.
+- D0a is complete. F1/F2/G1/G2 behavior and all unrelated contracts remain unchanged; D0b purpose assignment is next and D0c owns scoped reads.
+
 ## 2026-09-29 — LearningResources dependency micro-repair
 
 - Audited the additional `react-hooks/exhaustive-deps` warning in `src/components/learning/LearningResources.tsx` and confirmed it pre-dated G2 and was unrelated to G2.

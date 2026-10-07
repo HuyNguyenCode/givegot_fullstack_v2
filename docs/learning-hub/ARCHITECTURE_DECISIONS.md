@@ -66,6 +66,8 @@ Database rows store metadata and `storageKey`, never a durable signed URL or fil
 
 F1 implements this with a private AWS S3 bucket and a provider interface. A five-minute signed POST writes only to a random `pending/` key with MIME and size policy conditions. Provider-confirmed finalize copies to a separate random final key before READY, so replay of an upload credential cannot replace a downloadable object. Downloads use at-most-ten-minute signed attachment URLs after ACTIVE membership authorization; archived spaces remain readable only to their ACTIVE members. A provider-deletion failure can leave an already issued URL usable until that bounded expiry. The existing LearningResource schema is sufficient, and a guarded cron plus bucket lifecycle remove orphan staging objects. F2 and later code consume the provider-agnostic storage-service abstraction rather than depend directly on AWS SDK/S3 behavior.
 
+**D0a amendment (2026-10-03):** The original schema-sufficiency statement applies to F1's private storage lifecycle. The later approved product distinction between intentionally shared learning materials and task-submission attachments requires an additive `LearningResource.purpose` enum. `MATERIAL` and `SUBMISSION_ATTACHMENT` record explicit intent; `LEGACY_UNCLASSIFIED` is the non-inferred value for existing rows and older writers. D0a adds only the schema foundation. It does not change F1 authorization, provider behavior, quota, expiry, finalize, download, deletion, F2 reads, or G2 attachment eligibility. D0b and D0c own purpose assignment and scoped reads separately.
+
 ## ADR 011 Separate private feedback from public reputation
 
 **Status:** Accepted
