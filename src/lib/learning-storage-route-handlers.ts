@@ -16,13 +16,13 @@ function failure(error: unknown) {
 async function jsonObject(request: NextRequest) {
   const value: unknown = await request.json()
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new LearningStorageError(400, 'Invalid request body')
-  return value as { fileName?: unknown; mimeType?: unknown; sizeBytes?: unknown; description?: unknown; bookingId?: unknown; topicId?: unknown }
+  return value as { fileName?: unknown; mimeType?: unknown; sizeBytes?: unknown; description?: unknown; bookingId?: unknown; topicId?: unknown; purpose?: unknown }
 }
 
 export function createLearningFileCollectionHandlers(service: Service) {
   return {
     POST: async (request: NextRequest, context: CollectionContext) => {
-      try { return NextResponse.json(await service.initiate((await context.params).spaceId, await jsonObject(request)), { status: 201, headers: { 'Cache-Control': 'no-store' } }) }
+      try { return NextResponse.json(await service.initiate((await context.clparams).spaceId, await jsonObject(request)), { status: 201, headers: { 'Cache-Control': 'no-store' } }) }
       catch (error) { return failure(error) }
     },
   }

@@ -29,7 +29,7 @@ Severity and likelihood are qualitative. `Open baseline` means verified before a
 
 ## Immediate gates
 
-- D0a migration 006 passed its clean and representative legacy forward/rollback, old-writer default, classified-row guard, atomic failure, and cleanup rehearsal. Shared staging or production application still follows the general migration procedure; after classified writes, preserve purpose data and prefer roll-forward. D0b is next and has not started.
+- D0a migration 006 passed its clean and representative legacy forward/rollback, old-writer default, classified-row guard, atomic failure, and cleanup rehearsal. D0b now persists only explicit `MATERIAL`/`SUBMISSION_ATTACHMENT` intent and uses `LEGACY_UNCLASSIFIED` only for omitted older callers; invalid values fail before reservation/provider access. Shared staging or production application still follows the general migration procedure; after classified writes, preserve purpose data and prefer roll-forward. D0c scoped reads are next.
 
 - R-001 through R-003 are closed. LearningSpace realtime is private and authorized through B2 active-membership lookup.
 - B1 supplied executable evidence for R-008, R-009, R-014, and the migration portion of R-016. Shared deployment still follows the rollback note and never uses `db push`.

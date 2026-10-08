@@ -1,5 +1,11 @@
 # Learning Hub Test Matrix
 
+## D0b verification checkpoint (completed 2026-10-08)
+
+- PASS: 18/18 focused F1 storage tests, 43/43 complete Learning Hub integration tests with route smoke, 97/97 complete Learning Hub unit tests, `npm run typecheck`, targeted ESLint, and `git diff --check`. Production build, full repository lint, and the five legacy regression scripts were not rerun for D0b. Provider calls are mocked; no shared database or real storage provider was touched.
+- Coverage proves explicit `MATERIAL` and `SUBMISSION_ATTACHMENT`, omitted-purpose `LEGACY_UNCLASSIFIED`, reserved-value/unknown/malformed rejection before reservation or provider access, authorization before protected provider behavior, unchanged advisory-lock/quota ordering, and unchanged purpose through READY, quarantine, provider failure, orphan cleanup, and soft delete. Existing F1 coverage continues to prove expiry, downloads, cleanup retry, and race behavior; G2 unit coverage continues to prove purpose-independent READY same-space FILE eligibility.
+- The standard Windows `tsx` command failed before discovery with the documented `uv_os_get_passwd` ENOMEM. The suites passed unchanged with the documented temporary `process.geteuid` preload, which was removed afterward. D0c scoped reads are next; D0d, D0e, and G3 remain unstarted.
+
 ## D0a verification checkpoint (completed 2026-10-07)
 
 - PASS: Prisma schema generation and validation, `npm run typecheck`, 21 focused D0a tests after the verifier regression repair, targeted ESLint, and `git diff --check`. Prisma's schema-to-schema SQL diff creates exactly the proposed enum and non-null legacy-default column; the reviewed manual SQL wraps those statements in a transaction.
@@ -14,7 +20,7 @@
 
 ## Current checkpoint and historical-count rule
 
-The current checkout checkpoint through G2 and D0a is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair established a 77-error/32-warning unrelated legacy baseline. After the isolated `LearningResources.tsx` dependency micro-repair, current full lint is restored to 77 errors/32 warnings; targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, typecheck, all five legacy regressions, production build, and `git diff --check` passed. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. D0b purpose assignment is next; D0c scoped reads follow, then the later D0 LearningSpace four-section/submission-flow redesign. G3 remains separate and is not the active next task.
+The current checkout checkpoint through G2, D0a, and D0b is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair established a 77-error/32-warning unrelated legacy baseline. After the isolated `LearningResources.tsx` dependency micro-repair, the recorded full-lint result was 77 errors/32 warnings; D0b did not rerun full lint. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. D0c scoped reads are next, then the later D0 LearningSpace four-section/submission-flow redesign. D0e and G3 remain separate and are not active.
 
 ## Test ladder
 
@@ -81,7 +87,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 
 - `npm run lint` reports 151 errors and 34 warnings. The unchanged unrelated legacy baseline is 77 errors and 32 warnings. The additional 74 errors and two warnings are genuine Learning Hub debt introduced by B2/C1, not pre-existing unrelated debt, newly visible untracked files, generated/temp files, or a lint-scope/configuration change.
 - B2 contributes 46 errors and one warning: `src/lib/learning-space-service.ts` (22/1), `src/lib/learning-space-route-handlers.ts` (5/0), and `tests/learning-hub/unit/learning-space-service.test.ts` (19/0). C1 contributes 28 errors and one warning: `src/lib/learning-invite-service.ts` (12/1), `src/lib/learning-invite-route-handlers.ts` (2/0), `tests/learning-hub/unit/learning-invite-service.test.ts` (13/0), and `tests/learning-hub/integration/learning-invite-continuation.test.ts` (1/0).
-- All 74 errors are `@typescript-eslint/no-explicit-any`; the two warnings are known unused variables. F1 files have zero lint findings. The lint script, ESLint configuration, and installed lint package versions did not change. Repair the B2/C1 findings in an isolated task before F2; subsequent work compares the full repository against 151 errors and 34 warnings until that repair lands.
+- At this 2026-09-20 checkpoint, all 74 errors were `@typescript-eslint/no-explicit-any`; the two warnings were known unused variables. F1 files had zero lint findings. The lint script, ESLint configuration, and installed lint package versions did not change. The B2/C1 findings were repaired in isolation on 2026-09-21 before F2; the 151/34 count remains historical evidence only.
 
 ## B2/C1 lint repair verification (2026-09-21)
 

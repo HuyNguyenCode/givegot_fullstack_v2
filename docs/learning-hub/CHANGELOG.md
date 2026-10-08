@@ -1,5 +1,12 @@
 # Learning Hub Changelog
 
+## 2026-10-08 — D0b F1 resource-purpose assignment
+
+- Extended F1 file initiation with optional `purpose`. Explicit `MATERIAL` and `SUBMISSION_ATTACHMENT` are persisted in the existing locked PENDING reservation; omission persists `LEGACY_UNCLASSIFIED` for backward compatibility. Explicit legacy, unknown, and malformed values return 400 before reservation or provider access.
+- Preserved F1 authorization, archive, ownership, MIME/extension, size, quota, advisory-lock, signing, key, finalize, lifecycle, cleanup, download, and deletion contracts. Purpose remains unchanged after reservation. G2 attachment eligibility remains READY, non-deleted, FILE, and same-space without purpose filtering.
+- D0b verification passed 18/18 focused F1 storage tests, 43/43 Learning Hub integration tests, 97/97 Learning Hub unit tests, typecheck, targeted ESLint, and `git diff --check`. Production build, full repository lint, and the five legacy regression scripts were not rerun for D0b. Provider calls were mocked; no shared database or real storage provider was used. The documented temporary Windows `tsx` preload was removed afterward.
+- D0c scoped resource reads are next. D0d, D0e, and G3 were not started.
+
 ## 2026-10-07 — D0a resource-purpose schema foundation
 
 - Added `LearningResourcePurpose`, a non-null legacy-default purpose column, transactional manual migration 006, guarded rollback and production note, focused static tests, and a disposable-database migration verifier. When applied, existing rows retain their data and receive `LEGACY_UNCLASSIFIED`; no intent is inferred.
@@ -47,7 +54,7 @@
 
 - Later read-only diagnosis classifies the current 151-error/34-warning full-lint result: 77 errors/32 warnings are unrelated legacy debt, while B2 introduced 46 errors/one warning and C1 introduced 28 errors/one warning. All 74 Learning Hub errors are `@typescript-eslint/no-explicit-any`; the two warnings are known unused variables.
 - The diagnosis found no lint scope/configuration change, newly included untracked-file contribution, or generated/temp-file contribution. F1 files have zero lint findings.
-- An isolated B2/C1 lint repair was required before F2. The 2026-09-21 repair subsequently removed the 74/2 Learning Hub findings and restored full lint to the unrelated 77/32 legacy baseline.
+- An isolated B2/C1 lint repair was required before F2 and completed on 2026-09-21, removing the 74/2 Learning Hub findings and restoring full lint to the unrelated 77/32 legacy baseline.
 
 ## 2026-09-20 Task F1 Private storage infrastructure
 

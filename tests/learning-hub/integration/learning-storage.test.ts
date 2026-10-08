@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 import { AuthorizationError } from '../../../src/lib/server-authorization'
@@ -43,7 +44,7 @@ function fixture() {
     reserve: async input => {
       const used = [...rows.values()].filter(row => ['PENDING', 'READY', 'QUARANTINED'].includes(row.status)).reduce((sum, row) => sum + Number(row.sizeBytes), 0)
       if (used + input.sizeBytes > input.quotaBytes) throw new LearningStorageError(413, 'Learning space storage quota exceeded')
-      const row: FileResource = { id: input.id, learningSpaceId: input.spaceId, uploaderId: input.userId, kind: 'FILE', title: input.title, storageKey: input.key, mimeType: input.mimeType, sizeBytes: BigInt(input.sizeBytes), status: 'PENDING', createdAt: new Date(clock), deletedAt: null }
+      const row: FileResource = { id: input.id, learningSpaceId: input.spaceId, uploaderId: input.userId, kind: 'FILE', title: input.title, storageKey: input.key, mimeType: input.mimeType, sizeBytes: BigInt(input.sizeBytes), status: 'PENDING', purpose: input.purpose, createdAt: new Date(clock), deletedAt: null }
       rows.set(row.id, row)
       return row
     },
@@ -128,6 +129,76 @@ function fixture() {
   const valid = { fileName: 'notes.pdf', mimeType: 'application/pdf', sizeBytes: 1024 }
   return { service, valid, rows, activities, objects, removed, setContent: (key: string, bytes: Uint8Array) => { content.set(key, bytes) }, setActor: (value: string | null) => { actor = value }, setArchived: (value: boolean) => { archived = value }, advance: (ms: number) => { clock += ms }, canOpenSignedUrl: (url: string) => clock < Number(new URL(url).searchParams.get('expires')), calls: () => providerCalls, failSign: () => { failSign = true }, failPromote: () => { failPromote = true }, deleteDuringPromote: () => { deleteDuringPromote = true }, setFailRemove: (value: boolean) => { failRemove = value }, failActivityWrite: (value: boolean) => { failActivityWrite = value } }
 }
+
+test('FILE reservation persists explicit purpose and preserves the omitted-purpose compatibility default', async () => {
+  for (const [purpose, expected] of [
+    ['MATERIAL', 'MATERIAL'],
+    ['SUBMISSION_ATTACHMENT', 'SUBMISSION_ATTACHMENT'],
+    [undefined, 'LEGACY_UNCLASSIFIED'],
+  ] as const) {
+    const f = fixture()
+    const issued = await f.service.initiate('space', { ...f.valid, purpose })
+    assert.equal(f.rows.get(issued.resourceId)?.purpose, expected)
+  }
+})
+
+test('reserved purpose survives READY, quarantine, provider failure, expiry cleanup, and deletion unchanged', async () => {
+  const ready = fixture()
+  const readyIssued = await ready.service.initiate('space', { ...ready.valid, purpose: 'MATERIAL' })
+  const readyRow = ready.rows.get(readyIssued.resourceId)!
+  assert.equal(readyRow.purpose, 'MATERIAL')
+  ready.objects.set(readyRow.storageKey!, { sizeBytes: 1024, mimeType: 'application/pdf' })
+  await ready.service.finalize('space', readyIssued.resourceId)
+  assert.equal(readyRow.purpose, 'MATERIAL')
+  await ready.service.softDelete('space', readyIssued.resourceId)
+  assert.equal(readyRow.purpose, 'MATERIAL')
+
+  const quarantined = fixture()
+  const quarantinedIssued = await quarantined.service.initiate('space', { ...quarantined.valid, purpose: 'SUBMISSION_ATTACHMENT' })
+  const quarantinedRow = quarantined.rows.get(quarantinedIssued.resourceId)!
+  quarantined.objects.set(quarantinedRow.storageKey!, { sizeBytes: 1024, mimeType: 'text/html' })
+  await assert.rejects(() => quarantined.service.finalize('space', quarantinedIssued.resourceId), { status: 409 })
+  assert.equal(quarantinedRow.purpose, 'SUBMISSION_ATTACHMENT')
+
+  const failed = fixture()
+  const failedIssued = await failed.service.initiate('space', { ...failed.valid, purpose: 'MATERIAL' })
+  const failedRow = failed.rows.get(failedIssued.resourceId)!
+  failed.objects.set(failedRow.storageKey!, { sizeBytes: 1024, mimeType: 'application/pdf' })
+  failed.failPromote()
+  await assert.rejects(() => failed.service.finalize('space', failedIssued.resourceId), { status: 502 })
+  assert.equal(failedRow.purpose, 'MATERIAL')
+
+  const expired = fixture()
+  const expiredIssued = await expired.service.initiate('space', { ...expired.valid, purpose: 'SUBMISSION_ATTACHMENT' })
+  const expiredRow = expired.rows.get(expiredIssued.resourceId)!
+  expired.advance(LEARNING_ORPHAN_GRACE_MS + 1)
+  await expired.service.cleanupOrphans()
+  assert.equal(expiredRow.purpose, 'SUBMISSION_ATTACHMENT')
+})
+
+test('reserved legacy and malformed purpose values fail before reservation or provider access', async () => {
+  for (const purpose of ['LEGACY_UNCLASSIFIED', 'UNKNOWN', 'material', '', null, 1, {}, []]) {
+    const f = fixture()
+    await assert.rejects(() => f.service.initiate('space', { ...f.valid, purpose }), { status: 400, message: 'Invalid purpose' })
+    assert.equal(f.rows.size, 0)
+    assert.equal(f.calls(), 0)
+  }
+
+  const outsider = fixture()
+  outsider.setActor('outsider')
+  await assert.rejects(() => outsider.service.initiate('space', { ...outsider.valid, purpose: 'LEGACY_UNCLASSIFIED' }), { status: 403 })
+  assert.equal(outsider.rows.size, 0)
+  assert.equal(outsider.calls(), 0)
+})
+
+test('F1 reservation keeps its transaction-scoped space lock and quota check before the purpose-bearing create', () => {
+  const source = readFileSync('src/lib/learning-storage-service.ts', 'utf8')
+  const lock = source.indexOf('pg_advisory_xact_lock')
+  const quota = source.indexOf('learningResource.aggregate', lock)
+  const create = source.indexOf('learningResource.create', quota)
+  assert.ok(lock >= 0 && quota > lock && create > quota)
+  assert.match(source.slice(create), /purpose: input\.purpose/)
+})
 
 test('FILE finalize to READY records one privacy-safe resource-created activity and retries dedupe it', async () => {
   const f = fixture()
@@ -229,12 +300,14 @@ test('member upload finalizes only after provider confirmation, then member down
   await assert.rejects(() => f.service.download('space', issued.resourceId), { status: 403 })
   f.setActor('member')
   const download = await f.service.download('space', issued.resourceId)
+  assert.equal(pending.purpose, 'LEGACY_UNCLASSIFIED')
   assert.equal(download.expiresAt, new Date(start.getTime() + LEARNING_DOWNLOAD_TTL_MS).toISOString())
   assert.equal(f.canOpenSignedUrl(download.url), true)
   f.advance(LEARNING_DOWNLOAD_TTL_MS + 1)
   assert.equal(f.canOpenSignedUrl(download.url), false, 'mock provider rejects an expired bearer URL')
   f.setArchived(true)
   assert.ok((await f.service.download('space', issued.resourceId)).url)
+  assert.equal(pending.purpose, 'LEGACY_UNCLASSIFIED')
   await assert.rejects(() => f.service.initiate('space', f.valid), { status: 403 })
   f.setArchived(false)
   await f.service.softDelete('space', issued.resourceId)
@@ -306,8 +379,9 @@ test('orphan finalize and cleanup remove expired pending uploads and release the
 test('provider signing and promotion failure never make a pending file downloadable', async () => {
   const sign = fixture()
   sign.failSign()
-  await assert.rejects(() => sign.service.initiate('space', sign.valid), { status: 502 })
+  await assert.rejects(() => sign.service.initiate('space', { ...sign.valid, purpose: 'SUBMISSION_ATTACHMENT' }), { status: 502 })
   assert.equal([...sign.rows.values()][0].status, 'DELETED')
+  assert.equal([...sign.rows.values()][0].purpose, 'SUBMISSION_ATTACHMENT')
 
   const promote = fixture()
   const issued = await promote.service.initiate('space', promote.valid)

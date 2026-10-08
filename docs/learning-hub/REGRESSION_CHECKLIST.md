@@ -1,5 +1,9 @@
 # Learning Hub Regression Checklist
 
+## D0b F1 assignment boundary (completed 2026-10-08)
+
+D0b changes only the F1 initiation request type, purpose validation/reservation write, focused storage tests, and repository memory. Server-session/member authorization still precedes validation/provider behavior; the advisory lock, quota aggregate, row reservation, provider signing, finalize, READY/quarantine, cleanup, download, and soft-delete paths retain their prior ordering and behavior. G2 attachment eligibility has no purpose predicate. The focused storage, complete Learning Hub integration, complete Learning Hub unit, typecheck, targeted ESLint, and `git diff --check` passed. Legacy behavior preservation was established through the bounded source diff and relevant Learning Hub tests; the five offline legacy regression scripts were not rerun during D0b. No schema, migration, shared database, real provider, F2 scoped read, UI redesign, deletion protection, G3, Booking, GP, settlement, notification, or cron change was made. D0c may proceed separately as the next task.
+
 ## D0a schema-only boundary (completed 2026-10-07)
 
 The D0a diff changes only the LearningResource schema foundation, migration 006/rollback, focused verifier/tests, and repository memory. Prisma diff parity, validation, typecheck, 21 focused D0a tests after the verifier repair, targeted ESLint, and diff checks passed. The disposable TEST rehearsal passed clean and representative-legacy forward migration, old-writer defaults, explicit classifications, invalid-enum rejection, relationship preservation, classified-row rollback refusal, safe rollback, injected-failure atomicity, and temporary-schema cleanup. D0a was schema-only and did not change F1/F2/G1/G2 or any legacy runtime path, so their historical regression evidence remains valid. D0b may proceed separately as the next task.
@@ -34,7 +38,7 @@ Run the rows affected by a task, then the full applicable gate before a block ch
 
 - F1 changed only new storage routes/services, the private bucket template, package dependencies, and the new cleanup schedule. It did not edit Booking, AvailableSlot, Calendar/Meet, cancellation/no-show/dispute, GP/ledger, public Review/Trust, chat, notification, dashboard/history, or existing cron logic. Old Booking and resource rows remain valid because there is no migration or backfill.
 - `npm run test:regression` passed all five offline scripts. The 41-unit and 35-integration Learning Hub suites passed with mocked provider calls, including archived member access, nonmember/unauthenticated denial, deleted resource denial, and cleanup retry. Production build passed with 35 pages and the existing middleware warning.
-- Later lint reconciliation classifies 151 errors/34 warnings as 77/32 unrelated legacy debt plus 74/2 B2/C1 Learning Hub debt; F1 has zero findings. Complete the isolated B2/C1 lint repair before F2. This does not change the recorded F1 regression evidence or its pending production S3 configuration gate.
+- Later lint reconciliation classified the historical 151 errors/34 warnings as 77/32 unrelated legacy debt plus 74/2 B2/C1 Learning Hub debt; F1 had zero findings. The isolated B2/C1 lint repair completed before F2. This does not change the recorded F1 regression evidence or its pending production S3 configuration gate.
 
 ## Current executable regressions
 

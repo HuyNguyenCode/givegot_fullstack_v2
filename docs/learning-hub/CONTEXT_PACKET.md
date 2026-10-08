@@ -1,8 +1,12 @@
 # Learning Hub Context Packet
 
+## D0b resource-purpose assignment checkpoint (verified 2026-10-08)
+
+D0b is complete. F1 file initiation accepts optional `purpose`; only explicit `MATERIAL` and `SUBMISSION_ATTACHMENT` are client-selectable, while omission is persisted as `LEGACY_UNCLASSIFIED` for older callers. Explicit `LEGACY_UNCLASSIFIED` and every unknown or malformed value fail with the existing 400 validation style before reservation or provider access. Purpose is written in the existing advisory-locked quota reservation and is not changed by finalize, READY, quarantine, cleanup, download, or soft delete. F1 authorization, provider, quota, locking, key, expiry, and lifecycle contracts are unchanged; G2 attachment eligibility remains READY, non-deleted, FILE, and same-space without a purpose predicate. D0c scoped reads are next. D0d, D0e, and G3 remain unstarted.
+
 ## D0a resource-purpose checkpoint (verified 2026-10-07)
 
-D0a is complete. The additive `LearningResource.purpose` enum uses `MATERIAL`, `SUBMISSION_ATTACHMENT`, and `LEGACY_UNCLASSIFIED`; the non-null database default preserves unknown legacy intent and older writers. Migration 006 and its guarded rollback passed clean, representative-legacy, classification/default, relationship, rollback, atomic-failure, and cleanup rehearsal on a disposable TEST database; their SQL was unchanged during final rehearsal debugging. F1/F2/G1/G2 runtime behavior is unchanged. D0b purpose assignment is next, D0c owns scoped reads, and later D0 UI work owns the LearningSpace four-section and submission-flow redesign. G3 remains separate and unstarted while this D0 path is resolved.
+D0a is complete. The additive `LearningResource.purpose` enum uses `MATERIAL`, `SUBMISSION_ATTACHMENT`, and `LEGACY_UNCLASSIFIED`; the non-null database default preserves unknown legacy intent and older writers. Migration 006 and its guarded rollback passed clean, representative-legacy, classification/default, relationship, rollback, atomic-failure, and cleanup rehearsal on a disposable TEST database; their SQL was unchanged during final rehearsal debugging. D0a did not change F1/F2/G1/G2 runtime behavior. D0b purpose assignment is complete; D0c owns scoped reads and is next. Later D0 UI work owns the LearningSpace redesign. G3 remains separate and unstarted while this D0 path is resolved.
 
 ## G2 completion update (2026-09-28)
 
@@ -22,7 +26,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Current checkpoint
 
-- Tasks D1, C2, E1, F1, F2, G1, and G2 completed after B2’s protected LearningSpace domain service work and C1’s invite backend. The narrow E1 AvailableSlot repair completed on 2026-09-18; F1 private storage infrastructure completed on 2026-09-20; F2 resource domain/UI completed on 2026-09-21; G1 task domain and G2 current Submission workflow completed on 2026-09-28. The post-G2 `LearningResources.tsx` dependency micro-repair restored the current full lint baseline to 77 errors/32 warnings.
+- Tasks D1, C2, E1, F1, F2, G1, and G2 completed after B2’s protected LearningSpace domain service work and C1’s invite backend. The narrow E1 AvailableSlot repair completed on 2026-09-18; F1 private storage infrastructure completed on 2026-09-20; F2 resource domain/UI completed on 2026-09-21; G1 task domain and G2 current Submission workflow completed on 2026-09-28. The post-G2 `LearningResources.tsx` dependency micro-repair restored the historical full-lint result to 77 errors/32 warnings; D0b did not rerun full lint.
 - LearningSpace and LearningTopic have server-session-backed protected service/API handlers. Direct and confirmed-Booking creation create exactly two active members; a transaction-scoped advisory lock rejects a third active member.
 - Primary-skill changes are versioned and audited. Objective/definition updates use optimistic concurrency. Topics are free-form or canonically mapped, and archive state preserves historical Booking references.
 - Reuse suggestions return matching active pair spaces without forcing reuse or imposing pair-plus-skill uniqueness. Archived spaces remain readable to members and only restore is allowed among normal mutations.
@@ -38,7 +42,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 - F1 adds an S3-backed provider interface, private-bucket template, five-minute direct upload POST, provider-confirmed metadata and content-signature finalize, ten-minute signed attachment download, 20 MiB allowlist, 500 MiB per-space quota, soft deletion, and secret-protected orphan cleanup. It reuses the B1 LearningResource model without schema or legacy data changes. Typecheck, targeted lint, 41 unit tests, 35 integration tests after route smoke, five legacy regressions, and the 35-page build passed with mocked storage; the Windows `tsx` host preload was temporary and removed. F1 has zero lint findings.
 - F2 verification passed typecheck, 44 Learning Hub unit tests, 35 integration tests, all five legacy regressions, targeted ESLint, and the production build. Full lint remains the unrelated 77-error/32-warning legacy baseline after the verified B2/C1 repair.
 
-- Later lint reconciliation and repair: the 2026-09-20 diagnosis attributed 46 errors/one warning to B2 and 28 errors/one warning to C1. The verified 2026-09-21 seven-file typing repair removed all 74 errors and both warnings. Targeted ESLint is 0/0 and full lint is the unrelated 77-error/32-warning legacy baseline. Typecheck, 41 unit tests, route smoke plus 35 integration tests, all five legacy regressions, and the 35-page build pass. The documented host-only `tsx` preload was temporary, removed afterward, and is not a product/runtime dependency.
+- Later lint reconciliation and repair: the 2026-09-20 diagnosis attributed 46 errors/one warning to B2 and 28 errors/one warning to C1. The verified 2026-09-21 seven-file typing repair removed all 74 errors and both warnings. Historical targeted ESLint was 0/0 and full lint was the unrelated 77-error/32-warning legacy baseline. Typecheck, 41 unit tests, route smoke plus 35 integration tests, all five legacy regressions, and the 35-page build passed at that repair checkpoint. D0b ran targeted ESLint only; it did not rerun full lint, the build, or legacy regression scripts. The documented host-only `tsx` preload was temporary, removed afterward, and is not a product/runtime dependency.
 
 ## Owner-owned dirty state before Task 00
 
@@ -104,7 +108,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Next task
 
-G1 Learning Tasks, G2 current Submission, and D0a resource-purpose schema foundation are complete. G2 verification passed typecheck, targeted ESLint, 71 Learning Hub unit tests, 39 integration tests, all five legacy regressions, production build, and `git diff --check`; D0a's focused tests and full disposable TEST rehearsal also passed. The current full lint baseline is 77 errors/32 warnings of unrelated legacy debt. D0b purpose assignment is next, followed by D0c scoped resource reads and later D0 LearningSpace four-section/submission-flow redesign. G3 Review remains separate and must not start before the active D0 redesign path is resolved.
+G1 Learning Tasks, G2 current Submission, D0a resource-purpose schema foundation, and D0b purpose assignment are complete. D0b passed 18/18 focused F1 tests, 43/43 Learning Hub integration tests, 97/97 Learning Hub unit tests, typecheck, targeted ESLint, and `git diff --check`. It did not rerun full lint, production build, or the five legacy regression scripts. The known 77-error/32-warning full-lint result is historical, not a fresh D0b result. D0c scoped resource reads are next, followed by the later D0 LearningSpace four-section/submission-flow redesign. G3 Review remains separate and must not start before the active D0 redesign path is resolved.
 
 ## Completion contract
 
@@ -152,6 +156,6 @@ For each task: check every requirement; list changed files and reasons; report s
 - Reads and mutations use active membership derived from `auth()`; archived spaces remain readable to members and reject normal mutations, while restore is allowed. Topics are soft-archived without changing historical `Booking.topicId` references. Primary-skill changes write structured activity with the previous/new IDs and version.
 - LearningSpace Pusher authorization now checks the concrete active-membership repository; no LearningSpace content is published by B2.
 - Verification: typecheck; 17 Learning Hub unit tests; 12 integration tests; all five legacy regressions; production build. Full lint remains the pre-existing 77-error/32-warning baseline.
-- Later correction (2026-09-20): this preserves the B2 checkpoint result. The current 151/34 result is now classified as 77/32 unrelated legacy debt, 46/1 B2 debt, and 28/1 C1 debt; repair the B2/C1 findings before F2.
+- Later correction (2026-09-20): this preserves the B2 checkpoint result. The then-current 151/34 result was classified as 77/32 unrelated legacy debt, 46/1 B2 debt, and 28/1 C1 debt. The B2/C1 findings were repaired on 2026-09-21 before F2.
 - Compatibility/rollback: no schema/data migration or backfill; legacy Bookings with null Learning Hub fields remain unchanged/readable. Rollback is file-level reversion of B2 routes, services, tests, realtime authorizer wiring, and docs.
 - At the B2 checkpoint, C1 was the next planned task; it is now complete.
