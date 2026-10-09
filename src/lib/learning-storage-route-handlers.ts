@@ -22,7 +22,7 @@ async function jsonObject(request: NextRequest) {
 export function createLearningFileCollectionHandlers(service: Service) {
   return {
     POST: async (request: NextRequest, context: CollectionContext) => {
-      try { return NextResponse.json(await service.initiate((await context.clparams).spaceId, await jsonObject(request)), { status: 201, headers: { 'Cache-Control': 'no-store' } }) }
+      try { return NextResponse.json(await service.initiate((await context.params).spaceId, await jsonObject(request)), { status: 201, headers: { 'Cache-Control': 'no-store' } }) }
       catch (error) { return failure(error) }
     },
   }
