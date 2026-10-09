@@ -1,12 +1,19 @@
 # Learning Hub Implementation State
 
+## D0c scoped resource reads (verified 2026-10-09)
+
+- Status: PASS. `GET /api/learning/spaces/[spaceId]/resources` accepts omitted `view` for the unchanged all-purpose PENDING/READY/QUARANTINED list, `view=materials` for MATERIAL and LEGACY_UNCLASSIFIED in those statuses, and `view=ready-files` for READY, non-deleted FILE rows of every purpose. Unsupported values return the existing F2 JSON 400 validation response after member authorization. All views retain `createdAt desc`.
+- Scope is a Prisma `findMany` predicate. The independent FILE PENDING/READY/QUARANTINED quota aggregate, response shape and private-field exclusions, archived-member reads, and one-argument page caller remain unchanged. No schema, migration, F1 lifecycle, F2 link write, G2 eligibility, LearningResources grouping/pagination, or UI change was made.
+- Verification: 23/23 focused resource view and F2 unit tests, 24/24 resource view and F1 storage integration tests, route smoke, `npm run typecheck`, targeted ESLint, and `git diff --check` passed. Tests used an in-memory Prisma boundary and mocked storage; no shared database or provider was touched. The standard Windows `tsx` command hit the documented pre-discovery ENOMEM; the unchanged suites passed with the temporary preload, removed after testing. Full lint, production build, and offline legacy regressions were not rerun.
+- Next safe slice: D0d LearningSpace/UI/submission-flow redesign, not started. D0e deletion protection and G3 SubmissionReview remain unstarted.
+
 ## D0b resource-purpose assignment (verified 2026-10-08)
 
 - Status: PASS. `POST /api/learning/spaces/[spaceId]/files` accepts optional `purpose`. Explicit `MATERIAL` and `SUBMISSION_ATTACHMENT` are persisted on the new PENDING FILE row; omission is normalized and persisted as `LEGACY_UNCLASSIFIED`. Explicit `LEGACY_UNCLASSIFIED`, unknown strings, non-strings, null, arrays, and objects return the existing F1 400 validation style before reservation or provider access.
 - Purpose is decided after server-session/member authorization and before provider bucket/signing access. It is included in the existing transaction-scoped advisory-lock reservation after the unchanged booking/topic checks and quota aggregate. No heuristic uses topic, Booking, filename, uploader, time, or Submission references.
 - Finalize, READY, quarantine, provider failure, expiry/orphan cleanup, download, and soft delete do not write `purpose`. F1 identity, authorization, archive, ownership, MIME/extension, size, quota, lock, signed expiry, provider, random-key, finalize, cleanup, download, and deletion contracts are unchanged. G2 still accepts any READY, non-deleted, same-space FILE attachment and has no purpose predicate.
 - Verification: focused F1 storage test PASS (18); complete Learning Hub integration PASS (43, including route smoke); complete Learning Hub unit PASS (97); `npm run typecheck` PASS; targeted ESLint PASS. The standard `tsx` command reproduced the documented Windows `uv_os_get_passwd` ENOMEM before discovery; the unchanged suites passed under the documented temporary preload, which was removed after verification. No shared database or real storage provider was used.
-- Next dependency-ordered task: D0c scoped resource reads. D0d LearningSpace/UI/submission-flow redesign, D0e deletion protection, and G3 SubmissionReview remain unstarted.
+- At the 2026-10-08 D0b checkpoint, D0c scoped resource reads were next; D0d LearningSpace/UI/submission-flow redesign, D0e deletion protection, and G3 SubmissionReview were unstarted then.
 
 ## D0a resource-purpose schema foundation (verified 2026-10-07)
 
@@ -14,7 +21,7 @@
 - The paired rollback takes an exclusive resource-table lock and aborts if any classified row exists; after classified writes, retain the additive column and prefer roll-forward unless an explicit preservation plan is approved. The approved disposable Supabase TEST rehearsal passed clean and representative legacy forward paths, old-writer defaults, explicit classifications, invalid-enum rejection, relationship preservation, classified-row rollback refusal, safe rollback, injected forward failure atomicity, and run-owned cleanup.
 - The first live rehearsal exposed a verifier-only defect: JavaScript replacement-string processing collapsed the injected PostgreSQL `DO $$` guard to invalid `DO $` for transaction-bearing SQL. A replacement callback now preserves the dollar quotes, and a focused regression assertion covers them. Migration 006 and its rollback were unchanged.
 - Verification: Prisma schema validation/generation, 21 focused D0a tests, `npm run typecheck`, targeted lint and schema-parity checks, and the complete rehearsal all passed. The Supabase intermediate `X509_STRICT` Key Usage result occurred only in an additional diagnostic after normal certificate-chain and hostname verification passed; it is not a D0a product or migration limitation, so the final status is plain `PASS`.
-- No F1 initiation/finalize/download/delete, F2 service/API/UI, G1, G2, provider, quota, Booking, GP, settlement, or cron behavior changed during D0a. At the D0a checkpoint, D0b purpose assignment was next. D0b is now complete; D0c owns scoped reads and is next; later D0 work owns the LearningSpace four-section and submission-flow redesign. G3 remains separate and unstarted. The historical G2 checkpoint below remains its original evidence.
+- No F1 initiation/finalize/download/delete, F2 service/API/UI, G1, G2, provider, quota, Booking, GP, settlement, or cron behavior changed during D0a. At the D0a checkpoint, D0b purpose assignment was next, with D0c scoped reads to follow. D0b and D0c are complete now; D0d owns the LearningSpace four-section and submission-flow redesign. G3 remains separate and unstarted. The historical G2 checkpoint below remains its original evidence.
 
 ## Task G2 completion (2026-09-28)
 
@@ -38,20 +45,21 @@
 
 ## Current checkpoint
 
-- Recorded: 2026-10-08, Asia/Saigon.
+- Recorded: 2026-10-09, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
 - Latest committed checkpoint: `b9cf25172d6895d45589fbdd6abed42a489ba25c`
   (`fix(learning-hub): support direct file attachment in G2 submissions`).
-- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, F2, G1, G2, D0a, and D0b are complete. F2 implements LH 030, LH 031, and LH 032; G1 implements LH 040; G2 implements LH 041; D0a supplies the resource-purpose schema foundation and D0b supplies F1 assignment. No D0c, later D0 UI, D0e, or G3 implementation is recorded here.
+- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, F2, G1, G2, D0a, D0b, and D0c are complete. F2 implements LH 030, LH 031, and LH 032; G1 implements LH 040; G2 implements LH 041; D0a supplies the resource-purpose schema foundation and D0b supplies F1 assignment. D0c scoped reads are complete; no D0d UI, D0e, or G3 implementation is recorded here.
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Status: D0b PASS. Historical D0a/G1/G2 evidence remains recorded below and their runtime behavior is unchanged. The checkpoint retains the unrelated legacy lint baseline and private-storage deployment limitation recorded by their owning tasks.
+- Status: D0c PASS. Historical D0a/D0b/G1/G2 evidence remains recorded below and their runtime behavior is unchanged. The checkpoint retains the unrelated legacy lint baseline and private-storage deployment limitation recorded by their owning tasks.
 - Production behavior: a Booking started from a LearningSpace carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. LIVE and HYBRID now select a future unbooked mentor AvailableSlot and use the existing locked slot path; EXERCISE_REVIEW retains the E1 manual-time `createBooking` path. Legacy Booking creation remains valid with all Learning Hub fields null.
 - Schema/migration behavior: ten Learning Hub models plus eight nullable Booking fields; additive migrations 004, 005, and 006 with paired rollback SQL/notes and no Booking backfill. Migration 005 adds only `LearningTask.version` with default 1. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with database default `LEGACY_UNCLASSIFIED`; its rollback refuses classified rows.
 - API behavior: F1 provides session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. F2 adds member-authorized resource collection/item routes under `/api/learning/spaces/[spaceId]/resources`. G1 adds protected task list/create and item-update routes under `/api/learning/spaces/[spaceId]/tasks`; G2 adds the session-backed current-submission route under `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`; `getLearningBookingContext` and E1 Booking guards remain intact.
 - Learning Hub implementation: F2 uses F1's provider-agnostic storage-service/API abstraction and does not import or depend directly on the AWS SDK or S3. G1 provides task create/list/version-checked edit with active-pair, Booking/topic ownership, START/CANCEL transition, and independent dueAt rules. Resource lists and activity return no signed URL or storage key. G2 implements current Submission; review, fulfillment, settlement, and notes remain pending.
 - D0b verification: 18/18 focused F1 storage tests, 43/43 Learning Hub integration tests, 97/97 Learning Hub unit tests, typecheck, targeted ESLint, and `git diff --check` passed. Production build, full repository lint, and the five legacy regression scripts were not rerun for D0b. Historical G2/F1 verification remains in its owning sections and is not D0b evidence; the 77-error/32-warning full-lint result is a historical repository baseline, not a fresh D0b lint run.
+- D0c verification: 23/23 focused F2/D0c tests, 24/24 relevant integration tests, route smoke, typecheck, targeted ESLint, and `git diff --check` passed. Production build, full lint, and the five legacy regression scripts were not rerun for D0c.
 - F2 Resource domain and UI completed on 2026-09-21. Active members can list, add, reopen, and delete their HTTPS links or F1 private files from LearningSpace. Resource metadata carries optional Booking/topic references; safe status, uploader, topic, time, and quota are displayed. Link/file deletion remains uploader-only and soft deletes preserve audit/provider cleanup. No server URL fetch, file parsing, raw video, Booking, fulfillment, or settlement behavior was added.
-- Next dependency-ordered task: D0c scoped resource reads. The LearningSpace four-section/submission-flow redesign follows scoped reads. D0e and G3 remain separate and unstarted.
+- Next dependency-ordered task: D0d LearningSpace four-section/submission-flow redesign. D0e and G3 remain separate and unstarted.
 
 ### OWNER DECISION — EXERCISE_REVIEW scheduling semantics
 

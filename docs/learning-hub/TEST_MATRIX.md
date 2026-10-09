@@ -1,10 +1,16 @@
 # Learning Hub Test Matrix
 
+## D0c verification checkpoint (completed 2026-10-09)
+
+- PASS: 23/23 focused F2 resource contract plus D0c view tests; 24/24 D0c view plus F1 storage integration tests; route smoke; typecheck; targeted ESLint; and `git diff --check`. Tests use an in-memory resource-query boundary and provider mocks, with no shared database.
+- Coverage proves omitted-view all-purpose compatibility across MATERIAL, SUBMISSION_ATTACHMENT, and LEGACY_UNCLASSIFIED; materials inclusion/exclusion and existing status policy; ready-files FILE/READY/non-deleted rules across purposes; invalid-view 400; member authorization before resource access; `createdAt desc`; view-independent full-space FILE quota; and no purpose, storage key, or signed URL in the response. Existing client grouping and five-row per-group pagination unit assertions pass. Standard `tsx` hit the documented Windows ENOMEM before discovery; unchanged suites passed with the temporary preload.
+- D0d is next and not started. D0e and G3 remain unstarted. Historical checkpoints below are unchanged.
+
 ## D0b verification checkpoint (completed 2026-10-08)
 
 - PASS: 18/18 focused F1 storage tests, 43/43 complete Learning Hub integration tests with route smoke, 97/97 complete Learning Hub unit tests, `npm run typecheck`, targeted ESLint, and `git diff --check`. Production build, full repository lint, and the five legacy regression scripts were not rerun for D0b. Provider calls are mocked; no shared database or real storage provider was touched.
 - Coverage proves explicit `MATERIAL` and `SUBMISSION_ATTACHMENT`, omitted-purpose `LEGACY_UNCLASSIFIED`, reserved-value/unknown/malformed rejection before reservation or provider access, authorization before protected provider behavior, unchanged advisory-lock/quota ordering, and unchanged purpose through READY, quarantine, provider failure, orphan cleanup, and soft delete. Existing F1 coverage continues to prove expiry, downloads, cleanup retry, and race behavior; G2 unit coverage continues to prove purpose-independent READY same-space FILE eligibility.
-- The standard Windows `tsx` command failed before discovery with the documented `uv_os_get_passwd` ENOMEM. The suites passed unchanged with the documented temporary `process.geteuid` preload, which was removed afterward. D0c scoped reads are next; D0d, D0e, and G3 remain unstarted.
+- The standard Windows `tsx` command failed before discovery with the documented `uv_os_get_passwd` ENOMEM. The suites passed unchanged with the documented temporary `process.geteuid` preload, which was removed afterward. At the 2026-10-08 D0b checkpoint, D0c scoped reads were next; D0d, D0e, and G3 were unstarted then.
 
 ## D0a verification checkpoint (completed 2026-10-07)
 
@@ -20,7 +26,7 @@
 
 ## Current checkpoint and historical-count rule
 
-The current checkout checkpoint through G2, D0a, and D0b is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair established a 77-error/32-warning unrelated legacy baseline. After the isolated `LearningResources.tsx` dependency micro-repair, the recorded full-lint result was 77 errors/32 warnings; D0b did not rerun full lint. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. D0c scoped reads are next, then the later D0 LearningSpace four-section/submission-flow redesign. D0e and G3 remain separate and are not active.
+The current checkout checkpoint through G2, D0a, D0b, and D0c is complete. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair established a 77-error/32-warning unrelated legacy baseline. After the isolated `LearningResources.tsx` dependency micro-repair, the recorded full-lint result was 77 errors/32 warnings; D0b did not rerun full lint. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals. D0d LearningSpace four-section/submission-flow redesign is next. D0e and G3 remain separate and are not active.
 
 ## Test ladder
 

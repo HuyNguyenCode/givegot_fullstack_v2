@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { AuthorizationError, requireAuthenticatedUser } from '@/lib/server-authorization'
 
 export const LEARNING_SPACE_QUOTA_BYTES = 500 * 1024 * 1024
@@ -50,11 +51,22 @@ export async function createLearningLink(spaceId: string, input: Record<string, 
   })
 }
 
-export async function listLearningResources(spaceId: string) {
-  const actorId = await authorize(spaceId, false)
+export async function listLearningResources(
+  spaceId: string,
+  view?: string,
+  dependencies: { authorize: typeof authorize; resource: typeof prisma.learningResource } = { authorize, resource: prisma.learningResource },
+) {
+  const actorId = await dependencies.authorize(spaceId, false)
+  const where: Prisma.LearningResourceWhereInput = { learningSpaceId: spaceId, status: { in: ['PENDING', 'READY', 'QUARANTINED'] } }
+  if (view === 'materials') where.purpose = { in: ['MATERIAL', 'LEGACY_UNCLASSIFIED'] }
+  else if (view === 'ready-files') {
+    where.kind = 'FILE'
+    where.status = 'READY'
+    where.deletedAt = null
+  } else if (view !== undefined) throw new LearningResourceError(400, 'Invalid view')
   const [resources, total] = await Promise.all([
-    prisma.learningResource.findMany({ where: { learningSpaceId: spaceId, status: { in: ['PENDING', 'READY', 'QUARANTINED'] } }, orderBy: { createdAt: 'desc' }, select: { id: true, bookingId: true, topicId: true, uploaderId: true, kind: true, title: true, description: true, externalUrl: true, mimeType: true, sizeBytes: true, status: true, deletedAt: true, createdAt: true, uploader: { select: { name: true, email: true } }, topic: { select: { label: true } } } }),
-    prisma.learningResource.aggregate({ where: { learningSpaceId: spaceId, kind: 'FILE', status: { in: ['PENDING', 'READY', 'QUARANTINED'] } }, _sum: { sizeBytes: true } }),
+    dependencies.resource.findMany({ where, orderBy: { createdAt: 'desc' }, select: { id: true, bookingId: true, topicId: true, uploaderId: true, kind: true, title: true, description: true, externalUrl: true, mimeType: true, sizeBytes: true, status: true, deletedAt: true, createdAt: true, uploader: { select: { name: true, email: true } }, topic: { select: { label: true } } } }),
+    dependencies.resource.aggregate({ where: { learningSpaceId: spaceId, kind: 'FILE', status: { in: ['PENDING', 'READY', 'QUARANTINED'] } }, _sum: { sizeBytes: true } }),
   ])
   return { resources: resources.map(resource => ({ id: resource.id, bookingId: resource.bookingId, topicId: resource.topicId, kind: resource.kind, title: resource.title, description: resource.description, externalUrl: resource.externalUrl, mimeType: resource.mimeType, sizeBytes: resource.sizeBytes?.toString() ?? null, status: resource.status, deletedAt: resource.deletedAt, createdAt: resource.createdAt, uploaderName: resource.uploader.name || resource.uploader.email || 'Thành viên', topicLabel: resource.topic?.label ?? null, canDelete: resource.uploaderId === actorId })), quota: { usedBytes: (total._sum.sizeBytes ?? BigInt(0)).toString(), maxBytes: LEARNING_SPACE_QUOTA_BYTES.toString() } }
 }

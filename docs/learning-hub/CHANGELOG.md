@@ -1,5 +1,11 @@
 # Learning Hub Changelog
 
+## 2026-10-09 — D0c scoped F2 resource reads
+
+- Added optional `view=materials` and `view=ready-files` to the existing resource collection GET. Omitted view retains all-purpose compatibility; filters run in the Prisma resource query. Unsupported views return the existing 400 error style.
+- Preserved member authorization, archived-space reads, response privacy, ordering, independent full-space FILE quota, page caller, and client-side topic grouping/pagination. F2 link creation continues to rely on the legacy purpose default. No schema, migration, F1/G2, UI, D0d, D0e, or G3 change was made.
+- Verification passed 23 focused F2/D0c tests, 24 relevant integration tests, route smoke, typecheck, targeted ESLint, and diff check. Standard Windows `tsx` hit the documented ENOMEM before discovery; unchanged suites passed with the temporary preload, then removed. Full lint, build, legacy regression scripts, shared database, and real provider were not run. D0d is next.
+
 ## 2026-10-08 — D0b F1 resource-purpose assignment
 
 - Extended F1 file initiation with optional `purpose`. Explicit `MATERIAL` and `SUBMISSION_ATTACHMENT` are persisted in the existing locked PENDING reservation; omission persists `LEGACY_UNCLASSIFIED` for backward compatibility. Explicit legacy, unknown, and malformed values return 400 before reservation or provider access.

@@ -1,8 +1,14 @@
 # Learning Hub Implementation Plan
 
-## D0 dependency note (updated 2026-10-08)
+## D0 dependency note (updated 2026-10-09)
 
-D0a and D0b are COMPLETE: the additive purpose schema/migration foundation and the bounded F1 purpose-assignment request/reservation path passed their required verification. D0c is next with scoped resource reads. Later D0 UI work owns the four-section LearningSpace and submission-flow redesign after those reads are correct. D0e and G3 remain separate and unstarted. The registry and historical task evidence below retain their original sequence.
+D0a, D0b, and D0c are COMPLETE: purpose schema, F1 purpose assignment, and scoped F2 resource reads passed their required verification. D0d is next and not started; it owns the four-section LearningSpace and submission-flow redesign. D0e and G3 remain separate and unstarted.
+
+### Pending owner decision before D0d
+
+F2 link creation still relies on the `LEGACY_UNCLASSIFIED` database default, and D0c intentionally left that write path unchanged. Before D0d implementation, the owner must decide whether explicit server-side `MATERIAL` stamping for newly created learning links belongs in an approved D0d slice or a separate bounded repair. This is a planning question only; it does not approve or implement the change.
+
+The registry and historical task evidence below retain their original sequence.
 
 ## Execution rules
 
@@ -11,7 +17,7 @@ D0a and D0b are COMPLETE: the additive purpose schema/migration foundation and t
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Current checkpoint: work through G2 plus D0a and D0b is complete. D0c is the next dependency-ordered task; later D0 UI redesign follows. D0e and G3 remain separate and are not active.
+- Current checkpoint: work through G2 plus D0a, D0b, and D0c is complete; D0d UI redesign is the next dependency-ordered task. D0e and G3 remain separate and are not active.
 
 ## Task registry
 

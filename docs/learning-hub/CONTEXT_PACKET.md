@@ -1,12 +1,16 @@
 # Learning Hub Context Packet
 
+## D0c scoped-resource-read checkpoint (verified 2026-10-09)
+
+D0c is complete. The F2 collection GET accepts optional `view=materials` and `view=ready-files`; omission keeps the original all-purpose PENDING/READY/QUARANTINED collection and the one-argument `listLearningResources(spaceId)` caller. Materials include MATERIAL and LEGACY_UNCLASSIFIED; ready-files include non-deleted READY FILE rows of every purpose. The resource query applies scope in Prisma, keeps `createdAt desc`, and does not expose purpose, storage keys, signed URLs, or provider credentials. Quota remains the full-space FILE PENDING/READY/QUARANTINED aggregate for every view. Current LearningResources grouping and five-row per-group pagination remain client-side. F2 link creation still uses the legacy database default. D0d is next and not started; D0e and G3 remain unstarted.
+
 ## D0b resource-purpose assignment checkpoint (verified 2026-10-08)
 
-D0b is complete. F1 file initiation accepts optional `purpose`; only explicit `MATERIAL` and `SUBMISSION_ATTACHMENT` are client-selectable, while omission is persisted as `LEGACY_UNCLASSIFIED` for older callers. Explicit `LEGACY_UNCLASSIFIED` and every unknown or malformed value fail with the existing 400 validation style before reservation or provider access. Purpose is written in the existing advisory-locked quota reservation and is not changed by finalize, READY, quarantine, cleanup, download, or soft delete. F1 authorization, provider, quota, locking, key, expiry, and lifecycle contracts are unchanged; G2 attachment eligibility remains READY, non-deleted, FILE, and same-space without a purpose predicate. D0c scoped reads are next. D0d, D0e, and G3 remain unstarted.
+D0b is complete. F1 file initiation accepts optional `purpose`; only explicit `MATERIAL` and `SUBMISSION_ATTACHMENT` are client-selectable, while omission is persisted as `LEGACY_UNCLASSIFIED` for older callers. Explicit `LEGACY_UNCLASSIFIED` and every unknown or malformed value fail with the existing 400 validation style before reservation or provider access. Purpose is written in the existing advisory-locked quota reservation and is not changed by finalize, READY, quarantine, cleanup, download, or soft delete. F1 authorization, provider, quota, locking, key, expiry, and lifecycle contracts are unchanged; G2 attachment eligibility remains READY, non-deleted, FILE, and same-space without a purpose predicate. At the 2026-10-08 D0b checkpoint, D0c scoped reads were next; D0c is complete now. D0d is next and not started; D0e and G3 remain unstarted.
 
 ## D0a resource-purpose checkpoint (verified 2026-10-07)
 
-D0a is complete. The additive `LearningResource.purpose` enum uses `MATERIAL`, `SUBMISSION_ATTACHMENT`, and `LEGACY_UNCLASSIFIED`; the non-null database default preserves unknown legacy intent and older writers. Migration 006 and its guarded rollback passed clean, representative-legacy, classification/default, relationship, rollback, atomic-failure, and cleanup rehearsal on a disposable TEST database; their SQL was unchanged during final rehearsal debugging. D0a did not change F1/F2/G1/G2 runtime behavior. D0b purpose assignment is complete; D0c owns scoped reads and is next. Later D0 UI work owns the LearningSpace redesign. G3 remains separate and unstarted while this D0 path is resolved.
+D0a is complete. The additive `LearningResource.purpose` enum uses `MATERIAL`, `SUBMISSION_ATTACHMENT`, and `LEGACY_UNCLASSIFIED`; the non-null database default preserves unknown legacy intent and older writers. Migration 006 and its guarded rollback passed clean, representative-legacy, classification/default, relationship, rollback, atomic-failure, and cleanup rehearsal on a disposable TEST database; their SQL was unchanged during final rehearsal debugging. D0a did not change F1/F2/G1/G2 runtime behavior. At the 2026-10-07 D0a checkpoint, D0b purpose assignment was next, followed by D0c scoped reads. Both are complete now; D0d owns the later LearningSpace redesign. G3 remains separate and unstarted while this D0 path is resolved.
 
 ## G2 completion update (2026-09-28)
 
@@ -93,11 +97,12 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 - Next.js 16.1.6 App Router, React 19.2.3, NextAuth 5 beta, Prisma/PostgreSQL 5.22.0.
 - Existing user routes: auth, homepage, discover, mentor, booking, dashboard, chat, history, wallet, profile, admin.
-- Existing APIs: auth, conversations, messages, existing cron routes plus F1 storage cleanup, two test routes, three VNPay routes, and `/api/pusher/auth`. Current Learning Hub APIs are `/api/learning/spaces/*`, including:
+- Existing APIs: auth, conversations, messages, existing cron routes plus F1 storage cleanup, two test routes, three VNPay routes, and `/api/pusher/auth`. Current Learning Hub APIs include:
     - F1 file initiation/finalize/download/delete routes,
     - F2 resource collection/item routes,
     - G1 task list/create/update routes,
-    - G2 current-submission route: `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`, and `/api/learning/invites/*`.
+    - G2 current-submission route: `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`.
+    - Learning invite APIs: `/api/learning/invites/*`.
 - Schema has 27 models, including the ten Learning Hub domain models. Booking has eight nullable Learning Hub fields and keeps its original status enum unchanged.
 - Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. Additive migration 005 adds only `LearningTask.version` with default 1 and has executable rollback SQL plus a rollback note. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with the `LEGACY_UNCLASSIFIED` database default, plus its guarded rollback. None backfills Booking.
 - Canonical commands include `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, `test:learning-hub:migration`, and `test:regression`.
@@ -108,7 +113,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Next task
 
-G1 Learning Tasks, G2 current Submission, D0a resource-purpose schema foundation, and D0b purpose assignment are complete. D0b passed 18/18 focused F1 tests, 43/43 Learning Hub integration tests, 97/97 Learning Hub unit tests, typecheck, targeted ESLint, and `git diff --check`. It did not rerun full lint, production build, or the five legacy regression scripts. The known 77-error/32-warning full-lint result is historical, not a fresh D0b result. D0c scoped resource reads are next, followed by the later D0 LearningSpace four-section/submission-flow redesign. G3 Review remains separate and must not start before the active D0 redesign path is resolved.
+G1 Learning Tasks, G2 current Submission, D0a resource-purpose schema, D0b purpose assignment, and D0c scoped reads are complete. D0c passed 23 focused F2/D0c tests, 24 relevant integration tests, route smoke, typecheck, targeted ESLint, and `git diff --check`; full lint, production build, and offline legacy regressions were not rerun. The 77-error/32-warning full-lint result remains historical. D0d LearningSpace four-section/submission-flow redesign is next. D0e deletion protection and G3 Review remain separate and unstarted.
 
 ## Completion contract
 
