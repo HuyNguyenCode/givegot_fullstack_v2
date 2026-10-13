@@ -80,7 +80,7 @@ test('explicit upload completes the existing flow and refetches resources withou
     '/api/learning/spaces/space%2Fid/files',
     'https://upload.example.test',
     '/api/learning/spaces/space%2Fid/files/file-1/finalize',
-    '/api/learning/spaces/space%2Fid/resources',
+    '/api/learning/spaces/space%2Fid/resources?view=materials',
   ])
   assert.equal(calls[0].init?.method, 'POST')
   assert.equal(calls[1].init?.method, 'POST')
@@ -224,7 +224,7 @@ test('link creation revalidates local resources without native navigation and re
 
   const result = await createLearningLink('space/id', form, request)
 
-  assert.deepEqual(calls.map(call => call.input), ['/api/learning/spaces/space%2Fid/resources', '/api/learning/spaces/space%2Fid/resources'])
+  assert.deepEqual(calls.map(call => call.input), ['/api/learning/spaces/space%2Fid/resources', '/api/learning/spaces/space%2Fid/resources?view=materials'])
   assert.equal(calls[0].init?.method, 'POST')
   assert.equal(calls[1].init?.cache, 'no-store')
   assert.equal(result.resources[0].title, 'Tài liệu')
@@ -289,7 +289,7 @@ test('successful deletion revalidates the authoritative resource list and quota 
   const request = (async (input: string | URL | Request, init?: RequestInit) => { calls.push({ input: String(input), init }); return Response.json(refreshed) }) as typeof fetch
 
   assert.deepEqual(await fetchLearningResources('space/id', request), refreshed)
-  assert.deepEqual(calls.map(call => call.input), ['/api/learning/spaces/space%2Fid/resources'])
+  assert.deepEqual(calls.map(call => call.input), ['/api/learning/spaces/space%2Fid/resources?view=materials'])
   assert.equal(calls[0].init?.cache, 'no-store')
   const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
   assert.match(source, /const refreshed = await fetchLearningResources\(spaceId\)/)

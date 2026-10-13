@@ -86,15 +86,15 @@ async function responseJson(response: Response) {
 
 export async function fetchLearningResources(spaceId: string, request: typeof fetch = fetch) {
   const base = `/api/learning/spaces/${encodeURIComponent(spaceId)}`
-  return await responseJson(await request(`${base}/resources`, { cache: 'no-store' })) as ResourceListResponse
+  return await responseJson(await request(`${base}/resources?view=materials`, { cache: 'no-store' })) as ResourceListResponse
 }
 
-export async function initiateLearningFileUpload(spaceId: string, file: File, request: typeof fetch = fetch, topicId: string | null = null) {
+export async function initiateLearningFileUpload(spaceId: string, file: File, request: typeof fetch = fetch, topicId: string | null = null, purpose: 'MATERIAL' | 'SUBMISSION_ATTACHMENT' = 'MATERIAL') {
   const base = `/api/learning/spaces/${encodeURIComponent(spaceId)}`
   return await responseJson(await request(`${base}/files`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size, topicId }),
+    body: JSON.stringify({ fileName: file.name, mimeType: file.type, sizeBytes: file.size, topicId, purpose }),
   })) as LearningFileUploadReservation
 }
 

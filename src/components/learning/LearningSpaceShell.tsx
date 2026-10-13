@@ -1,26 +1,15 @@
 import Link from 'next/link'
-import { Archive, ArrowRight, BookOpen, CalendarDays, History, NotebookPen, Users } from 'lucide-react'
+import { Archive, ArrowRight, BookOpen, CalendarDays, Users } from 'lucide-react'
 
 import type { AuthorizedLearningSpaceShellData } from '@/lib/learning-space-shell'
-import { LearningResources, type LearningResourceView } from '@/components/learning/LearningResources'
-import { LearningSubmissions } from '@/components/learning/LearningSubmissions'
+import type { LearningResourceView } from '@/components/learning/LearningResources'
+import { LearningSpaceSections } from '@/components/learning/LearningSpaceSections'
 
 type Props = { space: AuthorizedLearningSpaceShellData; showFirstValue?: boolean; resources?: LearningResourceView[]; quota?: { usedBytes: string; maxBytes: string } }
 
 const formatDate = (date: Date) => new Intl.DateTimeFormat('vi-VN', {
   dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh',
 }).format(date)
-
-function Placeholder({ icon: Icon, title, detail }: { icon: typeof BookOpen; title: string; detail: string }) {
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby={`${title}-heading`}>
-      <Icon aria-hidden="true" className="mb-3 h-5 w-5 text-purple-600" />
-      <h2 id={`${title}-heading`} className="text-base font-semibold text-slate-900">{title}</h2>
-      <p className="mt-1 text-sm leading-6 text-slate-600">{detail}</p>
-      <p className="mt-3 text-xs font-medium text-slate-500">Sắp có trong Learning Hub</p>
-    </section>
-  )
-}
 
 export function LearningSpaceShell({ space, showFirstValue = false, resources = [], quota = { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) } }: Props) {
   const now = new Date()
@@ -78,13 +67,7 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
           {partner && <Link href={`/book/${partner.id}?learningSpaceId=${encodeURIComponent(space.id)}`} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{showFirstValue && !nextBooking ? 'Đặt buổi học đầu tiên' : 'Đặt buổi học tiếp theo'} <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>}
         </section>
 
-        <LearningResources spaceId={space.id} resources={resources} quota={quota} topics={space.topics} archived={archived} />
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <LearningSubmissions spaceId={space.id} viewerId={space.viewerId} archived={archived} resources={resources} />
-          <Placeholder icon={NotebookPen} title="Ghi chú" detail="Ghi chú và phần tóm tắt chung sẽ xuất hiện tại đây." />
-          <Placeholder icon={History} title="Lịch sử" detail="Hoạt động học tập có cấu trúc sẽ xuất hiện tại đây." />
-        </div>
+        <LearningSpaceSections spaceId={space.id} viewerId={space.viewerId} archived={archived} resources={resources} quota={quota} topics={space.topics} />
       </div>
     </main>
   )

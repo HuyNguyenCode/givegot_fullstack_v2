@@ -52,8 +52,8 @@ test('empty and long Vietnamese content is preserved without requiring a mutatio
 
 test('mobile layout, keyboard focus, and navigation stay local to the route', () => {
   const html = renderToStaticMarkup(createElement(LearningSpaceShell, { space: memberShell }))
-  assert.match(html, /sm:grid-cols-2/)
+  assert.match(html, /grid-cols-2 gap-2 sm:grid-cols-4/)
   assert.match(html, /focus-visible:ring-2/)
-  assert.equal((html.match(/<nav/g) ?? []).length, 1)
+  assert.equal((html.match(/<nav/g) ?? []).length, 2)
   assert.doesNotMatch(html, /ProductionHeader|Tin nhắn|Ví của Mình/)
 })

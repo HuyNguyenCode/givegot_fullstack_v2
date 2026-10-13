@@ -1,12 +1,14 @@
 # Learning Hub Implementation Plan
 
-## D0 dependency note (updated 2026-10-09)
+## D0 dependency note (updated 2026-10-13)
 
-D0a, D0b, and D0c are COMPLETE: purpose schema, F1 purpose assignment, and scoped F2 resource reads passed their required verification. D0d is next and not started; it owns the four-section LearningSpace and submission-flow redesign. D0e and G3 remain separate and unstarted.
+D0a, D0b, and D0c are COMPLETE: purpose schema, F1 purpose assignment, and scoped F2 resource reads passed their required verification. D0d, UX1, UX2, and D0d-F1 are implemented and uncommitted. F1's automated checks passed; the owner reports all D0d browser smoke and P1 regression scenarios PASS, including G2 blocked-request failure/retry, private file download, P1-01 navigation/upload success and failure recovery, and P1-02 pending-edit lock/navigation/failure recovery/retry. These are owner-reported browser results, not independently reproduced automated results. No next implementation task is selected. D0e current-attachment deletion protection is NOT STARTED and needs owner approval; G3 private SubmissionReview is NOT STARTED.
 
-### Pending owner decision before D0d
+Deferred work, not D0d fixes: BUG-033 (excessively long G2 text and submission presentation); GG-LH-UI-002 (existing-file picker expands into a long inline list instead of a height-limited dropdown); GG-LH-F1-001 (DOCX upload/download support, a P1 enhancement before pilot; current F1 does not support DOCX).
 
-F2 link creation still relies on the `LEGACY_UNCLASSIFIED` database default, and D0c intentionally left that write path unchanged. Before D0d implementation, the owner must decide whether explicit server-side `MATERIAL` stamping for newly created learning links belongs in an approved D0d slice or a separate bounded repair. This is a planning question only; it does not approve or implement the change.
+### Deferred F2 LINK purpose question
+
+F2 link creation still relies on the `LEGACY_UNCLASSIFIED` database default, and D0c intentionally left that write path unchanged. D0d intentionally preserves this write path because D0c includes LEGACY_UNCLASSIFIED links in materials. Explicit server-side MATERIAL stamping for new links remains a separate bounded decision; D0d did not approve or implement it.
 
 The registry and historical task evidence below retain their original sequence.
 
@@ -17,7 +19,7 @@ The registry and historical task evidence below retain their original sequence.
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Current checkpoint: work through G2 plus D0a, D0b, and D0c is complete; D0d UI redesign is the next dependency-ordered task. D0e and G3 remain separate and are not active.
+- Current checkpoint: work through G2 and D0a–D0c is complete; uncommitted D0d/UX1/UX2/F1 is implemented with the acceptance evidence stated above. No next task has been selected; D0e requires owner approval and G3 remains unstarted.
 
 ## Task registry
 

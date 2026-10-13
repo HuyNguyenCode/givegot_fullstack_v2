@@ -1,5 +1,21 @@
 # Learning Hub Regression Checklist
 
+## Current D0d-F1 boundary and owner smoke (2026-10-13)
+
+D0d-F1 repaired two client-state races by keeping per-task upload/submit lifecycle in the mounted parent. F1/G1/G2 server contracts, resource deletion, Booking, GP, settlement, and cron behavior did not change. The focused 14/14, Learning Hub unit 105/105, relevant integration 24/24, typecheck, targeted ESLint, and diff check passed; F1 did not rerun the production build, while UX2's earlier build PASS remains recorded. The owner reports all D0d browser smoke PASS: sections, selection/pagination, drafts, direct F1/G2, materials separation, picker, mobile, archived reads, G2 blocked-request failure/retry, and private file download. The owner also reports P1-01 upload success after navigation and failure/retry recovery, and P1-02 pending G2 editing lock, task navigation, failure recovery, and retry PASS. These are owner-reported browser results, not independently reproduced automated results. D0e and G3 remain unstarted.
+
+## D0d-UX2 content and file-control boundary (completed 2026-10-10)
+
+The task list/detail presentation now renders G1 title, description, acceptance criteria, optional dueAt, and status through tested view components. The styled file label retains the native file input and existing F1 upload path. G1/G2 server contracts, task order, eight-row pagination, per-task draft retention, current Submission, archive reads, and deletion semantics remain unchanged. Focused render/UI, full Learning Hub unit, relevant integration, typecheck, targeted lint, build, and diff check passed. UX1 owner visual acceptance was rejected; UX2 browser review remains pending. No private/live task records were inspected, and D0e/G3 remain unstarted.
+
+## D0d-UX1 task UX boundary (completed 2026-10-09)
+
+The master/detail layout, mobile list/detail switch, eight-row local pagination, Vietnamese labels, and submission-form feedback are client-only changes. G1 task ordering/data and G2 authorization, state, validation, concurrency, and current-Submission semantics are unchanged. Direct upload still uses the established F1 lifecycle and the finalized READY ID; removing it from an unsent draft performs no resource deletion. Focused UI, complete Learning Hub unit, relevant resource/storage integration, typecheck, targeted ESLint, diff check, and production build passed. Owner manual smoke is pending; D0e and G3 were not started.
+
+## D0d UI and submission boundary (completed 2026-10-09)
+
+The page and Tài liệu refreshes use D0c materials scope; F2 omitted-view compatibility remains unchanged. Material and direct-submission F1 initiation send their explicit supported purposes. Task selection and per-task in-memory drafts affect only client UI; G1/G2 authorization, states, same-space READY FILE eligibility, transaction/idempotency, and F1 lifecycle remain unchanged. The optional picker and current attachment display read D0c READY files independently of materials. Focused UI tests, complete Learning Hub unit suite, relevant resource/storage integration, typecheck, targeted ESLint, diff check, and production build passed. Manual smoke is owner-pending; offline legacy regression scripts were not rerun because shared domain logic did not change. D0e and G3 were not started.
+
 ## D0c scoped resource read boundary (completed 2026-10-09)
 
 The F2 collection GET now passes optional `view` to the member-authorized service. Omission preserves all-purpose resource status/order/shape and the existing LearningSpace page caller. Materials and ready-files filters run in the Prisma resource query; quota remains the independent full-space FILE aggregate. Invalid views return 400, and the response still omits purpose, storage keys, and signed URLs. The current client-side topic grouping and five-row group pagination, F2 link write, F1 lifecycle, G2 eligibility, and archived-space read authorization did not change. Focused F2/D0c tests, relevant F1 storage integration, route smoke, typecheck, targeted ESLint, and diff check passed. Full lint, production build, and offline legacy regressions were not rerun for this bounded read change.

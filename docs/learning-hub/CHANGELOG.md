@@ -1,5 +1,29 @@
 # Learning Hub Changelog
 
+## 2026-10-13 — D0d pre-commit evidence reconciliation
+
+- D0d-F1 repaired two audited P1 client-state races: per-task upload lifecycle now settles in the mounted parent across task navigation, and pending G2 submission locks that task's draft inputs and attachment actions until the request settles. F1/G1/G2 backend contracts did not change. Focused submission UI tests 14/14, Learning Hub unit 105/105, relevant integration 24/24, typecheck, targeted ESLint, and diff check passed. F1 did not rerun the production build; the UX2 build PASS below is earlier evidence.
+- Historical UX2 automation passed while owner acceptance was blocked by the missing-content observation. The owner later found affected legacy/test tasks were inserted directly into Supabase without complete task content; a newly populated task displayed title, description, and acceptance criteria in the actual UI. This owner-observed test-data provenance does not rewrite the historical UX2 result or represent a backend/UI fix.
+- The owner now reports all D0d browser smoke PASS, including sections, task selection/pagination, draft retention, direct F1/G2, materials separation, the existing-file picker, mobile, archived behavior, G2 blocked-request failure/retry, and private file download. The owner also reports P1-01 upload success after navigation and failure/retry recovery, and P1-02 pending G2 editing lock, task navigation, failure recovery, and retry PASS. These are owner-reported browser results, not independently reproduced automated results. D0d remains uncommitted; D0e and G3 are NOT STARTED. Deferred BUG-033, GG-LH-UI-002, and GG-LH-F1-001 are not D0d fixes.
+
+## 2026-10-10 — D0d-UX2 task content and file-control repair
+
+- Replaced inline task row and requirements markup with render-tested title-first row and selected-detail components. The detail consistently presents task title, localized status, optional deadline, Mô tả bài tập, and Yêu cầu hoàn thành. Invalid or absent optional values have explicit restrained copy. The exposed native file input is now inside a styled accessible selection control.
+- The owner rejected UX1 visual acceptance after seeing missing titles and requirements. G1 returns full task rows and UX1 already referenced the matching property names; no title-hiding CSS was found. The exact running-page cause and the specific screenshot tasks' dueAt values remain unverified without authorized runtime response inspection. No private records were queried.
+- Focused render/UI tests 33/33, Learning Hub unit 102/102, relevant integrations 24/24, typecheck, targeted ESLint, production build, and diff check passed. Owner browser review remains pending. No server, schema, migration, provider, D0e, or G3 change; no commit or push.
+
+## 2026-10-09 — D0d-UX1 master/detail and submission-form repair
+
+- Reworked Công việc & bài nộp into a desktop 35/65 master/detail view with an eight-row title-first task list and immediate selected detail. Mobile now starts on the list, opens one detail, and provides an accessible back action. Task statuses are localized and due dates are shown without changing G1 data or enums.
+- Clarified the Bài làm của bạn hierarchy and observable direct-upload stages while preserving text, HTTPS link, and file inputs. READY attachments remain associated directly with each in-memory draft; G2 failures keep the draft and retry the same resource ID. The optional picker stays secondary and refreshes `view=ready-files` on every open. Current Submission content, link, submitted time, revision, file download, and unavailable state remain read-only.
+- Verification passed 30 focused UI tests, 99 Learning Hub unit tests, 24 relevant integration tests, typecheck, targeted ESLint, diff check, and production build. The obsolete render/loading attachment assertion was replaced by contract-level metadata-fetch and click-only download coverage. Manual owner smoke remains pending. No server contract, schema, migration, database, provider, D0e, or G3 work was performed.
+
+## 2026-10-09 — D0d LearningSpace sections and submission flow
+
+- Replaced the lower resource/task/placeholder grid with four hash-linked, responsive sections while keeping shared LearningSpace and Booking context above them. Task rows are compact; one selected task has the full-width detail and editable form. Notes and History remain placeholders.
+- The page and Tài liệu refresh use D0c `view=materials`. Material uploads request `MATERIAL`; direct task uploads request `SUBMISSION_ATTACHMENT`, automatically attach the finalized READY ID, and reuse it on G2 retry. Per-task unsent drafts remain in memory across section/task changes. The secondary existing-file picker fetches fresh `view=ready-files` data on each open; current attachment metadata uses the same view.
+- Focused tests, 96 Learning Hub unit tests, 24 relevant integration tests, typecheck, targeted ESLint, diff check, and production build passed. Manual smoke remains pending. F2 LINK purpose remains legacy; drafts do not survive reload; deleted current attachments show unavailable. D0e deletion protection is recommended next and G3 remains unstarted. No commit, push, schema, migration, database, provider, or server-contract change.
+
 ## 2026-10-09 — D0c scoped F2 resource reads
 
 - Added optional `view=materials` and `view=ready-files` to the existing resource collection GET. Omitted view retains all-purpose compatibility; filters run in the Prisma resource query. Unsupported views return the existing 400 error style.

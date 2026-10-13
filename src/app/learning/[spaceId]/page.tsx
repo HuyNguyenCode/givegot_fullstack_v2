@@ -43,6 +43,6 @@ export default async function LearningSpacePage({ params, searchParams }: { para
   // Treat an inaccessible ID exactly like an absent record. This prevents a
   // route response from disclosing whether a private space exists.
   if (!space) notFound()
-  const resourceData = await listLearningResources(spaceId)
+  const resourceData = await listLearningResources(spaceId, 'materials')
   return <LearningSpaceShell space={space} showFirstValue={onboarding === 'invite'} resources={resourceData.resources} quota={resourceData.quota} />
 }
