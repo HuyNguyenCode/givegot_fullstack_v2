@@ -1,6 +1,14 @@
 # Learning Hub Context Packet
 
-## Current D0d pre-commit reconciliation (2026-10-13)
+## Current D0e checkpoint (reconciled 2026-10-14)
+
+D0e protects every current Submission FILE attachment independent of resource purpose. F1 FILE deletion rechecks the active member, LearningSpace state, uploader ownership, FILE state, and current reference inside a Serializable transaction, then commits a conditional DELETED transition before provider removal. Referenced files and `P2034` conflicts return privacy-safe 409. G2's existing Serializable transaction is unchanged, as are orphan cleanup and F2 LINK deletion. Existing legacy FILE rows already DELETED are not restored; a current Submission that already references an unavailable/deleted legacy FILE remains unavailable.
+
+Focused F1 integration 22/22, Learning Hub unit 105/105, Learning Hub integration 53/53, real disposable PostgreSQL races 4/4 controlled scenarios, typecheck, targeted ESLint, offline legacy regressions, and diff check passed. The race suite covers submit wins, delete wins, controlled overlap, and revision A to B, not every theoretical schedule. The backend independent audit was `PASS WITH FINDINGS` with LOW-only documentation findings and reviewed test source/evidence without independently rerunning database tests.
+
+D0e-UI-001 resolves the specific current-Submission FILE conflict message; D0e-UI-002 hides and guards FILE delete in ARCHIVED spaces while preserving reads/downloads. Its focused UI 19/19, relevant F1/F2 integration 28/28, typecheck, targeted ESLint, and diff check passed. The owner reports M01-M05 PASS, including M03 and M05 after the UI repair. No independent UI re-audit or production build was run. D0e remains uncommitted. G3 is NOT STARTED and not authorized.
+
+## Historical D0d pre-commit reconciliation (2026-10-13)
 
 D0d, UX1, UX2, and D0d-F1 are implemented and remain uncommitted. D0d-F1 repaired two audited P1 client-state races: parent-owned per-task upload settlement across task navigation and a per-task G2 pending lock that preserves the submitted snapshot. Its automated verification passed 14/14 focused submission UI tests, 105/105 Learning Hub unit tests, 24/24 relevant integrations, typecheck, targeted ESLint, and `git diff --check`. No production build was rerun for F1; the UX2 build PASS is earlier evidence.
 
@@ -131,7 +139,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Next task
 
-G1, G2, D0a, D0b, D0c, and the uncommitted D0d/UX1/UX2/F1 work are implemented; the dated current reconciliation above records owner-reported manual acceptance. No next implementation task is selected. D0e deletion protection is NOT STARTED and requires owner approval; G3 SubmissionReview is NOT STARTED. Historical D0c verification and the 77-error/32-warning full-lint baseline remain in their owning checkpoints.
+G1, G2, D0a-D0d, and D0e are implemented. D0e backend audit, targeted UI verification, and owner-reported M01-M05 acceptance are complete as recorded above; no independent UI re-audit or production build ran. No next implementation task is authorized. G3 SubmissionReview is NOT STARTED. Historical D0c/D0d verification and the 77-error/32-warning full-lint baseline remain in their owning checkpoints.
 
 ## Completion contract
 

@@ -13,6 +13,14 @@ export type LearningFileUploadReservation = { resourceId: string; upload: { url:
 export const RESOURCE_GROUP_PAGE_SIZE = 5
 
 class LearningResourceRefreshError extends Error {}
+export const CURRENT_SUBMISSION_FILE_CONFLICT = 'File is attached to a current submission'
+
+export class LearningResourceDeleteError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message)
+    this.name = 'LearningResourceDeleteError'
+  }
+}
 
 const initialFileUploadState: FileUploadState = { phase: 'EMPTY', file: null }
 const bytes = (value: string) => `${(Number(value) / (1024 * 1024)).toFixed(1)} MB`
@@ -141,7 +149,12 @@ export async function createLearningLink(spaceId: string, form: FormData, reques
 export async function deleteLearningResource(spaceId: string, resource: Pick<LearningResourceView, 'id' | 'kind'>, request: typeof fetch = fetch) {
   const base = `/api/learning/spaces/${encodeURIComponent(spaceId)}`
   const path = resource.kind === 'FILE' ? `${base}/files/${encodeURIComponent(resource.id)}` : `${base}/resources/${encodeURIComponent(resource.id)}`
-  await responseJson(await request(path, { method: 'DELETE' }))
+  const response = await request(path, { method: 'DELETE' })
+  if (!response.ok) {
+    const data: unknown = await response.json().catch(() => null)
+    const message = data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Không thể xử lý tài nguyên'
+    throw new LearningResourceDeleteError(response.status, message)
+  }
 }
 
 export function SelectedFileReview({ state, busy, onRemove, onUpload }: { state: FileUploadState; busy: boolean; onRemove: () => void; onUpload: () => void }) {
@@ -165,6 +178,7 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
   const [deleteCandidate, setDeleteCandidate] = useState<LearningResourceView | null>(null)
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteAttachmentConflict, setDeleteAttachmentConflict] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const uploadInFlight = useRef(false)
   const deleteInFlight = useRef<string | null>(null)
@@ -202,8 +216,16 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
     if (deleteInFlight.current) return
     setDeleteCandidate(null)
     setDeleteError(null)
+    setDeleteAttachmentConflict(false)
     restoreDeleteTriggerFocus()
   }
+
+  useEffect(() => {
+    if (!archived || !deleteCandidate || deleteInFlight.current) return
+    setDeleteCandidate(null)
+    setDeleteError(null)
+    setDeleteAttachmentConflict(false)
+  }, [archived, deleteCandidate])
 
   useEffect(() => {
     if (!deleteCandidate) return
@@ -295,15 +317,16 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
   }
 
   function openDeleteConfirmation(resource: LearningResourceView, trigger: HTMLButtonElement) {
-    if (deleteInFlight.current) return
+    if (archived || deleteInFlight.current) return
     deleteTrigger.current = trigger
     setDeleteCandidate(resource)
     setDeleteError(null)
+    setDeleteAttachmentConflict(false)
   }
 
   async function confirmRemove() {
     const resource = deleteCandidate
-    if (!resource || deleteInFlight.current) return
+    if (!resource || archived || deleteInFlight.current) return
     deleteInFlight.current = resource.id
     setDeletingResourceId(resource.id)
     setBusy(true)
@@ -321,8 +344,13 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
       } catch {
         setError('Tài nguyên đã được xóa nhưng danh sách chưa thể cập nhật.')
       }
-    } catch {
-      setDeleteError('Không thể xóa tài nguyên. Kiểm tra kết nối và thử lại.')
+    } catch (cause) {
+      if (resource.kind === 'FILE' && cause instanceof LearningResourceDeleteError && cause.status === 409 && cause.message === CURRENT_SUBMISSION_FILE_CONFLICT) {
+        setDeleteAttachmentConflict(true)
+        setDeleteError('Không thể xóa tệp này.\nTệp đang được sử dụng trong một bài nộp. Bạn cần thay thế tệp trong bài nộp trước khi có thể xóa.')
+      } else {
+        setDeleteError('Không thể xóa tài nguyên. Kiểm tra kết nối và thử lại.')
+      }
     } finally {
       deleteInFlight.current = null
       setDeletingResourceId(null)
@@ -331,7 +359,7 @@ export function LearningResources({ spaceId, resources, quota, topics, archived 
   }
 
   function renderResource(resource: LearningResourceView) {
-    return <li key={resource.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl ? <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-slate-900 underline-offset-4 hover:text-purple-700 hover:focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{resource.title}</a> : <p className="break-words font-medium text-slate-900">{resource.title}</p>}{resource.description && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-600">{resource.description}</p>}<p className="mt-2 text-xs text-slate-500">{resource.kind === 'LINK' ? 'Liên kết' : resource.mimeType || 'Tệp'} · {resource.uploaderName} · {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(resource.createdAt))}{resource.topicLabel ? ` · ${resource.topicLabel}` : ''} · <span className={resource.status === 'READY' ? 'text-emerald-700' : resource.status === 'DELETED' ? 'text-slate-500' : 'text-amber-700'}>{labels[resource.status]}</span></p></div><div className="flex shrink-0 gap-2">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl && <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Mở<ExternalLink className="h-4 w-4" /></a>}{resource.status === 'READY' && resource.kind === 'FILE' && <button disabled={busy} onClick={() => void download(resource.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Tải<Download className="h-4 w-4" /></button>}{resource.canDelete && resource.status !== 'DELETED' && <div className="relative"><button disabled={busy} onClick={event => openDeleteConfirmation(resource, event.currentTarget)} aria-label={`Xóa ${resource.title}`} aria-haspopup="dialog" aria-expanded={deleteCandidate?.id === resource.id} aria-controls={`delete-resource-${resource.id}`} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-700"><Trash2 className="h-4 w-4" />Xóa</button>{deleteCandidate?.id === resource.id && <div ref={deletePopover} id={`delete-resource-${resource.id}`} role="dialog" aria-label="Xác nhận xóa tài nguyên" className="absolute right-0 top-full z-10 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"><p className="text-sm font-medium text-slate-900">Xóa tài nguyên này?</p>{deleteError && <p role="alert" className="mt-2 text-sm text-red-700">{deleteError}</p>}<div className="mt-3 flex justify-end gap-2"><button ref={deleteCancel} type="button" disabled={deletingResourceId === resource.id} onClick={closeDeleteConfirmation} className="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:opacity-60">Hủy</button><button type="button" disabled={deletingResourceId === resource.id} onClick={() => void confirmRemove()} className="min-h-10 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 disabled:opacity-60">{deletingResourceId === resource.id ? 'Đang xóa...' : 'Xóa'}</button></div></div>}</div>}</div></div></li>
+    return <li key={resource.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl ? <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-slate-900 underline-offset-4 hover:text-purple-700 hover:focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{resource.title}</a> : <p className="break-words font-medium text-slate-900">{resource.title}</p>}{resource.description && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-600">{resource.description}</p>}<p className="mt-2 text-xs text-slate-500">{resource.kind === 'LINK' ? 'Liên kết' : resource.mimeType || 'Tệp'} · {resource.uploaderName} · {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(resource.createdAt))}{resource.topicLabel ? ` · ${resource.topicLabel}` : ''} · <span className={resource.status === 'READY' ? 'text-emerald-700' : resource.status === 'DELETED' ? 'text-slate-500' : 'text-amber-700'}>{labels[resource.status]}</span></p></div><div className="flex shrink-0 gap-2">{resource.status === 'READY' && resource.kind === 'LINK' && resource.externalUrl && <a href={resource.externalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Mở<ExternalLink className="h-4 w-4" /></a>}{resource.status === 'READY' && resource.kind === 'FILE' && <button disabled={busy} onClick={() => void download(resource.id)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm font-medium">Tải<Download className="h-4 w-4" /></button>}{!archived && resource.canDelete && resource.status !== 'DELETED' && <div className="relative"><button disabled={busy} onClick={event => openDeleteConfirmation(resource, event.currentTarget)} aria-label={`Xóa ${resource.title}`} aria-haspopup="dialog" aria-expanded={deleteCandidate?.id === resource.id} aria-controls={`delete-resource-${resource.id}`} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-700"><Trash2 className="h-4 w-4" />Xóa</button>{deleteCandidate?.id === resource.id && <div ref={deletePopover} id={`delete-resource-${resource.id}`} role="dialog" aria-label="Xác nhận xóa tài nguyên" className="absolute right-0 top-full z-10 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"><p className="text-sm font-medium text-slate-900">Xóa tài nguyên này?</p>{deleteError && <p role="alert" className="mt-2 whitespace-pre-line text-sm text-red-700">{deleteError}</p>}<div className="mt-3 flex justify-end gap-2"><button ref={deleteCancel} type="button" disabled={deletingResourceId === resource.id} onClick={closeDeleteConfirmation} className="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:opacity-60">{deleteAttachmentConflict ? 'Đóng' : 'Hủy'}</button><button type="button" disabled={deletingResourceId === resource.id || deleteAttachmentConflict} onClick={() => void confirmRemove()} className="min-h-10 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 disabled:opacity-60">{deletingResourceId === resource.id ? 'Đang xóa...' : 'Xóa'}</button></div></div>}</div>}</div></div></li>
   }
 
   return <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="resources-heading">

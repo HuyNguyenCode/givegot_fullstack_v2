@@ -1,6 +1,14 @@
 # Learning Hub Implementation State
 
-## Current D0d pre-commit reconciliation (2026-10-13)
+## D0e current FILE attachment deletion protection (reconciled 2026-10-14)
+
+D0e is implemented in F1 FILE deletion. The uploader's delete request rechecks ACTIVE membership and LearningSpace state, FILE ownership/state, and current `Submission.attachmentResourceId` references within one short Prisma Serializable transaction. A current reference returns privacy-safe HTTP 409; an unreferenced FILE is conditionally marked DELETED. Prisma `P2034` maps to 409, and provider removal starts only after commit. All FILE purposes receive the same protection. G2's existing Serializable submission transaction, F1 orphan cleanup, schema, migrations, and F2 LINK deletion remain unchanged.
+
+Verification: focused F1 integration 22/22; Learning Hub unit 105/105; Learning Hub integration 53/53; and the real disposable PostgreSQL race suite 4/4 controlled scenarios (submit wins, delete wins, controlled overlap, revision A to B) passed. Typecheck, targeted ESLint, all five offline legacy regression scripts, and `git diff --check` passed. The backend independent audit was `PASS WITH FINDINGS`, with LOW-only documentation findings: already-DELETED legacy FILE rows are not restored; current Submissions that already reference unavailable/deleted legacy FILEs remain unavailable; orphan cleanup is unchanged; and the four real races do not cover every theoretical schedule. The audit reviewed the test source and evidence without independently rerunning database tests.
+
+D0e-UI-001 now recognizes the specific current-Submission FILE conflict and keeps the confirmation open with the Vietnamese explanation and a Close action. D0e-UI-002 hides and guards FILE deletion in ARCHIVED LearningSpaces while preserving reads/downloads. The UI repair changed only `LearningResources.tsx` and its contract test: focused UI 19/19, relevant F1/F2 integration 28/28, typecheck, targeted ESLint, and diff check passed. The owner reports M01-M05 PASS, including M03 and M05 after the repair. No independent UI re-audit or D0e production build was run. D0e remains uncommitted; G3 is NOT STARTED and is not authorized by this checkpoint.
+
+## Historical D0d pre-commit reconciliation (2026-10-13)
 
 D0d, UX1, UX2, and D0d-F1 are implemented and remain uncommitted. D0d-F1 repaired parent-owned per-task upload settlement across task navigation and a per-task G2 pending lock. Its automated verification passed 14/14 focused submission UI tests, 105/105 Learning Hub unit tests, 24/24 relevant integrations, typecheck, targeted ESLint, and `git diff --check`. Production build was not rerun for F1; UX2's build PASS is earlier evidence.
 
@@ -79,14 +87,14 @@ At the UX2 checkpoint, automated checks passed but owner acceptance was blocked 
 
 ## Current checkpoint
 
-- Recorded: 2026-10-13, Asia/Saigon.
+- Recorded: 2026-10-14, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
-- Latest committed checkpoint on this branch: `5cd35d49dbd91bda998d9caf41e002febd3a46d4`
-  (`feat(learning-hub): add D0c scoped resource views`).
+- Current HEAD: `43c0ced83281f5cd35a967929aba6d1061f7acf6` (`feat(learning-hub): complete D0d LearningSpace and submission UX`). D0e changes are uncommitted.
+- Previously recorded D0c commit: `5cd35d49dbd91bda998d9caf41e002febd3a46d4` (`feat(learning-hub): add D0c scoped resource views`).
 - Previously recorded G2 commit: `b9cf25172d6895d45589fbdd6abed42a489ba25c` (`fix(learning-hub): support direct file attachment in G2 submissions`).
-- Current checkout checkpoint: 00, 01, A1, A2, B1, B2, C1, D1, C2, E1 plus its narrow AvailableSlot repair, F1, F2, G1, G2, D0a, D0b, D0c, and D0d including UX1, UX2, and D0d-F1 are implemented. D0a: PASS; D0b: PASS; D0c: PASS. D0d automated verification through F1 passed with known limitations; the owner reports all D0d and P1 browser scenarios PASS, as detailed above. D0e: NOT STARTED, owner approval required. G3: NOT STARTED. The D0d work remains uncommitted and has no commit ID.
+- Current checkout checkpoint: G2, D0a-D0d (including UX1, UX2, and D0d-F1), and D0e are implemented. D0e backend audit is `PASS WITH FINDINGS` (LOW only); its controlled real PostgreSQL race evidence and later UI repair verification are recorded above. The owner reports D0e M01-M05 PASS. No independent UI re-audit or production build ran. G3 is NOT STARTED; D0e has no commit ID.
 - Historical baseline before Task A1 authoring: `b2342f4c07430c2441ae4bcc2ec410fc27dfefb1`.
-- Status: D0a PASS; D0b PASS; D0c PASS; D0d/UX1/UX2/F1 implemented with automated verification PASS and known limitations; owner-reported D0d manual acceptance PASS. The UX2 acceptance block remains historical checkpoint evidence, later explained by owner-observed incomplete test data. D0e NOT STARTED (owner approval required); G3 NOT STARTED. Historical D0a/D0b/G1/G2 evidence remains recorded below, including the unrelated legacy lint baseline and private-storage deployment limitation.
+- Status: D0a-D0c PASS; D0d automated verification PASS with its recorded limitations and owner-reported manual acceptance PASS; D0e implementation and verification complete, backend audit `PASS WITH FINDINGS` (LOW only), UI repair verification PASS, and owner-reported M01-M05 PASS; no independent UI re-audit or production build. G3 NOT STARTED. Historical UX2 acceptance and prior D0d/G1/G2 evidence remain in their dated sections.
 - Production behavior: a Booking started from a LearningSpace carries a server-authorized `learningSpaceId`, optional active `topicId`, selected LIVE/EXERCISE_REVIEW/HYBRID mode, objective/definition snapshots, and `NOT_STARTED` fulfillment state. LIVE and HYBRID now select a future unbooked mentor AvailableSlot and use the existing locked slot path; EXERCISE_REVIEW retains the E1 manual-time `createBooking` path. Legacy Booking creation remains valid with all Learning Hub fields null.
 - Schema/migration behavior: ten Learning Hub models plus eight nullable Booking fields; additive migrations 004, 005, and 006 with paired rollback SQL/notes and no Booking backfill. Migration 005 adds only `LearningTask.version` with default 1. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with database default `LEGACY_UNCLASSIFIED`; its rollback refuses classified rows.
 - API behavior: F1 provides session-bound private file initiation, finalize, signed download, and soft-delete routes under `/api/learning/spaces/[spaceId]/files`, plus a secret-protected cleanup cron. F2 adds member-authorized resource collection/item routes under `/api/learning/spaces/[spaceId]/resources`. G1 adds protected task list/create and item-update routes under `/api/learning/spaces/[spaceId]/tasks`; G2 adds the session-backed current-submission route under `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`; `getLearningBookingContext` and E1 Booking guards remain intact.
@@ -94,7 +102,7 @@ At the UX2 checkpoint, automated checks passed but owner acceptance was blocked 
 - D0b verification: 18/18 focused F1 storage tests, 43/43 Learning Hub integration tests, 97/97 Learning Hub unit tests, typecheck, targeted ESLint, and `git diff --check` passed. Production build, full repository lint, and the five legacy regression scripts were not rerun for D0b. Historical G2/F1 verification remains in its owning sections and is not D0b evidence; the 77-error/32-warning full-lint result is a historical repository baseline, not a fresh D0b lint run.
 - D0c verification: 23/23 focused F2/D0c tests, 24/24 relevant integration tests, route smoke, typecheck, targeted ESLint, and `git diff --check` passed. Production build, full lint, and the five legacy regression scripts were not rerun for D0c.
 - F2 Resource domain and UI completed on 2026-09-21. Active members can list, add, reopen, and delete their HTTPS links or F1 private files from LearningSpace. Resource metadata carries optional Booking/topic references; safe status, uploader, topic, time, and quota are displayed. Link/file deletion remains uploader-only and soft deletes preserve audit/provider cleanup. No server URL fetch, file parsing, raw video, Booking, fulfillment, or settlement behavior was added.
-- At that checkpoint, D0d was next. D0d is complete now; D0e and G3 remain separate and unstarted.
+- At that checkpoint, D0d was next. D0d is complete now; D0e is complete and uncommitted. G3 remains separate and NOT STARTED.
 
 ### OWNER DECISION — EXERCISE_REVIEW scheduling semantics
 

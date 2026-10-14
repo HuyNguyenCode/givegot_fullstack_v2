@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import type { LearningResourcePurpose, LearningResourceStatus, LearningSpaceStatus } from '@prisma/client'
+import { Prisma, type LearningResourcePurpose, type LearningResourceStatus, type LearningSpaceStatus } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 import { requireAuthenticatedUser } from '@/lib/server-authorization'
@@ -51,6 +51,7 @@ export interface LearningStorageRepository {
   access(spaceId: string, userId: string): Promise<{ state: LearningSpaceStatus } | null>
   reserve(input: { spaceId: string; userId: string; id: string; title: string; description: string | null; bookingId: string | null; topicId: string | null; key: string; mimeType: string; sizeBytes: number; purpose: LearningResourcePurpose; quotaBytes: number }): Promise<FileResource>
   resource(spaceId: string, resourceId: string): Promise<FileResource | null>
+  deleteUnreferencedFile(input: { spaceId: string; resourceId: string; actorId: string; deletedAt: Date }): Promise<{ resource: FileResource; deleted: boolean }>
   transition(resourceId: string, from: LearningResourceStatus, to: LearningResourceStatus, changes?: { storageKey?: string | null; deletedAt?: Date }): Promise<boolean>
   transitionReadyWithActivity(input: { resourceId: string; storageKey: string; activity: ResourceCreatedActivity }): Promise<boolean>
   recordResourceCreated(input: ResourceCreatedActivity): Promise<void>
@@ -205,12 +206,16 @@ export function createLearningStorageService(deps: {
   }
 
   async function softDelete(spaceId: string, resourceId: string) {
-    const actorId = await authorize(spaceId, true)
-    const resource = await repository.resource(spaceId, resourceId)
-    if (!resource || resource.kind !== 'FILE' || resource.uploaderId !== actorId) throw new LearningStorageError(404, 'File resource not found')
-    if (resource.status === 'DELETED') return { resourceId, status: 'DELETED' as const }
-    const updated = await repository.transition(resourceId, resource.status, 'DELETED', { deletedAt: now() })
-    if (!updated) throw new LearningStorageError(409, 'File state changed')
+    const actorId = (await authenticatedUser()).id
+    let result: Awaited<ReturnType<LearningStorageRepository['deleteUnreferencedFile']>>
+    try {
+      result = await repository.deleteUnreferencedFile({ spaceId, resourceId, actorId, deletedAt: now() })
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') throw new LearningStorageError(409, 'File state changed; refresh and try again')
+      throw error
+    }
+    if (!result.deleted) return { resourceId, status: 'DELETED' as const }
+    const { resource } = result
     if (resource.storageKey) try {
       await provider.remove(resource.storageKey)
       await provider.remove(resource.storageKey.startsWith('pending/') ? finalKey(resource.storageKey) : stagingKey(resource.storageKey))
@@ -265,6 +270,19 @@ export const learningStorageRepository: LearningStorageRepository = {
     return tx.learningResource.create({ data: { id: input.id, learningSpaceId: input.spaceId, uploaderId: input.userId, bookingId: input.bookingId, topicId: input.topicId, kind: 'FILE', title: input.title, description: input.description, storageKey: input.key, mimeType: input.mimeType, sizeBytes: BigInt(input.sizeBytes), status: 'PENDING', purpose: input.purpose } }) as Promise<FileResource>
   }),
   resource: (spaceId, resourceId) => prisma.learningResource.findFirst({ where: { id: resourceId, learningSpaceId: spaceId, kind: 'FILE' } }) as Promise<FileResource | null>,
+  deleteUnreferencedFile: input => prisma.$transaction(async tx => {
+    const member = await tx.learningSpaceMember.findUnique({ where: { learningSpaceId_userId: { learningSpaceId: input.spaceId, userId: input.actorId } }, select: { status: true, learningSpace: { select: { state: true } } } })
+    if (member?.status !== 'ACTIVE') throw new LearningStorageError(403, 'Learning space membership required')
+    if (member.learningSpace.state !== 'ACTIVE') throw new LearningStorageError(403, 'Archived learning spaces are read-only')
+    const resource = await tx.learningResource.findFirst({ where: { id: input.resourceId, learningSpaceId: input.spaceId, kind: 'FILE' } })
+    if (!resource || resource.uploaderId !== input.actorId) throw new LearningStorageError(404, 'File resource not found')
+    if (resource.status === 'DELETED') return { resource: resource as FileResource, deleted: false }
+    const reference = await tx.submission.findFirst({ where: { attachmentResourceId: resource.id }, select: { id: true } })
+    if (reference) throw new LearningStorageError(409, 'File is attached to a current submission')
+    const updated = await tx.learningResource.updateMany({ where: { id: resource.id, learningSpaceId: input.spaceId, kind: 'FILE', uploaderId: input.actorId, status: resource.status }, data: { status: 'DELETED', deletedAt: input.deletedAt } })
+    if (updated.count !== 1) throw new LearningStorageError(409, 'File state changed')
+    return { resource: resource as FileResource, deleted: true }
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
   transition: async (resourceId, from, to, changes) => (await prisma.learningResource.updateMany({ where: { id: resourceId, status: from }, data: { status: to, ...changes } })).count === 1,
   transitionReadyWithActivity: input => prisma.$transaction(async tx => {
     const updated = await tx.learningResource.updateMany({ where: { id: input.resourceId, status: 'PENDING' }, data: { status: 'READY', storageKey: input.storageKey } })

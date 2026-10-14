@@ -1,6 +1,10 @@
 # Learning Hub Implementation Plan
 
-## D0 dependency note (updated 2026-10-13)
+## Current D0e checkpoint (reconciled 2026-10-14)
+
+D0e FILE deletion protection is implemented and verified. The F1 Serializable reference check and conditional soft delete preserve G2's existing Serializable transaction and provider cleanup after commit. No schema, migration, advisory lock, orphan-cleanup, F2 LINK, or G3 work changed. The later bounded UI repair adds precise current-Submission conflict messaging and removes actionable FILE deletion in ARCHIVED spaces; it changes no backend behavior. Focused F1 22/22, Learning Hub unit 105/105, Learning Hub integration 53/53, four controlled real PostgreSQL race scenarios, typecheck, targeted lint, five offline legacy regressions, and diff check passed. The backend independent audit was `PASS WITH FINDINGS` with LOW-only documentation findings; it reviewed source/evidence and did not rerun the database tests. The owner reports D0e M01-M05 PASS. Focused UI 19/19 and relevant F1/F2 integration 28/28 passed after the UI repair. No independent UI re-audit or production build was run. D0e is uncommitted; G3 is NOT STARTED and is not authorized by this checkpoint.
+
+## Historical D0 dependency note (updated 2026-10-13)
 
 D0a, D0b, and D0c are COMPLETE: purpose schema, F1 purpose assignment, and scoped F2 resource reads passed their required verification. D0d, UX1, UX2, and D0d-F1 are implemented and uncommitted. F1's automated checks passed; the owner reports all D0d browser smoke and P1 regression scenarios PASS, including G2 blocked-request failure/retry, private file download, P1-01 navigation/upload success and failure recovery, and P1-02 pending-edit lock/navigation/failure recovery/retry. These are owner-reported browser results, not independently reproduced automated results. No next implementation task is selected. D0e current-attachment deletion protection is NOT STARTED and needs owner approval; G3 private SubmissionReview is NOT STARTED.
 
@@ -19,7 +23,7 @@ The registry and historical task evidence below retain their original sequence.
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Current checkpoint: work through G2 and D0a–D0c is complete; uncommitted D0d/UX1/UX2/F1 is implemented with the acceptance evidence stated above. No next task has been selected; D0e requires owner approval and G3 remains unstarted.
+- Current checkpoint: D0e is implemented and verified as described above; backend audit and owner M01-M05 acceptance are complete, while an independent UI re-audit and a production build were not run. Earlier D0d/UX1/UX2/F1 evidence below is historical. G3 remains NOT STARTED.
 
 ## Task registry
 

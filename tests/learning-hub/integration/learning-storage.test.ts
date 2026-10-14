@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
+import { Prisma } from '@prisma/client'
+
 import { AuthorizationError } from '../../../src/lib/server-authorization'
 import {
   createLearningStorageService,
@@ -16,6 +18,7 @@ import {
 } from '../../../src/lib/learning-storage-service'
 import { downloadContentDisposition } from '../../../src/lib/learning-download-disposition'
 import type { LearningStorageProvider } from '../../../src/lib/learning-storage-provider'
+import { createLearningFileHandlers } from '../../../src/lib/learning-storage-route-handlers'
 
 const start = new Date('2030-01-01T00:00:00.000Z')
 
@@ -34,13 +37,16 @@ function fixture() {
   const objects = new Map<string, { sizeBytes: number; mimeType: string }>()
   const content = new Map<string, Uint8Array>()
   const removed: string[] = []
+  const currentAttachments = new Set<string>()
+  const deleteTimeline: string[] = []
+  let failSerializableDelete = false
   let nextId = 0
   const recordActivity = async (activity: Parameters<LearningStorageRepository['recordResourceCreated']>[0]) => {
     if (failActivityWrite) throw new Error('activity database unavailable')
     if (!activities.some(existing => existing.eventKey === activity.eventKey)) activities.push(activity)
   }
   const repository: LearningStorageRepository = {
-    access: async (_spaceId, userId) => userId === 'member' ? { state: archived ? 'ARCHIVED' : 'ACTIVE' } : null,
+    access: async (_spaceId, userId) => userId === 'member' || userId === 'other' ? { state: archived ? 'ARCHIVED' : 'ACTIVE' } : null,
     reserve: async input => {
       const used = [...rows.values()].filter(row => ['PENDING', 'READY', 'QUARANTINED'].includes(row.status)).reduce((sum, row) => sum + Number(row.sizeBytes), 0)
       if (used + input.sizeBytes > input.quotaBytes) throw new LearningStorageError(413, 'Learning space storage quota exceeded')
@@ -49,6 +55,19 @@ function fixture() {
       return row
     },
     resource: async (_spaceId, resourceId) => rows.get(resourceId) ?? null,
+    deleteUnreferencedFile: async ({ spaceId, resourceId, actorId, deletedAt }) => {
+      if (actorId !== 'member' && actorId !== 'other') throw new LearningStorageError(403, 'Learning space membership required')
+      if (archived) throw new LearningStorageError(403, 'Archived learning spaces are read-only')
+      const row = rows.get(resourceId)
+      if (!row || row.learningSpaceId !== spaceId || row.uploaderId !== actorId) throw new LearningStorageError(404, 'File resource not found')
+      if (row.status === 'DELETED') return { resource: row, deleted: false }
+      if (currentAttachments.has(resourceId)) throw new LearningStorageError(409, 'File is attached to a current submission')
+      if (failSerializableDelete) throw new Prisma.PrismaClientKnownRequestError('Write conflict', { code: 'P2034', clientVersion: '5.22.0' })
+      row.status = 'DELETED'
+      row.deletedAt = deletedAt
+      deleteTimeline.push('commit')
+      return { resource: row, deleted: true }
+    },
     transition: async (resourceId, from, to, changes) => {
       const row = rows.get(resourceId)
       if (!row || row.status !== from) return false
@@ -116,7 +135,7 @@ function fixture() {
       assert.equal(expiresAt.getTime() - clock, LEARNING_DOWNLOAD_TTL_MS)
       return `https://example.invalid/download?expires=${expiresAt.getTime()}`
     },
-    remove: async key => { providerCalls += 1; if (failRemove) throw new Error('provider down'); removed.push(key); objects.delete(key); content.delete(key) },
+    remove: async key => { providerCalls += 1; deleteTimeline.push('remove'); if (failRemove) throw new Error('provider down'); removed.push(key); objects.delete(key); content.delete(key) },
   }
   const service = createLearningStorageService({
     repository, provider,
@@ -127,7 +146,7 @@ function fixture() {
     now: () => new Date(clock), uuid: () => `uuid-${++nextId}`,
   })
   const valid = { fileName: 'notes.pdf', mimeType: 'application/pdf', sizeBytes: 1024 }
-  return { service, valid, rows, activities, objects, removed, setContent: (key: string, bytes: Uint8Array) => { content.set(key, bytes) }, setActor: (value: string | null) => { actor = value }, setArchived: (value: boolean) => { archived = value }, advance: (ms: number) => { clock += ms }, canOpenSignedUrl: (url: string) => clock < Number(new URL(url).searchParams.get('expires')), calls: () => providerCalls, failSign: () => { failSign = true }, failPromote: () => { failPromote = true }, deleteDuringPromote: () => { deleteDuringPromote = true }, setFailRemove: (value: boolean) => { failRemove = value }, failActivityWrite: (value: boolean) => { failActivityWrite = value } }
+  return { service, valid, rows, activities, objects, removed, currentAttachments, deleteTimeline, failSerializableDelete: () => { failSerializableDelete = true }, setContent: (key: string, bytes: Uint8Array) => { content.set(key, bytes) }, setActor: (value: string | null) => { actor = value }, setArchived: (value: boolean) => { archived = value }, advance: (ms: number) => { clock += ms }, canOpenSignedUrl: (url: string) => clock < Number(new URL(url).searchParams.get('expires')), calls: () => providerCalls, failSign: () => { failSign = true }, failPromote: () => { failPromote = true }, deleteDuringPromote: () => { deleteDuringPromote = true }, setFailRemove: (value: boolean) => { failRemove = value }, failActivityWrite: (value: boolean) => { failActivityWrite = value } }
 }
 
 test('FILE reservation persists explicit purpose and preserves the omitted-purpose compatibility default', async () => {
@@ -416,4 +435,69 @@ test('a deletion racing with finalize cannot publish or retain a promoted object
   assert.equal(row.status, 'DELETED')
   assert.equal(f.objects.has(row.storageKey!.replace('pending/', '')), false)
   await assert.rejects(() => f.service.download('space', issued.resourceId), { status: 404 })
+})
+
+test('D0e rejects current FILE attachments for every purpose with a privacy-safe HTTP 409', async () => {
+  for (const purpose of ['MATERIAL', 'SUBMISSION_ATTACHMENT', 'LEGACY_UNCLASSIFIED'] as const) {
+    const f = fixture()
+    const issued = await f.service.initiate('space', { ...f.valid, ...(purpose === 'LEGACY_UNCLASSIFIED' ? {} : { purpose }) })
+    f.rows.get(issued.resourceId)!.status = 'READY'
+    f.currentAttachments.add(issued.resourceId)
+    const response = await createLearningFileHandlers(f.service).DELETE({} as never, { params: Promise.resolve({ spaceId: 'space', resourceId: issued.resourceId }) })
+    assert.equal(response.status, 409)
+    assert.deepEqual(await response.json(), { error: 'File is attached to a current submission' })
+    assert.equal(f.rows.get(issued.resourceId)?.status, 'READY')
+    assert.deepEqual(f.removed, [])
+    assert.deepEqual(f.deleteTimeline, [])
+  }
+})
+
+test('D0e protects only the current attachment after replacement', async () => {
+  const f = fixture()
+  const a = await f.service.initiate('space', f.valid)
+  const b = await f.service.initiate('space', { ...f.valid, purpose: 'SUBMISSION_ATTACHMENT' })
+  f.rows.get(a.resourceId)!.status = 'READY'
+  f.rows.get(b.resourceId)!.status = 'READY'
+  f.currentAttachments.add(a.resourceId)
+  await assert.rejects(() => f.service.softDelete('space', a.resourceId), { status: 409 })
+  f.currentAttachments.delete(a.resourceId)
+  f.currentAttachments.add(b.resourceId)
+  await f.service.softDelete('space', a.resourceId)
+  await assert.rejects(() => f.service.softDelete('space', b.resourceId), { status: 409 })
+  assert.equal(f.rows.get(a.resourceId)?.status, 'DELETED')
+  assert.equal(f.rows.get(b.resourceId)?.status, 'READY')
+})
+
+test('D0e retains authentication, membership, uploader, archive and already-deleted behavior', async () => {
+  const f = fixture()
+  const issued = await f.service.initiate('space', f.valid)
+  f.setActor(null)
+  await assert.rejects(() => f.service.softDelete('space', issued.resourceId), { status: 401 })
+  f.setActor('outsider')
+  await assert.rejects(() => f.service.softDelete('space', issued.resourceId), { status: 403 })
+  f.setActor('other')
+  await assert.rejects(() => f.service.softDelete('space', issued.resourceId), { status: 404 })
+  f.setActor('member')
+  f.setArchived(true)
+  await assert.rejects(() => f.service.softDelete('space', issued.resourceId), { status: 403 })
+  f.setArchived(false)
+  await f.service.softDelete('space', issued.resourceId)
+  const removedCount = f.removed.length
+  assert.deepEqual(await f.service.softDelete('space', issued.resourceId), { resourceId: issued.resourceId, status: 'DELETED' })
+  assert.equal(f.removed.length, removedCount)
+})
+
+test('D0e removes provider objects only after commit and skips removal on P2034', async () => {
+  const committed = fixture()
+  const issued = await committed.service.initiate('space', committed.valid)
+  await committed.service.softDelete('space', issued.resourceId)
+  assert.deepEqual(committed.deleteTimeline.slice(0, 2), ['commit', 'remove'])
+
+  const conflicted = fixture()
+  const pending = await conflicted.service.initiate('space', conflicted.valid)
+  conflicted.failSerializableDelete()
+  await assert.rejects(() => conflicted.service.softDelete('space', pending.resourceId), { status: 409, message: 'File state changed; refresh and try again' })
+  assert.equal(conflicted.rows.get(pending.resourceId)?.status, 'PENDING')
+  assert.deepEqual(conflicted.removed, [])
+  assert.deepEqual(conflicted.deleteTimeline, [])
 })

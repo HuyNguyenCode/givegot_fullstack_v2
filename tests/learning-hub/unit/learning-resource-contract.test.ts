@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { clampResourceGroupPages, createLearningLink, deleteLearningResource, fetchLearningResources, fileUploadReducer, finalizeLearningFileUpload, formatFileSize, groupLearningResources, hasCurrentLearningUploadCredential, initiateLearningFileUpload, LearningResources, paginateLearningResourceGroup, RESOURCE_GROUP_PAGE_SIZE, SelectedFileReview, uploadLearningFile, uploadLearningFileToProvider } from '../../../src/components/learning/LearningResources'
+import { clampResourceGroupPages, createLearningLink, CURRENT_SUBMISSION_FILE_CONFLICT, deleteLearningResource, fetchLearningResources, LearningResourceDeleteError, fileUploadReducer, finalizeLearningFileUpload, formatFileSize, groupLearningResources, hasCurrentLearningUploadCredential, initiateLearningFileUpload, LearningResources, paginateLearningResourceGroup, RESOURCE_GROUP_PAGE_SIZE, SelectedFileReview, uploadLearningFile, uploadLearningFileToProvider } from '../../../src/components/learning/LearningResources'
 import { normalizeExternalUrl } from '../../../src/lib/learning-resource-service'
 
 test('external resources accept normalized HTTPS only and reject dangerous schemes', () => {
@@ -324,4 +324,43 @@ test('resource contracts retain private boundaries and deduplicated activity sem
   assert.match(source, /eventKey: `learning-resource:\$\{resource.id\}:created`/)
   assert.match(source, /metadata: \{ kind: 'LINK', status: 'READY' \}/)
   assert.doesNotMatch(source, /signDownload|storageKey.*return/)
+})
+
+test('FILE delete classifies only the current-submission conflict and preserves other failures', async () => {
+  const file = { id: 'file', kind: 'FILE' as const }
+  const attached = (async () => Response.json({ error: CURRENT_SUBMISSION_FILE_CONFLICT }, { status: 409 })) as typeof fetch
+  await assert.rejects(
+    () => deleteLearningResource('space', file, attached),
+    error => error instanceof LearningResourceDeleteError && error.status === 409 && error.message === CURRENT_SUBMISSION_FILE_CONFLICT,
+  )
+
+  const changed = (async () => Response.json({ error: 'File state changed; refresh and try again' }, { status: 409 })) as typeof fetch
+  await assert.rejects(
+    () => deleteLearningResource('space', file, changed),
+    error => error instanceof LearningResourceDeleteError && error.status === 409 && error.message === 'File state changed; refresh and try again',
+  )
+
+  const network = (async () => { throw new Error('network unavailable') }) as typeof fetch
+  await assert.rejects(() => deleteLearningResource('space', file, network), { message: 'network unavailable' })
+
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /cause instanceof LearningResourceDeleteError && cause\.status === 409 && cause\.message === CURRENT_SUBMISSION_FILE_CONFLICT/)
+  assert.match(source, /Không thể xóa tệp này\.\\nTệp đang được sử dụng trong một bài nộp/)
+  assert.match(source, /deleteAttachmentConflict \? 'Đóng' : 'Hủy'/)
+  assert.match(source, /disabled=\{deletingResourceId === resource\.id \|\| deleteAttachmentConflict\}/)
+})
+
+test('archived resources keep downloads but hide deletion and reject a stale confirmation', async () => {
+  const resource = { id: 'file', bookingId: null, topicId: null, kind: 'FILE' as const, title: 'Tệp riêng tư.pdf', description: null, externalUrl: null, mimeType: 'application/pdf', sizeBytes: '1024', status: 'READY' as const, createdAt: new Date('2030-01-01T00:00:00.000Z'), uploaderName: 'An', topicLabel: null, canDelete: true }
+  const active = renderToStaticMarkup(createElement(LearningResources, { spaceId: 'space', quota: { usedBytes: '0', maxBytes: '1' }, topics: [], archived: false, resources: [resource] }))
+  const archived = renderToStaticMarkup(createElement(LearningResources, { spaceId: 'space', quota: { usedBytes: '0', maxBytes: '1' }, topics: [], archived: true, resources: [resource] }))
+  assert.match(active, /aria-label="Xóa Tệp riêng tư\.pdf"/)
+  assert.match(archived, /Tải<svg/)
+  assert.doesNotMatch(archived, /aria-label="Xóa Tệp riêng tư\.pdf"/)
+
+  const source = await import('node:fs/promises').then(fs => fs.readFile('src/components/learning/LearningResources.tsx', 'utf8'))
+  assert.match(source, /!archived && resource\.canDelete && resource\.status !== 'DELETED'/)
+  assert.match(source, /if \(archived \|\| deleteInFlight\.current\) return/)
+  assert.match(source, /if \(!resource \|\| archived \|\| deleteInFlight\.current\) return/)
+  assert.match(source, /if \(!archived \|\| !deleteCandidate \|\| deleteInFlight\.current\) return/)
 })
