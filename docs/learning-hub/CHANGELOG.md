@@ -1,5 +1,15 @@
 # Learning Hub Changelog
 
+## 2026-10-16 — H1 checkpoint reconciliation
+
+H1/LH 050 implementation is COMPLETE. Migration 007 passed disposable TEST forward/legacy/default/enum/index/safe rollback/unsafe refusal/cleanup and owner-authorized STAGING forward/schema/Prisma checks; PRODUCTION was not migrated. The initial full suite passed 123/123 unit and 58/58 integration; latest H1-11 repair passed 9/9 focused Notes unit and 2/2 route. Five legacy regressions, typecheck, and targeted lint passed at both checkpoints; initial build and latest diff check passed at their respective checkpoints. Owner-reported browser H1-01–H1-20 20/20 PASS includes H1-09/11/15 retests, H1-10 soft delete, and H1-19 Booking ownership; no independent reproduction or browser automation is claimed. The UI says “Xóa ghi chú” for existing audited soft deletion. H1-UX-01/02 are deferred P2 UX work, and group learning/multi-learner slots are Post-MVP design backlog. H2/LH 060 is next and NOT STARTED; fulfillment and settlement risks remain open. No code, schema, migration, database, ADR, or risk classification changed during this documentation reconciliation.
+
+## 2026-10-16 — H1 manual notes and recap
+
+Added private, versioned GENERAL/RECAP notes with optional Booking scope, visibility rules, author-only edit/soft delete, and an optional LearningSpace recap editor after eligible linked sessions. Added additive migration 007 and API routes. Legacy Booking, dashboard/history, AI, chat, fulfillment, settlement, and provider flows are unchanged. Automated evidence and deployment limitation are in IMPLEMENTATION_STATE.
+
+
+
 ## 2026-10-16 — G3 documentation staleness reconciliation (F-01 through F-04)
 
 - F-01/F-04: established one authoritative current G3 checkpoint in state/context/plan/matrix/regression documents; labeled older G3/D0e checkout summaries as historical without rewriting their results, limits, or counts. G3/LH 042 implementation COMPLETE; real PostgreSQL concurrency VERIFIED on 2026-10-16 for R1-R5 in seven controlled cases with cleanup confirmed; that limitation is CLOSED, without claiming all theoretical schedules.

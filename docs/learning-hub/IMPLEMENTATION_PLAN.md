@@ -1,8 +1,14 @@
 # Learning Hub Implementation Plan
 
-## Current G3 checkpoint (reconciled 2026-10-16)
+## Current H1/LH 050 plan checkpoint (reconciled 2026-10-16)
 
-G3/LH 042 implementation is COMPLETE; real PostgreSQL concurrency is VERIFIED on 2026-10-16 (R1-R5, seven controlled cases, cleanup verified; not exhaustive schedules). OWNER-REPORTED MANUAL BROWSER SMOKE: 13/13 PASS — not independently reproduced or automated. G3-M08 covers UI reviewer permission, with backend authorization tested separately. IMPLEMENTATION_STATE is the detailed evidence source; TEST_MATRIX keeps automated, real PostgreSQL, and owner evidence separate. I1/I2/I3 and J1 remain pending. H1 is the next safe registry task because D1 is complete; H1 is NOT STARTED and this documentation task does not authorize implementation. Earlier checkpoint sections below are historical.
+H1 implementation is COMPLETE. Migration 007 passed disposable TEST forward/rollback/refusal/cleanup and STAGING forward/schema/Prisma checks; no PRODUCTION migration. Initial full suites passed 123/123 unit and 58/58 integration; latest H1-11 focused suites passed 9/9 Notes unit and 2/2 route. Owner-reported H1-01–H1-20 browser cases passed 20/20, including H1-09/11/15 retests; no independent browser automation was run. H2/LH 060 is the NEXT SAFE TASK and is NOT STARTED. I1/I2/I3 and J1 remain pending. The dated G3/D0 checkpoints below remain historical.
+
+### Deferred product and UX backlog
+
+- H1-UX-01 (P2, not an H2 blocker): long or numerous notes create excessive vertical scrolling. Consider collapsed previews with bounded pagination or load-more.
+- H1-UX-02 (P2, not an H2 blocker): editing a note near the bottom requires scrolling to the editor at the top. Consider inline editing.
+- Group Learning / Multi-learner Slots (Post-MVP): the current MVP permits two active space members, so `BOOKING_PARTICIPANTS` and `SPACE_MEMBERS` commonly resolve to the same two people today. Preserve both visibility semantics. Future contributors may choose learner capacity per slot/session; group Booking, membership, attendance, privacy, and GivePoint economics require separate design before implementation.
 
 ## Historical G3 implementation checkpoint (2026-10-15)
 
@@ -31,7 +37,7 @@ The registry and historical task evidence below retain their original sequence.
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Use the single current G3 checkpoint above: implementation COMPLETE, real PostgreSQL concurrency VERIFIED, and owner-reported manual smoke 13/13 PASS. H1 is the next safe task, NOT STARTED and not authorized by this documentation task; I1/I2/I3 and J1 remain pending. Do not interpret historical checkpoint statements as current task status.
+- Use the single current H1 checkpoint above: H1/LH 050 is COMPLETE, H2/LH 060 is next and NOT STARTED, and I1/I2/I3 and J1 remain pending. Interpret older checkpoint statements within their stated dates.
 
 ## Task registry
 

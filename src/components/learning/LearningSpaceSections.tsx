@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { History, NotebookPen } from 'lucide-react'
 import { LearningResources, type LearningResourceView } from '@/components/learning/LearningResources'
 import { LearningSubmissions } from '@/components/learning/LearningSubmissions'
+import { LearningNotes } from '@/components/learning/LearningNotes'
 
 type Section = 'materials' | 'tasks' | 'notes' | 'history'
 const sections: Array<{ id: Section; label: string }> = [
@@ -27,10 +28,10 @@ function Placeholder({ kind }: { kind: 'notes' | 'history' }) {
     <p className="mt-3 text-xs font-medium text-slate-500">Sắp có trong Learning Hub</p>
   </section>
 }
-export function LearningSpaceSections({ spaceId, viewerId, archived, resources, quota, topics }: {
+export function LearningSpaceSections({ spaceId, viewerId, archived, resources, quota, topics, bookings }: {
   spaceId: string; viewerId: string; archived: boolean; resources: LearningResourceView[];
   quota: { usedBytes: string; maxBytes: string };
-  topics: Array<{ id: string; label: string; state: 'ACTIVE' | 'ARCHIVED' }>
+  topics: Array<{ id: string; label: string; state: 'ACTIVE' | 'ARCHIVED' }>; bookings: Array<{ id: string; endTime: Date; status: string }>
 }) {
   const [selected, setSelected] = useState<Section>('materials')
   useEffect(() => {
@@ -45,7 +46,7 @@ export function LearningSpaceSections({ spaceId, viewerId, archived, resources, 
     </nav>
     <div id="materials" hidden={selected !== 'materials'}><LearningResources spaceId={spaceId} resources={resources} quota={quota} topics={topics} archived={archived} /></div>
     <div id="tasks" hidden={selected !== 'tasks'} className="mt-4 min-w-0"><LearningSubmissions spaceId={spaceId} viewerId={viewerId} archived={archived} /></div>
-    <div id="notes" hidden={selected !== 'notes'} className="mt-4"><Placeholder kind="notes" /></div>
+    <div id="notes" hidden={selected !== 'notes'} className="mt-4"><LearningNotes spaceId={spaceId} viewerId={viewerId} archived={archived} bookings={bookings} /></div>
     <div id="history" hidden={selected !== 'history'} className="mt-4"><Placeholder kind="history" /></div>
   </div>
 }

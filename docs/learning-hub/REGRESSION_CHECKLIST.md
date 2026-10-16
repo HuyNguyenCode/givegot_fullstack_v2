@@ -1,6 +1,13 @@
 # Learning Hub Regression Checklist
 
-## Current G3 regression checkpoint (reconciled 2026-10-16)
+## Current H1/LH 050 regression checkpoint (reconciled 2026-10-16)
+
+H1 implementation COMPLETE. Migration 007 passed disposable TEST forward, legacy/default/index/enum checks, safe rollback, unsafe rollback refusal, and cleanup; STAGING forward, schema, and Prisma Notes query checks passed. No PRODUCTION migration. The initial implementation gate passed 123/123 Learning Hub unit, 58/58 integration, five legacy regressions, typecheck, targeted lint, and build. Latest H1-11 repair gate passed 9/9 focused Notes unit, 2/2 route, five legacy regressions, typecheck, targeted lint, and diff check; no newer full-suite run is claimed.
+
+- OWNER-REPORTED manual browser H1-01 through H1-20: 20/20 PASS. H1-09 stale edit recovery, H1-11 archived/deleted-note recovery, and H1-15 network retry were retested PASS; H1-10 soft delete PASS and H1-19 Booking ownership owner-confirmed PASS. This is not independently reproduced or automated, and no browser automation was run.
+- The UI calls the existing soft delete “Xóa ghi chú”; the audited row and ADR 019 policy remain. H1-UX-01 and H1-UX-02 are deferred P2 UX items, not H2 blockers. H2/LH 060 is next and NOT STARTED. Booking fulfillment, GivePoint settlement, and cron risks remain open; I1/I2/I3 and J1 remain pending.
+
+## Historical G3 regression checkpoint (reconciled 2026-10-16)
 
 G3 implementation is COMPLETE; real PostgreSQL concurrency VERIFIED and the limitation CLOSED for the controlled R1-R5 schedules below. Actual independent overlapping Prisma/PostgreSQL transactions were confirmed through the established Linux/disposable Supabase TEST path. Detailed run evidence remains in IMPLEMENTATION_STATE, rather than duplicated here. Historical counts and earlier unverified statements below retain their dated scope.
 
@@ -8,7 +15,7 @@ G3 implementation is COMPLETE; real PostgreSQL concurrency VERIFIED and the limi
 - R4: stale revision identity returned 409 after actual G2 resubmission, leaving the current revision unchanged. R5: both reachable SUBMITTED and REVISION_REQUESTED boundaries passed; G2 replacement and G3 review cannot both be eligible in the same committed state.
 - Database assertions confirmed matching Task/Submission/review state, exact revision/version changes, transaction atomicity, duplicate/stale rejection, and activity event-key deduplication. No partial loser state or unrelated Booking/GP/TransactionLog/Trust/public Review mutation remained. All seven test-owned fixtures were removed and cleanup verified. These seven cases are controlled evidence, not all theoretically possible schedules.
 - OWNER-REPORTED MANUAL BROWSER SMOKE: 13/13 PASS — not independently reproduced or automated. G3-M01 through G3-M13 are accepted as reported; M08 checks that the assignee has no review input/actions, while authorized feedback reads and revision-requested resubmission remain available. No separate review page/URL is required; backend authorization has separate automated evidence. No Playwright/E2E run is claimed.
-- Evidence types remain separate: historical implementation unit 118/118, integration 56/56, five legacy regressions and typecheck/lint/build/diff gates; focused mock 18/18 rerun; real PostgreSQL seven controlled cases; owner-reported manual 13/13. None was rerun for this documentation task. REVIEWED completes only the task; Booking fulfillment, GP settlement, notification, and cron changes remain outside G3. I1/I2/I3 and J1 remain pending. H1 is the next safe task (D1 complete), NOT STARTED and not authorized by this task.
+- Evidence types remain separate: historical implementation unit 118/118, integration 56/56, five legacy regressions and typecheck/lint/build/diff gates; focused mock 18/18 rerun; real PostgreSQL seven controlled cases; owner-reported manual 13/13. None was rerun for this documentation task. REVIEWED completes only the task; Booking fulfillment, GP settlement, notification, and cron changes remain outside G3. I1/I2/I3 and J1 remain pending. At this historical G3 checkpoint, H1 was the next safe task (D1 complete), had NOT STARTED, and was not authorized by that task.
 
 ## Historical G3 private review boundary (2026-10-15)
 

@@ -67,7 +67,7 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
           {partner && <Link href={`/book/${partner.id}?learningSpaceId=${encodeURIComponent(space.id)}`} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">{showFirstValue && !nextBooking ? 'Đặt buổi học đầu tiên' : 'Đặt buổi học tiếp theo'} <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>}
         </section>
 
-        <LearningSpaceSections spaceId={space.id} viewerId={space.viewerId} archived={archived} resources={resources} quota={quota} topics={space.topics} />
+        <LearningSpaceSections spaceId={space.id} viewerId={space.viewerId} archived={archived} resources={resources} quota={quota} topics={space.topics} bookings={space.bookings} />
       </div>
     </main>
   )

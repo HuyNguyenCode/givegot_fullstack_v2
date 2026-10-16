@@ -593,6 +593,11 @@ enum LearningNoteVisibility {
   AUTHOR_ONLY
 }
 
+enum LearningNoteType {
+  GENERAL
+  RECAP
+}
+
 model LearningSpace {
   id               String              @id @default(uuid())
   title            String
@@ -801,8 +806,11 @@ model LearningNote {
   topicId         String?
   authorId        String
   content         String                 @db.Text
+  type            LearningNoteType       @default(GENERAL)
   visibility      LearningNoteVisibility @default(SPACE_MEMBERS)
   version         Int                    @default(1)
+  deletedAt       DateTime?
+  deletedById     String?
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @default(now()) @updatedAt
 
@@ -812,6 +820,7 @@ model LearningNote {
   author        User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   @@index([learningSpaceId, createdAt])
+  @@index([learningSpaceId, deletedAt, createdAt])
   @@index([bookingId])
   @@index([topicId])
   @@index([authorId, updatedAt])

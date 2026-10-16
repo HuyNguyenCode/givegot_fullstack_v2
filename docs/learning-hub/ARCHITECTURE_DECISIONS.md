@@ -135,3 +135,9 @@ Review requires both Task and Submission to be SUBMITTED and the submitted `subm
 A Serializable transaction conditionally claims Task version/status and Submission revision/status, upserts the existing single current SubmissionReview, and writes one event keyed `learning-submission-review:{submissionId}:revision:{revisionCount}`. Duplicate/stale requests and Prisma P2002/P2034 conflicts return 409. Audit retains prior revision numbers, outcomes, actors, timestamps, and explicitly changed deadlines without feedback/submission text, links, or file keys. It is not a historical content snapshot. After resubmit the old review row is retained but not presented as feedback for the new SUBMITTED revision; the next review updates that same row.
 
 No schema/migration, Booking lifecycle/fulfillment, public Review/Trust, GivePoint/ledger/settlement, Calendar/Meet, notification, or cron change is required. I1-I3 still own delivery, acceptance, settlement, and timeout enforcement; Task COMPLETED is not Booking delivery or settlement evidence by itself.
+
+## ADR 019 H1 manual note visibility and deletion
+
+**Status:** Accepted for H1 MVP (2026-10-16)
+
+New notes default to SPACE_MEMBERS. AUTHOR_ONLY restricts reads to the author; BOOKING_PARTICIPANTS requires a linked Booking in the same space and reads only for its participants who remain active space members. Only the author may edit or soft delete. Delete sets deletedAt/deletedById with an optimistic version claim and retains the row for audit; ordinary reads hide it. Archived spaces permit authorized reads but no note writes. Notes render as escaped plain text and are never sent to AI by H1.

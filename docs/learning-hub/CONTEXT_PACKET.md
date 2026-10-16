@@ -1,12 +1,18 @@
 # Learning Hub Context Packet
 
-## Current G3 checkpoint (reconciled 2026-10-16)
+## Current H1 checkpoint (2026-10-16)
+
+H1/LH 050 implementation is COMPLETE. Manual GENERAL/RECAP notes use server-session authorship, private visibility, optional Booking scope, version-checked author edits, and audited soft deletion labeled “Xóa ghi chú” in the UI under ADR 019. Archived spaces remain readable and reject writes; recap remains optional and legacy Bookings are unchanged. Migration 007 passed disposable TEST forward/rollback/refusal/cleanup and STAGING forward/schema/Prisma checks; PRODUCTION was not migrated. Initial full suites were 123/123 unit and 58/58 integration; latest H1-11 focused suites were 9/9 Notes unit and 2/2 route, with five legacy regressions passing at both checkpoints. Owner-reported browser H1-01–H1-20: 20/20 PASS, including H1-09/11/15 retests, H1-10 soft delete, and H1-19 Booking ownership; no independent browser automation was run. H1-UX-01/02 are deferred P2 and not H2 blockers. No AI or chat ingestion was added. H2/LH 060 is NEXT SAFE TASK and NOT STARTED. See IMPLEMENTATION_STATE, TEST_MATRIX, and IMPLEMENTATION_PLAN for evidence and backlog.
+
+
+
+## Historical G3 checkpoint (reconciled 2026-10-16)
 
 G3/LH 042 implementation is COMPLETE in the uncommitted working tree at HEAD `3e0cb6f8c2bf0d009195f0305f8979b7fccd516b` (D0e committed). G3 REAL POSTGRESQL CONCURRENCY: VERIFIED on 2026-10-16; R1-R5 passed in seven controlled cases with verified cleanup, closing that limitation without claiming exhaustive schedules. OWNER-REPORTED MANUAL BROWSER SMOKE: 13/13 PASS — not independently reproduced or automated. G3-M08 verifies UI reviewer permission; no separate review page/URL is required. Detailed evidence and all case IDs are in IMPLEMENTATION_STATE and TEST_MATRIX.
 
 Task creator reviews the assignee's current SUBMITTED revision; active unsuspended pair and ACTIVE space are required. A linked Booking must contain the pair and cannot be CANCELLED/DISPUTED/MISSED. REVIEWED sets Task COMPLETED and Submission REVIEWED only; REVISION_REQUESTED sets both records to REVISION_REQUESTED for unchanged G2 resubmission. Optional revisionDueAt updates independent Task.dueAt (omitted preserves; null clears). No Booking fulfillment, GP/settlement, public Review/Trust, provider, notification, or cron mutation occurs. ADR 018 governs atomic version/status/revision claims and single current review; duplicate/stale decisions return 409, and previous revision decisions remain in content-free audit.
 
-Historical automated implementation checkpoint (2026-10-15): unit 118/118, integration 56/56 plus smoke, five legacy regressions, typecheck, targeted lint, production build, and diff check PASS; full lint retained unrelated 77 errors/32 warnings. The 2026-10-16 focused mock rerun passed 18/18 separately from PostgreSQL and owner evidence. No tests were rerun for this reconciliation. I1/I2/I3 and J1 remain pending. NEXT SAFE TASK: H1 — NOT STARTED; D1 is complete, and this documentation task does not authorize H1 implementation. Dated sections below preserve earlier states and are historical.
+Historical automated implementation checkpoint (2026-10-15): unit 118/118, integration 56/56 plus smoke, five legacy regressions, typecheck, targeted lint, production build, and diff check PASS; full lint retained unrelated 77 errors/32 warnings. The 2026-10-16 focused mock rerun passed 18/18 separately from PostgreSQL and owner evidence. No tests were rerun for this reconciliation. I1/I2/I3 and J1 remain pending. At this historical G3 checkpoint, H1 was the next task and had not started. Dated sections below preserve earlier states and are historical.
 
 ## Historical D0e checkpoint (reconciled 2026-10-14)
 
@@ -64,23 +70,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Historical implementation overview (through 2026-10-14)
 
-- Tasks D1, C2, E1, F1, F2, G1, and G2 completed after B2’s protected LearningSpace domain service work and C1’s invite backend. The narrow E1 AvailableSlot repair completed on 2026-09-18; F1 private storage infrastructure completed on 2026-09-20; F2 resource domain/UI completed on 2026-09-21; G1 task domain and G2 current Submission workflow completed on 2026-09-28. The post-G2 `LearningResources.tsx` dependency micro-repair restored the historical full-lint result to 77 errors/32 warnings; D0b did not rerun full lint.
-- LearningSpace and LearningTopic have server-session-backed protected service/API handlers. Direct and confirmed-Booking creation create exactly two active members; a transaction-scoped advisory lock rejects a third active member.
-- Primary-skill changes are versioned and audited. Objective/definition updates use optimistic concurrency. Topics are free-form or canonically mapped, and archive state preserves historical Booking references.
-- Reuse suggestions return matching active pair spaces without forcing reuse or imposing pair-plus-skill uniqueness. Archived spaces remain readable to members and only restore is allowed among normal mutations.
-- `/api/pusher/auth` authorizes private LearningSpace channels through active membership. C1 provides `/api/learning/invites` create, preview, accept, and inviter-revoke APIs; C2 now provides the invite-onboarding UI for those APIs.
-- LearningInvite creation returns a 256-bit raw token once and stores only SHA-256. Acceptance is session-bound, transactionally locked/idempotent, and supports an explicit matching active-space reuse or a distinct new space for the same pair. It rejects self, expired, revoked, exhausted, different-user replay, and third-member outcomes.
-- Logged-out preview stores the raw token only in a ten-minute AES-GCM encrypted HttpOnly/SameSite=Lax continuation cookie, cleared after acceptance. No email is sent in C1.
-- At the D1 checkpoint, the server-session/member-authorized, mobile-first `/learning/[spaceId]` shell was read-only and showed pair/skill/topics/objective/definition/Booking context, archive state, rebooking, and future artifact placeholders. C2 subsequently delivered invite onboarding, F2 replaced the resource placeholder, G1 implemented tasks, and G2 implemented current Submission. Review, notes, fulfillment, settlement, notifications, and history remain pending.
-- F2 replaces the resource placeholder with member-authorized link/file UX and implements LH 030, LH 031, and LH 032. HTTPS links are normalized and never server-fetched. Private files consume F1's provider-agnostic storage-service/API boundary for direct upload/finalize and on-demand signed download; F2 has no direct AWS SDK or S3 dependency. Resource lists and activity contain safe metadata only, never storage keys or signed URLs; uploader-only soft deletion preserves records and F1 cleanup retries provider removal.
-- G1 implements LH 040 through protected `/api/learning/spaces/[spaceId]/tasks` routes and a session-backed task service. It supports create/list/version-checked edit, assignee START and creator CANCEL, active pair/Booking/topic ownership checks, and an independent future dueAt. It adds no Submission, Review, notification, fulfillment, settlement, or Booking scheduling behavior.
-- C2 adds the minimum Bring Your Pair onboarding UI: `/learning/new` creates a one-use link from an approved primary skill and optional objective, while `/learning/invite/[token]` previews active invite data, uses C1's encrypted login continuation, and accepts through the server-session endpoint. Stale links reveal no pair metadata; the new LearningSpace presents only the existing first-Booking action. At the C2 checkpoint, resource/task creation remained out of scope; F2 later delivered resources and G1 later delivered the task domain.
-- E1 carries LearningSpace context into Booking creation after server-session pair authorization and transaction-time validation. LIVE/HYBRID now select future unbooked mentor slots and use the existing `bookAvailableSlot` row-lock path; direct `createBooking` rejects those linked modes before side effects. EXERCISE_REVIEW and unlinked legacy creation retain their prior manual-time behavior.
-- LIVE, EXERCISE_REVIEW, and HYBRID now have executable required-artifact and completion-readiness contracts. Async and Hybrid timing is expressed from `deliveredAt`/artifact deadlines and not Meet `endTime`; no fulfillment transition, settlement, or cron behavior is implemented by E1.
-- F1 adds an S3-backed provider interface, private-bucket template, five-minute direct upload POST, provider-confirmed metadata and content-signature finalize, ten-minute signed attachment download, 20 MiB allowlist, 500 MiB per-space quota, soft deletion, and secret-protected orphan cleanup. It reuses the B1 LearningResource model without schema or legacy data changes. Typecheck, targeted lint, 41 unit tests, 35 integration tests after route smoke, five legacy regressions, and the 35-page build passed with mocked storage; the Windows `tsx` host preload was temporary and removed. F1 has zero lint findings.
-- F2 verification passed typecheck, 44 Learning Hub unit tests, 35 integration tests, all five legacy regressions, targeted ESLint, and the production build. Full lint remains the unrelated 77-error/32-warning legacy baseline after the verified B2/C1 repair.
-
-- Later lint reconciliation and repair: the 2026-09-20 diagnosis attributed 46 errors/one warning to B2 and 28 errors/one warning to C1. The verified 2026-09-21 seven-file typing repair removed all 74 errors and both warnings. Historical targeted ESLint was 0/0 and full lint was the unrelated 77-error/32-warning legacy baseline. Typecheck, 41 unit tests, route smoke plus 35 integration tests, all five legacy regressions, and the 35-page build passed at that repair checkpoint. D0b ran targeted ESLint only; it did not rerun full lint, the build, or legacy regression scripts. The documented host-only `tsx` preload was temporary, removed afterward, and is not a product/runtime dependency.
+Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMENTATION_STATE, TEST_MATRIX, and the dated sections above. They preserve their original tests, limits, and then-pending task status; the current H1 checkpoint controls today's status.
 
 ## Owner-owned dirty state before Task 00
 
@@ -136,9 +126,9 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
     - F2 resource collection/item routes,
     - G1 task list/create/update routes,
     - G2 current-submission route: `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`; G3 private review GET/POST appends `/review`.
-    - Learning invite APIs: `/api/learning/invites/*`.
+    - H1 Notes collection/item APIs: `/api/learning/spaces/[spaceId]/notes` and `/api/learning/spaces/[spaceId]/notes/[noteId]`; Learning invite APIs: `/api/learning/invites/*`.
 - Schema has 27 models, including the ten Learning Hub domain models. Booking has eight nullable Learning Hub fields and keeps its original status enum unchanged.
-- Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. Additive migration 005 adds only `LearningTask.version` with default 1 and has executable rollback SQL plus a rollback note. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with the `LEGACY_UNCLASSIFIED` database default, plus its guarded rollback. None backfills Booking.
+- Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. Additive migration 005 adds only `LearningTask.version` with default 1 and has executable rollback SQL plus a rollback note. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with the `LEGACY_UNCLASSIFIED` database default, plus its guarded rollback. Migration 007 adds H1 note type/default, audited soft deletion, and an active-list index; TEST rehearsal and STAGING forward passed. None backfills Booking; PRODUCTION migration 007 remains unapplied.
 - Canonical commands include `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, `test:learning-hub:migration`, and `test:regression`.
 
 ## Environment names only
@@ -147,7 +137,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Next task
 
-H1 is the next safe task in the dependency registry (D1 complete), but is NOT STARTED and is not authorized for implementation by this documentation task. I1/I2/I3 and J1 remain pending; Task COMPLETED/private feedback is not Booking delivery, acceptance, or GP settlement. See the single current G3 checkpoint above; dated verification remains in its owning historical checkpoint.
+H2/LH 060 is the next safe task after completed H1, and is NOT STARTED. I1/I2/I3 and J1 remain pending; Task COMPLETED/private feedback is not Booking delivery, acceptance, or GP settlement. The current H1 checkpoint above controls; dated historical evidence remains in its owning checkpoint.
 
 ## Completion contract
 
