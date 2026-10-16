@@ -1,6 +1,14 @@
 # Learning Hub Implementation Plan
 
-## Current D0e checkpoint (reconciled 2026-10-14)
+## Current G3 checkpoint (reconciled 2026-10-16)
+
+G3/LH 042 implementation is COMPLETE; real PostgreSQL concurrency is VERIFIED on 2026-10-16 (R1-R5, seven controlled cases, cleanup verified; not exhaustive schedules). OWNER-REPORTED MANUAL BROWSER SMOKE: 13/13 PASS — not independently reproduced or automated. G3-M08 covers UI reviewer permission, with backend authorization tested separately. IMPLEMENTATION_STATE is the detailed evidence source; TEST_MATRIX keeps automated, real PostgreSQL, and owner evidence separate. I1/I2/I3 and J1 remain pending. H1 is the next safe registry task because D1 is complete; H1 is NOT STARTED and this documentation task does not authorize implementation. Earlier checkpoint sections below are historical.
+
+## Historical G3 implementation checkpoint (2026-10-15)
+
+G3 LH 042 is implemented from clean committed D0e HEAD `3e0cb6f8c2bf0d009195f0305f8979b7fccd516b`, under the owner's explicit G3 prompt. Status PASS WITH KNOWN LIMITATION: 118 unit tests, 56 integration tests plus route smoke, five legacy regressions, typecheck, targeted lint, build, and diff check passed. Full lint retains 77 errors/32 warnings in legacy files. Browser smoke and real PostgreSQL G3 races have not run; service concurrency/rollback coverage uses a transactional mock. ADR 018 records eligible task-creator review, task-only REVIEWED/revision transitions, optional independent deadline, and current-content/content-free audit boundaries. I1-I3 and J1 remain pending and no next task is authorized. Earlier D0e/D0d checkpoint statements below are historical.
+
+## Historical D0e checkpoint (reconciled 2026-10-14)
 
 D0e FILE deletion protection is implemented and verified. The F1 Serializable reference check and conditional soft delete preserve G2's existing Serializable transaction and provider cleanup after commit. No schema, migration, advisory lock, orphan-cleanup, F2 LINK, or G3 work changed. The later bounded UI repair adds precise current-Submission conflict messaging and removes actionable FILE deletion in ARCHIVED spaces; it changes no backend behavior. Focused F1 22/22, Learning Hub unit 105/105, Learning Hub integration 53/53, four controlled real PostgreSQL race scenarios, typecheck, targeted lint, five offline legacy regressions, and diff check passed. The backend independent audit was `PASS WITH FINDINGS` with LOW-only documentation findings; it reviewed source/evidence and did not rerun the database tests. The owner reports D0e M01-M05 PASS. Focused UI 19/19 and relevant F1/F2 integration 28/28 passed after the UI repair. No independent UI re-audit or production build was run. D0e is uncommitted; G3 is NOT STARTED and is not authorized by this checkpoint.
 
@@ -23,7 +31,7 @@ The registry and historical task evidence below retain their original sequence.
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Current checkpoint: D0e is implemented and verified as described above; backend audit and owner M01-M05 acceptance are complete, while an independent UI re-audit and a production build were not run. Earlier D0d/UX1/UX2/F1 evidence below is historical. G3 remains NOT STARTED.
+- Use the single current G3 checkpoint above: implementation COMPLETE, real PostgreSQL concurrency VERIFIED, and owner-reported manual smoke 13/13 PASS. H1 is the next safe task, NOT STARTED and not authorized by this documentation task; I1/I2/I3 and J1 remain pending. Do not interpret historical checkpoint statements as current task status.
 
 ## Task registry
 

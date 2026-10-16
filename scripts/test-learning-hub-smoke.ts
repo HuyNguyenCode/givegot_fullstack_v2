@@ -15,6 +15,8 @@ const routeModules = [
   ['../src/app/api/learning/spaces/[spaceId]/tasks/[taskId]/route', 'PATCH'],
   ['../src/app/api/learning/spaces/[spaceId]/tasks/[taskId]/submission/route', 'GET'],
   ['../src/app/api/learning/spaces/[spaceId]/tasks/[taskId]/submission/route', 'POST'],
+  ['../src/app/api/learning/spaces/[spaceId]/tasks/[taskId]/submission/review/route', 'GET'],
+  ['../src/app/api/learning/spaces/[spaceId]/tasks/[taskId]/submission/review/route', 'POST'],
 ] as const
 
 async function main() {

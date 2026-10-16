@@ -1,6 +1,92 @@
 # Learning Hub Implementation State
 
-## D0e current FILE attachment deletion protection (reconciled 2026-10-14)
+## Current G3 checkpoint (reconciled 2026-10-16)
+
+- G3/LH 042 implementation: COMPLETE in the preserved uncommitted working tree. Authoritative repository `F:\givegot\givegot-v2`, branch `feature/learning-hub-mvp`, HEAD `3e0cb6f8c2bf0d009195f0305f8979b7fccd516b` (D0e committed). This is the single current checkpoint; all older checkpoint sections below retain their original temporal scope, counts, limitations, and outcomes.
+- Automated implementation evidence (historical 2026-10-15): unit 118/118, integration 56/56 plus smoke, five legacy regressions, typecheck, targeted lint, production build, and diff checks PASS. Full lint retained unrelated 77 errors/32 warnings. Focused G2/G3 mock rerun on 2026-10-16: 18/18 PASS. These are separate historical results, not tests rerun or combined into a new total by this reconciliation.
+- Real PostgreSQL evidence (2026-10-16): G3 concurrency VERIFIED; R1-R5 passed in seven controlled cases through the established Linux/disposable Supabase TEST environment, with independent overlapping real Prisma/PostgreSQL transactions where applicable, invariant/isolation assertions, and verified cleanup of all seven synthetic fixtures. The real PostgreSQL concurrency limitation is CLOSED for those schedules; no claim covers every theoretical interleaving. Detailed original run evidence follows below.
+- Owner manual evidence: all G3-M01 through G3-M13 accepted as owner-reported PASS, as individually recorded below. No independent reproduction, screenshots/logs, Playwright execution, or automated E2E evidence is claimed. This supersedes earlier browser-unverified statements as current status without changing the earlier reports.
+- Task creator owns review authorization. REVIEWED completes LearningTask and sets Submission REVIEWED, not Booking completion/fulfillment or GP release. REVISION_REQUESTED reopens G2 editing through the dual REVISION_REQUESTED state. Duplicate/stale decisions return 409. Private feedback does not update public Review/Trust. No GP settlement, Booking fulfillment, notification, or cron change is implied; ADR 018 is unchanged.
+- I1/I2/I3 and J1 remain pending. H1 is the next safe task in the dependency registry (D1 complete), is NOT STARTED, and is not authorized for implementation by this documentation task. Unresolved GP/fulfillment/settlement/cron business risks remain open; no unrelated risk is closed.
+- Documentation reconciliation only: F-01 current-state contradictions corrected; F-02 owner evidence and M08 scope recorded; F-03 regression checkpoint added; F-04 older current headings given historical scope. No tests/build/database verification were rerun and no production/test/schema/migration/config, WSL, database, or git staging/commit operation was performed.
+
+### Owner-reported G3 manual browser evidence (recorded 2026-10-16)
+
+OWNER-REPORTED MANUAL BROWSER SMOKE: 13/13 PASS — not independently reproduced or automated.
+
+| Case ID | Owner-reported result |
+| --- | --- |
+| G3-M01 | PASS |
+| G3-M02 | PASS |
+| G3-M03 | PASS |
+| G3-M04 | PASS |
+| G3-M05 | PASS |
+| G3-M06 | PASS |
+| G3-M07 | PASS |
+| G3-M08 | PASS — UI-level reviewer permission |
+| G3-M09 | PASS |
+| G3-M10 | PASS |
+| G3-M11 | PASS |
+| G3-M12 | PASS |
+| G3-M13 | PASS |
+
+G3-M08 verifies that the assignee cannot see feedback input or review actions on tasks created by the other participant. The assignee may still view authorized feedback and resubmit after a revision request. No separate review page or review URL is required. Backend authorization is supported by separate automated tests, not inferred from this UI check. Other case descriptions, screenshots, execution logs, or automation were not supplied by this reconciliation and are not invented.
+
+## Historical G3 real PostgreSQL verification checkpoint (2026-10-16)
+
+The following preserves the verification-only report before the later owner-manual reconciliation. Its browser-unverified statement describes that checkpoint, not the current owner-reported acceptance above.
+
+- Verification-only status: PASS. G3 REAL POSTGRESQL CONCURRENCY: VERIFIED for the seven controlled cases below. This closes the real-PostgreSQL concurrency limitation recorded on 2026-10-15; it does not claim exhaustive schedules or browser smoke. Historical implementation/test results below remain intact. No production code, schema, migration, application DB, H1, I1, settlement, or notification work was changed or executed.
+- Authoritative checkout: `F:\givegot\givegot-v2`, HEAD `3e0cb6f8c2bf0d009195f0305f8979b7fccd516b`, branch `feature/learning-hub-mvp`. All pre-existing uncommitted G3 source/test/docs changes were preserved. Added only the explicit PostgreSQL verifier `tests/learning-hub/postgres/learning-g3-race.test.ts` and evidence in IMPLEMENTATION_STATE, TEST_MATRIX, and CHANGELOG; risk classifications are unchanged.
+- REAL POSTGRESQL environment: established Linux workspace `/home/huynguyenquoc/givegot-test-linux` via WSL; Node `22.23.3`, Prisma/client `5.22.0`, tsx `4.21.0`, dotenv `17.3.1`. Only Linux-local `.env` `DISPOSABLE_TEST_DATABASE_URL` was connected. Local guards verified URL inequality and different Supabase project identities versus both application DATABASE_URL and DIRECT_URL. Application URLs were compared locally, never connected or printed. No Windows connection troubleshooting, D0a verifier role, TLS override/approval, migration, reset, or provider was used.
+- Source synchronization: copied exactly the verifier's 17-file manifest (G2/G3 and transitive auth/task/resource/Prisma dependencies, schema/config/lockfile, and relevant mock tests) from `/mnt/f/givegot/givegot-v2`. Existing Linux source copies were preserved in `/home/huynguyenquoc/givegot-test-linux/.g3-source-backup-OxueLj`; Linux .env and node_modules were not overwritten. Installed imported package versions matched the authoritative lockfile. Byte parity was asserted before and after execution; Linux-local .env hash was unchanged. The generated-client schema differed only in alignment whitespace; its whitespace-normalized data model matched exactly, so no generation/setup/migration was necessary.
+- Execution manifest SHA-256: `bec6e6b5c40521c2bed8ade742c3b51a6b0d7f98163df874cef89dca6df95938`. Authoritative G3 SHA-256: `2538351901dd88561ac912dbc7698d79c7d81aed7d619326b333447e71ecd1e1`; G2: `dff8041e8797e0b5a900dab4d2ba452473560756df3c3ef6d3aecdd5a8d019fb`; Prisma schema: `afbbb66d00d483f118dbc951fa9e71bc3c64d5a50b520127a1d6016d268fa097`. The exact current implementation, rather than stale Linux G3 source, was exercised.
+- Read-only preflight PASS: SELECT 1; two concurrently held READ ONLY transactions with distinct backend PIDs `1286726` and `1286725` in the execution run (the separate preflight also passed); current scalar columns/nullability for 13 prerequisite models; exact Task/Submission/review/space/member enums; unique Submission.taskId, SubmissionReview.submissionId, LearningActivity.eventKey indexes; validated RESTRICT review/submission/task ownership foreign keys. TEST schema had no missing prerequisite; no migrations were applied. The runner defaults to this read-only mode and requires `G3_POSTGRES_EXECUTE=1` to create fixtures.
+- Real transaction method: actual G3/G2 service factories, injected immutable authenticated synthetic creator/assignee identities, and real membership/pair checks; independent Prisma clients limited to one connection each. The test configures a 30-second transaction timeout but does not replace/mock Prisma $transaction or operations. Test-only middleware pauses after the real Submission.findUnique returns inside each transaction. Both operations read revision 1; PostgreSQL pg_stat_activity independently observed two simultaneous `idle in transaction` backends (`1286728`/`1286729`) at the Submission read for every overlapping case. R2 deliberately releases/commits one before releasing the other; R1/R3 release both together. R4 is the requested stale sequential lifecycle check, not an overlap claim.
+
+| Real case | Observed commit / rejected operation | Final Task / Submission | Revision / review rows / activities |
+| --- | --- | --- | --- |
+| R1 simultaneous REVIEWED | B committed REVIEWED; A rejected 409 | COMPLETED / REVIEWED | 1 / 1 / 2 |
+| R2 REVIEWED wins | A committed REVIEWED; B revision request rejected 409 | COMPLETED / REVIEWED | 1 / 1 / 2 |
+| R2 revision request wins | B committed REVISION_REQUESTED; A reviewed rejected 409 | REVISION_REQUESTED / REVISION_REQUESTED | 1 / 1 / 2 |
+| R3 duplicate revision requests | B committed; A rejected 409; only B's deadline retained | REVISION_REQUESTED / REVISION_REQUESTED | 1 / 1 / 2 |
+| R4 stale review after real G2 resubmit | Revision-1 request rejected 409 with exact DB snapshot unchanged; valid revision-2 review then committed using same review row | COMPLETED / REVIEWED | 2 / 1 / 4 |
+| R5 from SUBMITTED | G3 revision request committed; overlapping G2 edit rejected 409, original content retained | REVISION_REQUESTED / REVISION_REQUESTED | 1 / 1 / 2 |
+| R5 from REVISION_REQUESTED | G2 resubmit committed; overlapping G3 review of desired revision 2 rejected 409, previous review unchanged | SUBMITTED / SUBMITTED | 2 / 1 / 3 |
+
+- R3 represents two independent requests by the same sole eligible task creator, not two distinct authorized reviewer roles. R5 has no simultaneously eligible edit/review transition from one committed state: G3 requires Task/Submission SUBMITTED, whereas G2 replacement requires both REVISION_REQUESTED. Both actual boundary attempts were overlapped and verified without manufacturing an invalid DB state. The retained R5 review describes revision 1 and is not feedback for the unreviewed new revision 2.
+- PostgreSQL assertions checked actual Task version/status/deadline, Submission identity/content/status/revisionCount, single current review identity/content/outcome/reviewer, expected activity count/event keys/outcome metadata, and no duplicate activity. R2 revision winner retained only its deadline `2026-10-18T03:43:28.922Z`; R3 retained only winner B's `2026-10-18T03:43:36.788Z` (synthetic UTC test values). Each successful transition incremented Task.version exactly once. No loser partial writes or forbidden feedback/submission text in activity metadata remained. Snapshot counts and content digests for all TEST Booking, TransactionLog, TrustHistory, public Review, and MentorReview rows, unrelated User GP/Trust values, and each fixture pair's GP/Trust values remained unchanged for each case and after cleanup. No Booking fixture was needed.
+- Run identity: `g3-pg-5e7b147c-c91b-4f31-affc-6a8743bd335c`; each fixture marker appends its case label. Synthetic emails use `example.invalid`. Exact synthetic space/task identities are listed below for reproducibility. Cleanup deleted only the run-owned activity/review/submission/task/membership/space/skill/user rows, in dependency order. All eight checked categories returned zero for each of seven fixtures; global unrelated snapshots matched the pre-run baseline and source/config parity rechecked successfully. Run exit 0, FINAL_PASS, seven cases, cleanup verified, zero application connections.
+
+| Fixture suffix | LearningSpace ID | Task ID |
+| --- | --- | --- |
+| R1 | 32fee880-2352-4c65-b985-95951c3885f6 | b00f3ffb-d441-4543-b3a0-d8b1b52f8eaf |
+| R2-reviewed-wins | dacf9dd5-74ab-47c9-bbef-45e01f929846 | cddbb280-c8f0-4c16-8df7-85af6c319358 |
+| R2-revision-wins | 554de21b-d757-4758-a30a-0fe3a3f1d110 | f3dfa471-3185-4318-ac95-5efdb5229dce |
+| R3 | d9705906-6af1-421f-afd7-fab41928f01d | ef9f363e-5fa5-4714-aed4-3b456c289be2 |
+| R4 | 90f0ea8e-8c8c-4443-93f5-60c4b14f0b70 | 735eee3e-09e3-4dd6-b24c-b1993c192045 |
+| R5-SUBMITTED | 796cec7b-9fd4-4e73-bbc2-20a619c4f88a | 2deba1f1-985a-4bf3-bf57-1dffeae1e80a |
+| R5-REVISION_REQUESTED | 59291263-a448-4e9c-afb2-c0663a521f52 | 6940fe92-bdcc-4d98-a78e-d4711787ba32 |
+
+- Exact Linux commands (after adding the existing Node v22.23.3 bin directory to PATH and entering `~/givegot-test-linux`): `npx --no-install tsx tests/learning-hub/postgres/learning-g3-race.test.ts` read-only preflight PASS; `G3_POSTGRES_EXECUTE=1 npx --no-install tsx tests/learning-hub/postgres/learning-g3-race.test.ts` seven real cases/cleanup PASS. STATIC/MOCK evidence, separate from PostgreSQL: `npx --no-install tsx --test tests/learning-hub/unit/learning-submission-review.test.ts tests/learning-hub/unit/learning-submission-service.test.ts tests/learning-hub/integration/learning-submission-review-routes.test.ts` 18/18 PASS; `npx --no-install eslint tests/learning-hub/postgres/learning-g3-race.test.ts` PASS; Windows `npm run typecheck` PASS. Historical full suites/build/lint were not rerun for this verification-only task.
+- Next safe playbook task: H1 (depends on completed D1). This task does not authorize starting H1. G3 browser smoke remains unverified as a separate implementation limitation; there was no G3 production defect or suspected fix from these PostgreSQL cases.
+
+## Historical G3 Submission review and revision checkpoint (2026-10-15)
+
+- Starting checkout: clean on `feature/learning-hub-mvp`, HEAD `3e0cb6f8c2bf0d009195f0305f8979b7fccd516b` (`fix(learning-hub): protect current submission attachments (D0e)`). This supersedes the earlier uncommitted D0e/current-HEAD statements below, which describe their dated checkpoints. The owner explicitly authorized G3 in the implementation prompt.
+- Status: PASS WITH KNOWN LIMITATION. LH 042 adds a session-backed private review service, GET/POST `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission/review`, selected-task feedback display/form, service/route/render tests, and route smoke coverage.
+- Task creator is the eligible counterpart, regardless of linked Booking mentor/mentee ordering. Active unsuspended membership and task pair, ACTIVE space, scoped Task/Submission, and linked Booking participant/status guards apply. CANCELLED, DISPUTED, and MISSED Bookings reject new reviews; existing authorized feedback remains readable.
+- REVIEWED changes Submission to REVIEWED and Task to COMPLETED only. REVISION_REQUESTED changes both records to REVISION_REQUESTED to reopen G2 editing; optional future revisionDueAt uses Task.dueAt, omission preserves it, null clears it. See ADR 018. No Booking fulfillment mutation occurs.
+- The client supplies the reviewed Submission ID/revision, never reviewer identity. A Serializable conditional Task version/status and Submission revision/status claim, current-review upsert, and revision-keyed safe activity commit together. Duplicate/stale reviews return 409; P2002/P2034 map to 409. G2 revision count/event semantics and D0e current attachment protection are untouched.
+- Prior revision decisions remain in structured audit; prior private content is not snapshotted into activity. The single current review row is retained after resubmit and hidden for the new SUBMITTED revision until reviewed again. Feedback is plain text, member-only, no-store, and independent from public Review/Trust.
+- No schema, migration, backfill, production/shared DB operation, real provider call, Booking/fulfillment, GP, wallet/ledger/settlement, Calendar/Meet, notification, or cron changes. Rollback is a source revert; retained review rows/activity remain compatible with the existing schema. Export review rows if downgrading product visibility is a concern; do not erase audit.
+- Verification (exit 0 unless stated): `npm run typecheck`; `npx tsx --test tests/learning-hub/unit/learning-submission-review.test.ts tests/learning-hub/integration/learning-submission-review-routes.test.ts` (11/11); `npx tsx --test tests/learning-hub/unit/learning-submission-review-ui.test.ts` (3/3); `npm run test:learning-hub` (118/118); `npm run test:learning-hub:integration` (route smoke plus 56/56); `npm run test:regression` (all five scripts); targeted `npx eslint` across all G3 source/test files, changed task UI, and smoke script (0 errors/warnings); `npm run build` (35 static pages and the new dynamic review route; existing middleware deprecation warning); `git diff --check`. `npm run lint` exits 1 with the unchanged 77-error/32-warning legacy baseline and no G3 finding. The standard focused tsx command exits 1 before discovery with the documented Windows uv_os_get_passwd ENOMEM; the same tests pass with `NODE_OPTIONS=--require=F:/givegot/givegot-v2/.tmp-g3-host-preload.cjs` providing the documented getEUID workaround. The helper is removed after verification. One G3 test assertion initially expected lowercase datetime instead of React's emitted dateTime; it was corrected and the focused/full unit suites rerun successfully.
+- Known limitations: browser smoke and real PostgreSQL G3 races have not run; concurrency/rollback tests use an explicitly serialized transactional mock, not a database schedule proof. UI tests exercise rendered controls/request behavior, not mounted browser timing. I1-I3 and J1 remain unimplemented and are not authorized by G3. No commit, stage, push, or deployment was performed.
+- Changed-file inventory: `src/lib/learning-submission-review-service.ts` owns validation/auth/state/audit; `src/lib/learning-submission-review-route-handlers.ts` owns JSON/error/cache behavior; `src/app/api/learning/spaces/[spaceId]/tasks/[taskId]/submission/review/route.ts` exposes GET/POST; `src/components/learning/LearningSubmissionReview.tsx` provides private feedback/form controls; `src/components/learning/LearningSubmissions.tsx` mounts them in selected task detail.
+- Verification files: `tests/learning-hub/helpers/submission-review-fixture.ts` supplies an isolated rollback-capable transactional mock; `tests/learning-hub/unit/learning-submission-review.test.ts` covers domain/security/state/side-effect invariants; `tests/learning-hub/unit/learning-submission-review-ui.test.ts` covers render/request behavior; `tests/learning-hub/integration/learning-submission-review-routes.test.ts` covers HTTP plus G2 round trip; `scripts/test-learning-hub-smoke.ts` imports the new route.
+- Repository memory: `ARCHITECTURE_DECISIONS.md` records ADR 018; `IMPLEMENTATION_STATE.md`, `CONTEXT_PACKET.md`, `IMPLEMENTATION_PLAN.md`, `TEST_MATRIX.md`, `REGRESSION_CHECKLIST.md`, and `CHANGELOG.md` under `docs/learning-hub/` record scope, exact evidence, limitations, rollback, and next assumptions. MASTER_SPEC and RISK_REGISTER required no policy/risk change.
+
+## Historical D0e FILE attachment deletion checkpoint (reconciled 2026-10-14)
 
 D0e is implemented in F1 FILE deletion. The uploader's delete request rechecks ACTIVE membership and LearningSpace state, FILE ownership/state, and current `Submission.attachmentResourceId` references within one short Prisma Serializable transaction. A current reference returns privacy-safe HTTP 409; an unreferenced FILE is conditionally marked DELETED. Prisma `P2034` maps to 409, and provider removal starts only after commit. All FILE purposes receive the same protection. G2's existing Serializable submission transaction, F1 orphan cleanup, schema, migrations, and F2 LINK deletion remain unchanged.
 
@@ -85,7 +171,7 @@ At the UX2 checkpoint, automated checks passed but owner acceptance was blocked 
 - Final verification: `npm run db:generate`, `npx prisma validate`, `npm run typecheck`, targeted ESLint, and production build passed. `npm run test:learning-hub` passed 62/62; `npm run test:learning-hub:integration` passed 39/39; all five legacy regression scripts passed. Migration 005 forward and rollback rehearsals passed.
 - G2 may rely on G1 task ownership, active pair checks, status/version conditional updates, and independent dueAt, but must implement Submission transitions separately. No notification, submission, review, or settlement side effect exists in G1.
 
-## Current checkpoint
+## Historical checkout checkpoint (2026-10-14)
 
 - Recorded: 2026-10-14, Asia/Saigon.
 - Branch: `feature/learning-hub-mvp`.
@@ -130,7 +216,7 @@ The GP quantity for EXERCISE_REVIEW and HYBRID remains intentionally unresolved.
 
 The four memory files the Task 00 prompt required first did not exist at that baseline. Task 00 created the complete memory set from the supplied references, the tracked playbook at that HEAD, and repository evidence available then.
 
-## Pre-existing dirty state
+## Historical Task 00 pre-existing dirty state
 
 Captured with `git status --short --untracked-files=all` before authoring. These entries are user-owned and were not restored, edited, staged, or deleted:
 
@@ -143,7 +229,7 @@ Captured with `git status --short --untracked-files=all` before authoring. These
 
 Task 00 adds only the ten requested Markdown files under `docs/learning-hub/`.
 
-## Current application routes (Historical/representative route inventory)
+## Historical application route inventory (pre-G3)
 
 Verified by source inventory and successful Next.js build:
 

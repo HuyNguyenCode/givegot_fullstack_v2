@@ -1,5 +1,58 @@
 # Learning Hub Test Matrix
 
+## Current G3 coverage checkpoint (reconciled 2026-10-16)
+
+G3/LH 042 implementation is COMPLETE; real PostgreSQL concurrency VERIFIED and its limitation CLOSED for the seven controlled R1-R5 cases, with verified test-fixture cleanup. OWNER-REPORTED MANUAL BROWSER SMOKE: 13/13 PASS — not independently reproduced or automated. H1 is the next safe registry task (D1 complete), NOT STARTED and not authorized by this documentation task; I1/I2/I3 and J1 remain pending. IMPLEMENTATION_STATE contains detailed evidence. No suite, build, database, or browser automation was run for this reconciliation.
+
+Evidence remains separate: historical 2026-10-15 automated unit 118/118, integration 56/56 plus smoke, five legacy regressions, typecheck/targeted lint/build/diff PASS, unrelated full-lint 77-error/32-warning baseline; 2026-10-16 focused mock rerun 18/18 PASS; 2026-10-16 real PostgreSQL seven controlled cases PASS; owner-reported manual 13/13 PASS. These counts are not additive or newly executed. Dated checkpoint sections below preserve what was known then, including earlier NOT TESTED statements. No Playwright/E2E execution, independent manual reproduction, or exhaustive concurrency coverage is claimed.
+
+### Owner-reported G3 browser cases (recorded 2026-10-16)
+
+| Case ID | Owner-reported result |
+| --- | --- |
+| G3-M01 | PASS |
+| G3-M02 | PASS |
+| G3-M03 | PASS |
+| G3-M04 | PASS |
+| G3-M05 | PASS |
+| G3-M06 | PASS |
+| G3-M07 | PASS |
+| G3-M08 | PASS — UI-level reviewer permission |
+| G3-M09 | PASS |
+| G3-M10 | PASS |
+| G3-M11 | PASS |
+| G3-M12 | PASS |
+| G3-M13 | PASS |
+
+G3-M08 verifies that an assignee has no feedback input/review actions on tasks created by the other participant, while retaining authorized feedback visibility and revision-requested resubmission. A separate review page/URL is not required. Backend denial remains separately supported by automated authorization tests. Other individual scenario details, screenshots, logs, and automation are not invented.
+
+## Historical G3 REAL POSTGRESQL verification checkpoint (2026-10-16)
+
+Status PASS; G3 real PostgreSQL concurrency VERIFIED for all required reachable cases, with confirmed cleanup. Added opt-in verifier `tests/learning-hub/postgres/learning-g3-race.test.ts`. Tested the exact authoritative uncommitted G2/G3 source on established WSL `~/givegot-test-linux`, Node 22.23.3/Prisma 5.22, through Linux-local DISPOSABLE_TEST_DATABASE_URL only. URL/project guards exclude both application connections; .env was preserved, 17 source/config/test files were synchronized and checked byte-for-byte before/after, and installed imported dependencies matched the lockfile. The generated-client data model matched (alignment whitespace only). Read-only SELECT 1/two concurrent backend connections/schema/enums/uniqueness/foreign-key preflight passed; no migration/reset occurred.
+
+REAL POSTGRESQL evidence, distinct from mocks: actual G3/G2 service factories with legitimate injected synthetic session actors and real active-membership checks; separate Prisma clients and real Serializable transactions. Middleware pauses only after real Submission reads; pg_stat_activity observed simultaneous backends 1286728/1286729, both idle inside live transactions on revision 1, for all overlapping cases. R1/R3 release both; R2 controls the winning release; R4 verifies the stale lifecycle after resubmit.
+
+| Requirement/case | Executed database result | Status |
+| --- | --- | --- |
+| LH042-C R1 two REVIEWED | B won; A 409; Task COMPLETED, Submission REVIEWED, revision 1, one review row, two activities including initial G2 submit | PASS |
+| LH042-C R2 REVIEWED vs revision | Both winner orders executed; exactly one won per fixture and the other returned 409; Task/Submission/outcome/deadline matched winner only | PASS |
+| LH042-C R3 duplicate revision | B won; A 409; both states REVISION_REQUESTED, revision 1, one review row, only B deadline, one review activity | PASS |
+| LH042-C R4 stale after G2 | Real revision request and G2 resubmit; stale revision-1 review 409 with DB snapshot unchanged; valid revision-2 review updated same review row, correct four audit keys | PASS |
+| LH042-C R5 SUBMITTED boundary | Overlapping G3 revision request won; G2 edit rejected 409, original revision/content preserved | PASS |
+| LH042-C R5 REVISION_REQUESTED boundary | Real G2 resubmit won; overlapping G3 review of new revision rejected 409; new revision intact and previous review untouched | PASS |
+| LH042-R side effects/atomicity | Per-case SQL/Prisma state assertions, version/revision/event-key/outcome/deadline checks; no loser partial writes; all Booking/ledger/Trust/public-rating digests and fixture/unrelated user GP/Trust unchanged | PASS |
+| Fixture cleanup | Seven synthetic fixtures: all eight run-owned entity categories zero; global unrelated baseline, local .env and authoritative source parity unchanged | PASS |
+
+R3 uses concurrent requests by the one eligible creator. R5 cannot have a simultaneously eligible G2 replacement and G3 review in the same committed state: G2 requires dual REVISION_REQUESTED; G3 requires dual SUBMITTED. Both reachable boundary attempts were tested rather than constructing invalid state. Current-review count and previous-revision feedback semantics remained correct. Seven executed cases cover R1-R5 and both R2 outcomes; this is controlled-schedule evidence, not every theoretical schedule. Run `g3-pg-5e7b147c-c91b-4f31-affc-6a8743bd335c` and exact fixture identities, hashes, commands, outcomes, and cleanup are recorded in IMPLEMENTATION_STATE.
+
+STATIC/MOCK evidence rerun separately: 18/18 focused G2/G3 unit/service/route tests PASS; PostgreSQL verifier targeted lint PASS; Windows typecheck PASS. Historical unit 118/integration 56/build/lint evidence below was not rerun or rewritten. Browser smoke remains NOT TESTED; the PostgreSQL concurrency limitation alone is closed. No production source/schema/migration changes or application DB operations occurred.
+
+## Historical G3 implementation verification checkpoint (2026-10-15)
+
+LH 042 service and route tests cover valid task-creator review with reversed Booking roles, session identity, nonreviewer/outsider/self/spoof denial, private member reads and archived reads, suspended/inactive pair denial, revision request/deadline, actual G2 resubmit then review, stale revision identity, duplicate/concurrent requests, conditional-claim failure and rollback, P2002/P2034, and CANCELLED/DISPUTED/MISSED Booking guards. Forbidden public Review/Trust/wallet/ledger/notification delegates prove no such writes; linked Booking fields stay unchanged. Render/request tests cover long Vietnamese feedback, escaped HTML, accessible labelled controls, optional deadline, pending locks, retained failed form values, loading, and request error propagation.
+
+Executed G3 evidence: 11/11 focused service/route tests and 3/3 focused render/request tests passed; complete Learning Hub unit 118/118 and integration 56/56 plus route smoke passed. Typecheck and all five legacy regressions passed. Full lint remains 77 errors/32 warnings in unchanged legacy files. Final targeted lint/build/diff evidence is recorded in IMPLEMENTATION_STATE. The first render test used lowercase `datetime` while React static output uses `dateTime`; correcting that test expectation retained the timestamp assertion and all tests passed. The initial standard tsx invocation failed before discovery with the known Windows uv_os_get_passwd ENOMEM; unchanged test commands passed using a temporary getEUID preload. No shared DB/provider was used. Concurrent review and rollback evidence uses a serialized transactional mock; real PostgreSQL G3 races and browser smoke are NOT TESTED.
+
 ## D0e deletion protection verification (reconciled 2026-10-14)
 
 - Mock/service: F1 integration 22/22 covers current references and HTTP 409 across MATERIAL, SUBMISSION_ATTACHMENT, and LEGACY_UNCLASSIFIED; revision replacement/current-only behavior; authentication, membership, uploader, archive, already-deleted behavior; provider removal after commit; `P2034` without provider calls; and existing provider-failure retry. Learning Hub unit 105/105 and integration 53/53 passed.
@@ -53,7 +106,7 @@
 - `PARTIAL PASS`: part of the requirement has executable passing evidence, while explicitly assigned coverage remains pending in a later task.
 - `PASS` or `FAIL`: reserved for an implemented, executed test with recorded evidence.
 
-## Current checkpoint and historical-count rule
+## Historical D0e checkout checkpoint and count rule (2026-10-14)
 
 The current checkout includes completed D0a, D0b, D0c, uncommitted D0d work, UX1, UX2, D0d-F1 repairs, and uncommitted D0e. Status: D0a PASS; D0b PASS; D0c PASS; D0d automated verification through F1 PASS with known limitations; D0e backend implementation/verification complete, backend independent audit `PASS WITH FINDINGS` (LOW only), UI repair verification PASS, and owner-reported M01-M05 PASS. The four real PostgreSQL races are controlled evidence, not exhaustive schedule coverage; the backend audit reviewed test source/evidence without rerunning database tests. No independent UI re-audit or D0e production build ran. The UX2 owner-acceptance block remains historical; the owner later traced missing content to directly inserted incomplete legacy/test tasks and observed correct content on a newly populated task. The owner reports all D0d browser smoke PASS, including G2 blocked-request failure/retry and private file download, plus P1-01 upload success after task navigation and failure/retry recovery, and P1-02 pending G2 editing lock, task navigation, failure recovery, and retry. These browser results are owner-reported, not independently reproduced automated results. F1 did not rerun the build; UX2's build PASS remains earlier evidence. G3 NOT STARTED. No next task has been selected. G1 implements LH 040 with Prisma generate/validate, typecheck, 62 Learning Hub unit tests, 39 integration tests, all five legacy regressions, targeted ESLint, production build, and migration 005 forward/rollback rehearsals all PASS. The F2 pagination repair changed only an implementation-coupled test assertion and did not alter production behavior. The verified B2/C1 repair established a 77-error/32-warning unrelated legacy baseline. After the isolated `LearningResources.tsx` dependency micro-repair, the recorded full-lint result was 77 errors/32 warnings; D0b did not rerun full lint. Except where this section explicitly states a current observation, suite counts and command results below remain historical evidence from their named task checkpoints and must not be rewritten to current totals.
 
@@ -87,7 +140,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | LH 032 | F1, F2 | `LH032-U` TTL/deleted-state rules | `LH032-I` download issuance; `LH032-S` non-member/IDOR | Archived member and expired URL | PASS: F2 requests F1 download only after user action; lists/activity exclude signed URLs/storage keys and F1 denies deleted files. |
 | LH 040 | G1 | `LH040-U` role/deadline/criteria | `LH040-I` create/update; `LH040-S` member/assignee auth | Archived-space read/write; no G1 notification | PASS: create/list/version-checked edit, active-pair/Booking/topic checks, independent dueAt, and START/CANCEL-only transitions. Prisma generate/validate, 62 unit tests, 39 integration tests, five legacy regressions, targeted ESLint, build, and migration 005 forward/rollback rehearsals passed. |
 | LH 041 | G2 | `LH041-U` current Submission/revision rules | `LH041-I` text/link/file flow; `LH041-C` concurrent resubmit | Task status and attachment authorization | PASS: first submit, revision gating/count, session author, wrong-space/non-ready file, unsafe URL, empty input, closed task, concurrent claims, event dedupe, mobile draft/validation controls; unit/integration/regression/typecheck/lint/build passed. |
-| LH 042 | G3 | `LH042-U` reviewed/revision outcomes | `LH042-I` reviewer auth and state; private content guard | `LH042-R` public Review/Trust unchanged | PLACEHOLDER |
+| LH 042 | G3 | `LH042-U` reviewed/revision outcomes | `LH042-I` reviewer auth and state; private content guard | `LH042-R` public Review/Trust unchanged | Implementation COMPLETE; historical automated evidence PASS; 2026-10-16 real PostgreSQL R1-R5 (seven controlled cases), side-effect assertions and cleanup PASS; owner-reported manual G3-M01 through G3-M13 13/13 PASS, not independently reproduced or automated. M08 is UI permission verification. See current G3 checkpoint and IMPLEMENTATION_STATE. |
 | LH 050 | H1 | `LH050-U` scope/visibility/version | `LH050-I` note CRUD/member auth; `LH050-C` lost update | Archived read, XSS, long Vietnamese | PLACEHOLDER |
 | LH 060 | H2 | `LH060-U` event shape/dedupe/redaction | `LH060-I` ordered authorized activity query | `LH060-R` chat remains separate | PLACEHOLDER |
 | LH 070 | I1, I2, I3 | `LH070-U` transition/mode eligibility | `LH070-I` deliver/accept/revise/dispute; `LH070-X` concurrent retry/reconciliation | `LH070-R` cancellation/no-show/ledger | PLACEHOLDER |

@@ -123,3 +123,15 @@ This decision changes neither AvailableSlot nor legacy Booking scheduling semant
 **Status:** Accepted for G2 MVP
 
 A task has one current Submission. The assignee may create it only while the active task is OPEN or IN_PROGRESS, then both task and Submission enter SUBMITTED and content is locked. A later revision request must set both records to REVISION_REQUESTED before the same assignee may replace content/link/attachment. Resubmission updates the current row, increments revisionCount once, and writes a uniquely keyed, content-free activity event in the same transaction. G2 does not decide reviewer outcomes or settlement.
+
+## ADR 018 Private Submission review and revision
+
+**Status:** Accepted for G3 MVP (2026-10-15)
+
+The eligible reviewer is the task creator, distinct from its assignee and Submission author. Membership has no permanent mentor role; a linked Booking's mentor/mentee ordering does not replace task ownership. Both participants must remain ACTIVE and unsuspended, and the space must be ACTIVE for review writes. A linked Booking must belong to the space, contain the task pair, and not be CANCELLED, DISPUTED, or MISSED. Archived spaces remain readable to ACTIVE, unsuspended members.
+
+Review requires both Task and Submission to be SUBMITTED and the submitted `submissionId`/`revisionCount` to match the current record. REVIEWED sets Submission to REVIEWED and Task to COMPLETED. REVISION_REQUESTED sets both to REVISION_REQUESTED, reopening work through ADR 017; G2 resubmission returns both to SUBMITTED. This is task work in progress, not a mutation of Booking.fulfillmentStatus. An optional future `revisionDueAt` updates the existing independent Task.dueAt; omission preserves it and explicit null clears it. REVIEWED cannot change the deadline.
+
+A Serializable transaction conditionally claims Task version/status and Submission revision/status, upserts the existing single current SubmissionReview, and writes one event keyed `learning-submission-review:{submissionId}:revision:{revisionCount}`. Duplicate/stale requests and Prisma P2002/P2034 conflicts return 409. Audit retains prior revision numbers, outcomes, actors, timestamps, and explicitly changed deadlines without feedback/submission text, links, or file keys. It is not a historical content snapshot. After resubmit the old review row is retained but not presented as feedback for the new SUBMITTED revision; the next review updates that same row.
+
+No schema/migration, Booking lifecycle/fulfillment, public Review/Trust, GivePoint/ledger/settlement, Calendar/Meet, notification, or cron change is required. I1-I3 still own delivery, acceptance, settlement, and timeout enforcement; Task COMPLETED is not Booking delivery or settlement evidence by itself.
