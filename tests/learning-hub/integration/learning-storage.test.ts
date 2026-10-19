@@ -41,7 +41,7 @@ function fixture() {
   const deleteTimeline: string[] = []
   let failSerializableDelete = false
   let nextId = 0
-  const recordActivity = async (activity: Parameters<LearningStorageRepository['recordResourceCreated']>[0]) => {
+  const recordActivity = async (activity: { learningSpaceId: string; actorId: string; eventType: string; entityType: string; entityId: string; eventKey: string; metadata: Record<string, string> }) => {
     if (failActivityWrite) throw new Error('activity database unavailable')
     if (!activities.some(existing => existing.eventKey === activity.eventKey)) activities.push(activity)
   }
@@ -55,7 +55,7 @@ function fixture() {
       return row
     },
     resource: async (_spaceId, resourceId) => rows.get(resourceId) ?? null,
-    deleteUnreferencedFile: async ({ spaceId, resourceId, actorId, deletedAt }) => {
+    deleteUnreferencedFile: async ({ spaceId, resourceId, actorId, deletedAt, activity }) => {
       if (actorId !== 'member' && actorId !== 'other') throw new LearningStorageError(403, 'Learning space membership required')
       if (archived) throw new LearningStorageError(403, 'Archived learning spaces are read-only')
       const row = rows.get(resourceId)
@@ -63,8 +63,19 @@ function fixture() {
       if (row.status === 'DELETED') return { resource: row, deleted: false }
       if (currentAttachments.has(resourceId)) throw new LearningStorageError(409, 'File is attached to a current submission')
       if (failSerializableDelete) throw new Prisma.PrismaClientKnownRequestError('Write conflict', { code: 'P2034', clientVersion: '5.22.0' })
+      const previousStatus = row.status
+      const previousDeletedAt = row.deletedAt
+      const activityCount = activities.length
       row.status = 'DELETED'
       row.deletedAt = deletedAt
+      try {
+        await recordActivity(activity)
+      } catch (error) {
+        row.status = previousStatus
+        row.deletedAt = previousDeletedAt
+        activities.splice(activityCount)
+        throw error
+      }
       deleteTimeline.push('commit')
       return { resource: row, deleted: true }
     },
@@ -468,6 +479,23 @@ test('D0e protects only the current attachment after replacement', async () => {
   assert.equal(f.rows.get(b.resourceId)?.status, 'READY')
 })
 
+test('successful FILE deletion records one redacted activity and rejected deletion records none', async () => {
+  const f = fixture()
+  const issued = await f.service.initiate('space', f.valid)
+  await f.service.softDelete('space', issued.resourceId)
+  assert.deepEqual(f.activities, [{
+    learningSpaceId: 'space', actorId: 'member', eventType: 'LEARNING_RESOURCE_DELETED', entityType: 'LearningResource',
+    entityId: issued.resourceId, eventKey: `learning-resource:${issued.resourceId}:deleted`, metadata: { kind: 'FILE', status: 'DELETED' },
+  }])
+  await f.service.softDelete('space', issued.resourceId)
+  assert.equal(f.activities.length, 1)
+
+  const rejected = fixture()
+  const attached = await rejected.service.initiate('space', rejected.valid)
+  rejected.currentAttachments.add(attached.resourceId)
+  await assert.rejects(() => rejected.service.softDelete('space', attached.resourceId), { status: 409 })
+  assert.deepEqual(rejected.activities, [])
+})
 test('D0e retains authentication, membership, uploader, archive and already-deleted behavior', async () => {
   const f = fixture()
   const issued = await f.service.initiate('space', f.valid)

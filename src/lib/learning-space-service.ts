@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationError, requireAuthenticatedUser, requireLearningSpaceMember } from '@/lib/server-authorization'
 import type { AuthenticatedUser, LearningSpaceMembershipLookup } from '@/lib/server-authorization'
@@ -22,7 +23,7 @@ const pair = (a: string, b: string): [string, string] => a < b ? [a, b] : [b, a]
 
 type SpaceRecord = Pick<LearningSpace, 'id' | 'state' | 'version' | 'primarySkillId'>
 type MemberRecord = Pick<LearningSpaceMember, 'learningSpaceId' | 'userId' | 'status'>
-type TopicRecord = Pick<LearningTopic, 'id' | 'learningSpaceId' | 'state'>
+type TopicRecord = Pick<LearningTopic, 'id' | 'learningSpaceId' | 'state' | 'label' | 'updatedAt'>
 type BookingRecord = Pick<Booking, 'id' | 'mentorId' | 'menteeId' | 'status' | 'learningSpaceId'>
 type ReuseInput = { memberIds: [string, string]; primarySkillId: string }
 export type LearningSpaceTransaction = {
@@ -59,7 +60,7 @@ export function createLearningSpaceService(deps: Dependencies) {
     return deps.repository.transaction(async tx => {
       if (!await tx.userExists(memberId)) throw new AuthorizationError(404, 'Learning space member not found')
       if (!await tx.skillExists(data.primarySkillId)) throw new LearningSpaceValidationError('primarySkillId must reference an existing skill')
-      const space = await tx.createSpace(data); await tx.createMember(space.id, actor.id); await tx.createMember(space.id, memberId); return space
+      const space = await tx.createSpace(data); await tx.createMember(space.id, actor.id); await tx.createMember(space.id, memberId); await tx.activity({ learningSpaceId: space.id, actorId: actor.id, eventType: 'LEARNING_SPACE_CREATED', entityType: 'LearningSpace', entityId: space.id, eventKey: `learning-space:${space.id}:created`, metadata: {} }); return space
     })
   }
   async function createFromConfirmedBooking(input: Record<string, unknown>) {
@@ -71,7 +72,7 @@ export function createLearningSpaceService(deps: Dependencies) {
       if (booking.status !== 'CONFIRMED') throw new LearningSpaceConflictError('Only confirmed bookings can create a learning space')
       if (booking.learningSpaceId) throw new LearningSpaceConflictError('Booking is already associated with a learning space')
       if (!await tx.skillExists(data.primarySkillId)) throw new LearningSpaceValidationError('primarySkillId must reference an existing skill')
-      const space = await tx.createSpace(data); await tx.createMember(space.id, booking.mentorId); await tx.createMember(space.id, booking.menteeId); await tx.attachBooking(bookingId, space.id); return space
+      const space = await tx.createSpace(data); await tx.createMember(space.id, booking.mentorId); await tx.createMember(space.id, booking.menteeId); await tx.attachBooking(bookingId, space.id); await tx.activity({ learningSpaceId: space.id, bookingId, actorId: actor.id, eventType: 'LEARNING_SPACE_CREATED', entityType: 'LearningSpace', entityId: space.id, eventKey: `learning-space:${space.id}:created`, metadata: {} }); await tx.activity({ learningSpaceId: space.id, bookingId, actorId: actor.id, eventType: 'LEARNING_BOOKING_LINKED', entityType: 'Booking', entityId: bookingId, eventKey: `learning-booking:${bookingId}:linked:${space.id}`, metadata: {} }); return space
     })
   }
   async function read(spaceId: string) { await member(spaceId); return deps.repository.transaction(async tx => { const space = await tx.space(spaceId); if (!space) throw new AuthorizationError(404, 'Learning space not found'); return { space, topics: await tx.topics(spaceId) } }) }
@@ -93,9 +94,39 @@ export function createLearningSpaceService(deps: Dependencies) {
     return deps.repository.transaction(async tx => { await tx.lock(spaceId); const current = await tx.space(spaceId); if (!current) throw new AuthorizationError(404, 'Learning space not found'); active(current); if (current.version !== expected) throw new LearningSpaceConflictError('Learning space was updated by another member'); if (primarySkillId && !await tx.skillExists(primarySkillId)) throw new LearningSpaceValidationError('primarySkillId must reference an existing skill'); const space = await tx.updateSpace(spaceId, expected, { primarySkillId, objective: Object.hasOwn(input, 'objective') ? detail(input.objective, 'objective') : undefined, definitionOfDone: Object.hasOwn(input, 'definitionOfDone') ? detail(input.definitionOfDone, 'definitionOfDone') : undefined, updatedById: user.id, version: { increment: 1 } }); if (!space) throw new LearningSpaceConflictError('Learning space was updated by another member'); await tx.activity({ learningSpaceId: spaceId, actorId: user.id, eventType: kind === 'skill' ? 'LEARNING_SPACE_PRIMARY_SKILL_CHANGED' : 'LEARNING_SPACE_DETAILS_UPDATED', entityType: 'LearningSpace', entityId: spaceId, eventKey: `learning-space:${spaceId}:${kind}:${space.version}`, metadata: kind === 'skill' ? { previousPrimarySkillId: current.primarySkillId, primarySkillId, version: space.version } : { version: space.version } }); return space })
   }
   async function changeState(spaceId: string, input: Record<string, unknown>, state: 'ACTIVE' | 'ARCHIVED') { const { user } = await member(spaceId); const expected = version(input.expectedVersion); return deps.repository.transaction(async tx => { await tx.lock(spaceId); const current = await tx.space(spaceId); if (!current) throw new AuthorizationError(404, 'Learning space not found'); if (current.state === state) throw new LearningSpaceConflictError('Learning space is already in that state'); if (current.version !== expected) throw new LearningSpaceConflictError('Learning space was updated by another member'); const space = await tx.updateSpace(spaceId, expected, { state, archivedAt: state === 'ARCHIVED' ? now() : null, updatedById: user.id, version: { increment: 1 } }); if (!space) throw new LearningSpaceConflictError('Learning space was updated by another member'); return space }) }
-  async function addTopic(spaceId: string, input: Record<string, unknown>) { const { user } = await member(spaceId); const label = text(input.label, 'label'); const skillId = input.skillId == null ? null : text(input.skillId, 'skillId', 191); return deps.repository.transaction(async tx => { await tx.lock(spaceId); const space = await tx.space(spaceId); if (!space) throw new AuthorizationError(404, 'Learning space not found'); active(space); if (skillId && !await tx.skillExists(skillId)) throw new LearningSpaceValidationError('skillId must reference an existing skill'); return tx.createTopic({ learningSpaceId: spaceId, label, normalizedLabel: label.toLowerCase(), skillId, creatorId: user.id, provenance: input.provenance == null ? null : text(input.provenance, 'provenance', 500) }) }) }
-  async function renameTopic(spaceId: string, topicId: string, input: Record<string, unknown>) { await member(spaceId); const label = text(input.label, 'label'); return deps.repository.transaction(async tx => { await tx.lock(spaceId); const space = await tx.space(spaceId); if (!space) throw new AuthorizationError(404, 'Learning space not found'); active(space); const topic = await tx.topic(spaceId, topicId); if (!topic) throw new AuthorizationError(404, 'Learning topic not found'); if (topic.state === 'ARCHIVED') throw new LearningSpaceConflictError('Archived learning topics cannot be renamed'); return tx.updateTopic(topicId, { label, normalizedLabel: label.toLowerCase() }) }) }
-  async function archiveTopic(spaceId: string, topicId: string) { await member(spaceId); return deps.repository.transaction(async tx => { await tx.lock(spaceId); const space = await tx.space(spaceId); if (!space) throw new AuthorizationError(404, 'Learning space not found'); active(space); const topic = await tx.topic(spaceId, topicId); if (!topic) throw new AuthorizationError(404, 'Learning topic not found'); return topic.state === 'ARCHIVED' ? topic : tx.updateTopic(topicId, { state: 'ARCHIVED', archivedAt: now() }) }) }
+  async function addTopic(spaceId: string, input: Record<string, unknown>) { const { user } = await member(spaceId); const label = text(input.label, 'label'); const skillId = input.skillId == null ? null : text(input.skillId, 'skillId', 191); return deps.repository.transaction(async tx => { await tx.lock(spaceId); const space = await tx.space(spaceId); if (!space) throw new AuthorizationError(404, 'Learning space not found'); active(space); if (skillId && !await tx.skillExists(skillId)) throw new LearningSpaceValidationError('skillId must reference an existing skill'); const topic = await tx.createTopic({ learningSpaceId: spaceId, label, normalizedLabel: label.toLowerCase(), skillId, creatorId: user.id, provenance: input.provenance == null ? null : text(input.provenance, 'provenance', 500) }); await tx.activity({ learningSpaceId: spaceId, actorId: user.id, eventType: 'LEARNING_TOPIC_CHANGED', entityType: 'LearningTopic', entityId: topic.id, eventKey: `learning-topic:${topic.id}:created`, metadata: { status: 'CREATED' } }); return topic }) }
+  async function renameTopic(spaceId: string, topicId: string, input: Record<string, unknown>) {
+    const { user } = await member(spaceId)
+    const label = text(input.label, 'label')
+    return deps.repository.transaction(async tx => {
+      await tx.lock(spaceId)
+      const space = await tx.space(spaceId)
+      if (!space) throw new AuthorizationError(404, 'Learning space not found')
+      active(space)
+      const topic = await tx.topic(spaceId, topicId)
+      if (!topic) throw new AuthorizationError(404, 'Learning topic not found')
+      if (topic.state === 'ARCHIVED') throw new LearningSpaceConflictError('Archived learning topics cannot be renamed')
+      if (topic.label === label) return topic
+      const changed = await tx.updateTopic(topicId, { label, normalizedLabel: label.toLowerCase() })
+      await tx.activity({ learningSpaceId: spaceId, actorId: user.id, eventType: 'LEARNING_TOPIC_CHANGED', entityType: 'LearningTopic', entityId: topicId, eventKey: 'learning-topic:' + topicId + ':renamed:' + changed.updatedAt.toISOString() + ':' + createHash('sha256').update(label).digest('hex'), metadata: { status: 'RENAMED' } })
+      return changed
+    })
+  }
+  async function archiveTopic(spaceId: string, topicId: string) {
+    const { user } = await member(spaceId)
+    return deps.repository.transaction(async tx => {
+      await tx.lock(spaceId)
+      const space = await tx.space(spaceId)
+      if (!space) throw new AuthorizationError(404, 'Learning space not found')
+      active(space)
+      const topic = await tx.topic(spaceId, topicId)
+      if (!topic) throw new AuthorizationError(404, 'Learning topic not found')
+      if (topic.state === 'ARCHIVED') return topic
+      const changed = await tx.updateTopic(topicId, { state: 'ARCHIVED', archivedAt: now() })
+      await tx.activity({ learningSpaceId: spaceId, actorId: user.id, eventType: 'LEARNING_TOPIC_CHANGED', entityType: 'LearningTopic', entityId: topicId, eventKey: 'learning-topic:' + topicId + ':archived', metadata: { status: 'ARCHIVED' } })
+      return changed
+    })
+  }
   return { createDirect, createFromConfirmedBooking, read, suggestReuse, addMember, updateDetails, changePrimarySkill, archive: (id: string, input: Record<string, unknown>) => changeState(id, input, 'ARCHIVED'), restore: (id: string, input: Record<string, unknown>) => changeState(id, input, 'ACTIVE'), addTopic, renameTopic, archiveTopic }
 }
 

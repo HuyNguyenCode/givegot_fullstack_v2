@@ -1,8 +1,12 @@
 # Learning Hub Implementation Plan
 
-## Current H1/LH 050 plan checkpoint (reconciled 2026-10-16)
+## Current H2 checkpoint (2026-10-16)
 
-H1 implementation is COMPLETE. Migration 007 passed disposable TEST forward/rollback/refusal/cleanup and STAGING forward/schema/Prisma checks; no PRODUCTION migration. Initial full suites passed 123/123 unit and 58/58 integration; latest H1-11 focused suites passed 9/9 Notes unit and 2/2 route. Owner-reported H1-01–H1-20 browser cases passed 20/20, including H1-09/11/15 retests; no independent browser automation was run. H2/LH 060 is the NEXT SAFE TASK and is NOT STARTED. I1/I2/I3 and J1 remain pending. The dated G3/D0 checkpoints below remain historical.
+H2/LH 060 is implemented with the 2026-10-19 PASS WITH KNOWN LIMITATION audit-repair checkpoint and the privacy/fulfillment limitations recorded in IMPLEMENTATION_STATE. I1 remains separately owner-authorized; optional I0 is audit-only and may precede it. Do not start I1/I2/I3 or J1 automatically. No migration or settlement action was part of H2.
+
+## Historical H1/LH 050 plan checkpoint (reconciled 2026-10-16)
+
+H1 implementation is COMPLETE. Migration 007 passed disposable TEST forward/rollback/refusal/cleanup and STAGING forward/schema/Prisma checks; no PRODUCTION migration. Initial full suites passed 123/123 unit and 58/58 integration; latest H1-11 focused suites passed 9/9 Notes unit and 2/2 route. Owner-reported H1-01–H1-20 browser cases passed 20/20, including H1-09/11/15 retests; no independent browser automation was run. This is historical H1 evidence. H2/LH 060 is implemented with the 2026-10-19 PASS WITH KNOWN LIMITATION audit-repair checkpoint; I1/I2/I3 and J1 remain pending. The dated G3/D0 checkpoints below remain historical.
 
 ### Deferred product and UX backlog
 
@@ -37,7 +41,7 @@ The registry and historical task evidence below retain their original sequence.
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Use the single current H1 checkpoint above: H1/LH 050 is COMPLETE, H2/LH 060 is next and NOT STARTED, and I1/I2/I3 and J1 remain pending. Interpret older checkpoint statements within their stated dates.
+- Use the current H2/LH 060 checkpoint (2026-10-19): H1 and H2 are implemented; H2 is PASS WITH KNOWN LIMITATION. I1 is the next implementation task in the existing registry and requires separate owner authorization; optional I0 audit-only may precede it. I2/I3 and J1 remain pending. Dated older checkpoint statements are historical.
 
 ## Task registry
 

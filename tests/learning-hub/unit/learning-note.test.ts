@@ -10,10 +10,20 @@ import { LearningSpaceShell } from '../../../src/components/learning/LearningSpa
 function fixture() {
   let actorId = 'member-a'
   let state: 'ACTIVE' | 'ARCHIVED' = 'ACTIVE'
+  let active = true
+  let invalidate: 'MEMBERSHIP' | 'ARCHIVE' | null = null
   const notes: Array<Record<string, any>> = []
+  const activities: Array<Record<string, any>> = []
   const db = {
-    learningSpaceMember: { findUnique: async ({ where }: any) => ['member-a', 'member-b'].includes(where.learningSpaceId_userId.userId) ? { status: 'ACTIVE', learningSpace: { state }, user: { isSuspended: false } } : null },
+    learningSpaceMember: { findUnique: async ({ where }: any) => {
+      const member = ['member-a', 'member-b'].includes(where.learningSpaceId_userId.userId) && active ? { status: 'ACTIVE', learningSpace: { state }, user: { isSuspended: false } } : null
+      if (invalidate === 'MEMBERSHIP') active = false
+      if (invalidate === 'ARCHIVE') state = 'ARCHIVED'
+      invalidate = null
+      return member
+    } },
     booking: { findFirst: async ({ where }: any) => where.id === 'booking-a' && where.learningSpaceId === 'space' ? { mentorId: 'member-a', menteeId: 'member-b' } : where.id === 'booking-other' && where.learningSpaceId === 'space' ? { mentorId: 'other-a', menteeId: 'other-b' } : null },
+    learningActivity: { upsert: async ({ where, create }: any) => { const existing = activities.find(activity => activity.eventKey === where.eventKey); if (existing) return existing; activities.push(create); return create } },
     learningNote: {
       create: async ({ data }: any) => { const row = { id: String(notes.length + 1), ...data, version: 1, deletedAt: null, deletedById: null, createdAt: new Date(), updatedAt: new Date(), author: { name: data.authorId } }; notes.push(row); return row },
       findMany: async ({ where }: any) => notes.filter(n => n.learningSpaceId === where.learningSpaceId && !n.deletedAt),
@@ -22,8 +32,9 @@ function fixture() {
       findUniqueOrThrow: async ({ where }: any) => notes.find(n => n.id === where.id),
     },
   }
+  Object.assign(db, { $transaction: async (fn: (tx: typeof db) => Promise<unknown>) => fn(db) })
   const service = createLearningNoteService({ db: db as never, actor: async () => ({ id: actorId, email: null, name: null }), now: () => new Date('2030-01-01T00:00:00Z') })
-  return { service, actor: (value: string) => { actorId = value }, archive: () => { state = 'ARCHIVED' }, notes }
+  return { service, actor: (value: string) => { actorId = value }, archive: () => { state = 'ARCHIVED' }, revokeAtTransaction: () => { invalidate = 'MEMBERSHIP' }, archiveAtTransaction: () => { invalidate = 'ARCHIVE' }, notes, activities }
 }
 
 test('member creates, reads, edits with version; nonmember is denied', async () => {
@@ -45,6 +56,33 @@ test('member creates, reads, edits with version; nonmember is denied', async () 
   await assert.rejects(() => f.service.update('space', note.id, { expectedVersion: 1, content: 'Stale' }), { status: 409 })
 })
 
+test('shared note edits and deletion append redacted, deduplicated activity only after success', async () => {
+  const f = fixture()
+  const note = await f.service.create('space', { content: 'Nội dung riêng của ghi chú' })
+  const createdCount = f.activities.length
+  await f.service.update('space', note.id, { expectedVersion: 1, content: 'Nội dung đã sửa' })
+  await f.service.remove('space', note.id, { expectedVersion: 2 })
+  assert.deepEqual(f.activities.slice(createdCount), [
+    { learningSpaceId: 'space', bookingId: null, actorId: 'member-a', eventType: 'LEARNING_NOTE_UPDATED', entityType: 'LearningNote', entityId: note.id, eventKey: `learning-note:${note.id}:updated:2`, occurredAt: undefined, metadata: { noteType: 'GENERAL', version: 2 } },
+    { learningSpaceId: 'space', bookingId: null, actorId: 'member-a', eventType: 'LEARNING_NOTE_DELETED', entityType: 'LearningNote', entityId: note.id, eventKey: `learning-note:${note.id}:deleted:3`, occurredAt: undefined, metadata: { noteType: 'GENERAL', version: 3 } },
+  ])
+  await assert.rejects(() => f.service.remove('space', note.id, { expectedVersion: 2 }), { status: 404 })
+  assert.equal(f.activities.length, createdCount + 2)
+})
+
+test('private note mutations and stale shared mutations do not append activity', async () => {
+  const f = fixture()
+  const privateNote = await f.service.create('space', { content: 'Chỉ mình tôi', visibility: 'AUTHOR_ONLY' })
+  const initial = f.activities.length
+  await f.service.update('space', privateNote.id, { expectedVersion: 1, content: 'Vẫn riêng tư' })
+  await f.service.remove('space', privateNote.id, { expectedVersion: 2 })
+  assert.equal(f.activities.length, initial)
+
+  const shared = await f.service.create('space', { content: 'Công khai trong không gian' })
+  const beforeStale = f.activities.length
+  await assert.rejects(() => f.service.update('space', shared.id, { expectedVersion: 7, content: 'Không được lưu' }), { status: 409 })
+  assert.equal(f.activities.length, beforeStale)
+})
 test('visibility, booking ownership, archive reads, and soft deletion preserve audit', async () => {
   const f = fixture()
   await assert.rejects(() => f.service.create('space', { content: 'x', bookingId: 'booking-other' }), { status: 400 })
@@ -155,4 +193,30 @@ test('reload retires an editor for a note archived in another tab while preservi
   assert.equal(draft.content, 'Bản nháp cần sao chép')
   assert.equal(canSubmitNoteDraft(draft.content, false, reloaded.missingEditing), false)
   assert.deepEqual(methods, ['PATCH'])
+})
+
+test('note transaction guard rejects membership and archive changes without mutations or activity', async () => {
+  const create = fixture()
+  create.revokeAtTransaction()
+  await assert.rejects(() => create.service.create('space', { content: 'Không lưu' }), { status: 403 })
+  assert.equal(create.notes.length, 0)
+  assert.deepEqual(create.activities, [])
+
+  const update = fixture()
+  const note = await update.service.create('space', { content: 'Bản gốc' })
+  const activityCount = update.activities.length
+  update.archiveAtTransaction()
+  await assert.rejects(() => update.service.update('space', note.id, { expectedVersion: 1, content: 'Không lưu' }), { status: 409 })
+  assert.equal(update.notes[0].content, 'Bản gốc')
+  assert.equal(update.notes[0].version, 1)
+  assert.equal(update.activities.length, activityCount)
+
+  const remove = fixture()
+  const removable = await remove.service.create('space', { content: 'Giữ lại' })
+  const removeActivityCount = remove.activities.length
+  remove.revokeAtTransaction()
+  await assert.rejects(() => remove.service.remove('space', removable.id, { expectedVersion: 1 }), { status: 403 })
+  assert.equal(remove.notes[0].deletedAt, null)
+  assert.equal(remove.notes[0].version, 1)
+  assert.equal(remove.activities.length, removeActivityCount)
 })

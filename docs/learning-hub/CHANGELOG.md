@@ -1,5 +1,22 @@
 # Learning Hub Changelog
 
+## 2026-10-19 — H2 audit repair and documentation reconciliation
+
+Recorded the current H2 checkpoint: transaction-local membership/space rechecks for LINK deletion and note writes, the Vietnamese LearningSpace-details event label, and AUD-03 as deferred potential state reuse. Current H2 evidence is 20/20 focused, 139/139 unit, and 61/61 integration PASS; the latest production build was not rerun. Actor attribution and missing activity-events owner manual confirmations are 6/6 and 8/8 PASS respectively.
+
+
+## 2026-10-18 — H2 missing activity events
+
+Added privacy-safe, deduplicated activity entries for resource soft deletion and successful shared-note edits and deletion. The timeline labels these actions in Vietnamese. Private notes, downloads, views, failed mutations, Booking, GP, fulfillment, notifications, and legacy behavior are unchanged.
+
+## 2026-10-17 — H2 activity actor attribution
+
+Learning Activity responses now include the actor display name from the existing authorized activity relation, and each History timeline entry shows that name beside its timestamp. Missing/deleted actors use `Thành viên GiveGot`; actorless system events use `Hệ thống`. No schema, endpoint, event writer, pagination, deduplication, authorization, legacy Booking flow, or metadata exposure changed.
+
+## 2026-10-16 — H2 structured learning activity
+
+Added an active-member, cursor-paged LearningSpace activity feed and compact History-tab timeline. Added content-free space/topic/task/space-visible-note/linked-Booking events in existing transactions; reused existing resource, Submission, and review events. Reads redact event metadata through an allowlist, keep archived/deleted history, and never mirror chat or private feedback. No schema, migration, data backfill, GP/settlement, provider, notification, or legacy Booking policy change. Fulfillment writes remain I1 scope; private note existence is excluded from the shared timeline. Verification and rollback are recorded in IMPLEMENTATION_STATE.
+
 ## 2026-10-16 — H1 checkpoint reconciliation
 
 H1/LH 050 implementation is COMPLETE. Migration 007 passed disposable TEST forward/legacy/default/enum/index/safe rollback/unsafe refusal/cleanup and owner-authorized STAGING forward/schema/Prisma checks; PRODUCTION was not migrated. The initial full suite passed 123/123 unit and 58/58 integration; latest H1-11 repair passed 9/9 focused Notes unit and 2/2 route. Five legacy regressions, typecheck, and targeted lint passed at both checkpoints; initial build and latest diff check passed at their respective checkpoints. Owner-reported browser H1-01–H1-20 20/20 PASS includes H1-09/11/15 retests, H1-10 soft delete, and H1-19 Booking ownership; no independent reproduction or browser automation is claimed. The UI says “Xóa ghi chú” for existing audited soft deletion. H1-UX-01/02 are deferred P2 UX work, and group learning/multi-learner slots are Post-MVP design backlog. H2/LH 060 is next and NOT STARTED; fulfillment and settlement risks remain open. No code, schema, migration, database, ADR, or risk classification changed during this documentation reconciliation.

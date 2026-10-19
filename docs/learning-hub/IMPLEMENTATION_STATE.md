@@ -1,6 +1,34 @@
+## H2 audit findings repair — tests and status (2026-10-19)
+
+Status: PASS WITH KNOWN LIMITATION. H2 Actor Attribution is FIXED / VERIFIED / CLOSED: owner manual 6/6 PASS and historical owner-executed 135/135 unit plus 61/61 integration PASS. H2 Missing Activity Events is IMPLEMENTED and owner manual 8/8 PASS; its later automated-suite and production-build status remain unconfirmed. AUD-01 transaction-local authorization is covered for LINK deletion and LearningNote create, update, and delete: the existing transaction rechecks active, unsuspended membership and ACTIVE space state before changing a source row or appending activity. Existing transaction semantics still permit a membership revocation or archive transition after that recheck to race without added locking or isolation changes. AUD-02 adds the Vietnamese LEARNING_SPACE_DETAILS_UPDATED timeline label. AUD-03 remains POTENTIAL / DEFERRED with no confirmed UI reproduction.
+
+Verification: focused activity/resource/note unit tests 20/20, full Learning Hub unit 139/139, integration route smoke plus 61/61, typecheck, targeted ESLint, five offline legacy regression scripts, and diff check passed. The Windows tsx ENOMEM was a historical startup issue for these successfully completed suites; the temporary preload was removed. Latest production build: NOT RERUN. No database, provider, Booking, GP, schema, or migration behavior changed.
+
 # Learning Hub Implementation State
 
-## Current H1/LH 050 checkpoint (reconciled 2026-10-16)
+## H2 missing activity events micro-repair (2026-10-18)
+
+Status: IMPLEMENTED; focused runtime tests are blocked by the local test runner. Resource soft deletion now appends `LEARNING_RESOURCE_DELETED` inside its successful link or serializable file mutation transaction. Successful edits and soft deletions of notes that remain `SPACE_MEMBERS` append `LEARNING_NOTE_UPDATED` and `LEARNING_NOTE_DELETED` in the same version-checked transaction. Event keys use the resource ID or the post-mutation note version, so retries deduplicate. Metadata is limited to resource kind/status or note type/version; it contains no note content, feedback, URL, storage key, or signed URL. Private notes, stale conflicts, rejected deletions, and failed mutations create no shared event. Existing session authorization, archived history, pagination, ordering, and source-row preservation remain unchanged.
+
+Verification: `npm run typecheck`, targeted ESLint, `npm run test:regression`, and `git diff --check` passed. Focused `tsx` tests could not start because Windows Node fails before discovery at `uv_os_get_passwd` with `ENOMEM`. The build produced its output artifacts, but the local runner detached before returning a final exit status; no confirmed build result is claimed. Rollback is limited to the H2 activity writer/label/test/documentation edits; existing activity history is append-only and remains after rollback.
+
+## H2 actor attribution micro-repair (2026-10-17)
+
+Status: IMPLEMENTED; focused runtime tests blocked by the local test environment. Activity reads now select only the related actor `name` in the existing authorized query and return `actorName`; the History timeline renders it with the timestamp beneath each description. A named actor keeps that display name, a missing or deleted actor becomes `Thành viên GiveGot`, and an event without an actor becomes `Hệ thống`. The query remains one relational read with no client requests per event; ordering, cursor pages, metadata redaction, writers, server-session authorization, and archived history are unchanged.
+
+Verification: `npm run typecheck`, targeted ESLint, `npm run test:regression`, and `git diff --check` passed. The focused activity unit and route tests and `npm run test:learning-hub` could not start because Windows Node fails in tsx pre-discovery at `uv_os_get_passwd` with `ENOMEM`; a WSL retry reached tsx but the Windows `node_modules` contains the incompatible `@esbuild/win32-x64` binary. The production build completed its output artifacts after the local runner detached before returning its final status, so this checkpoint does not claim a confirmed build exit result.
+
+## H2 / LH 060 structured activity checkpoint (2026-10-16)
+
+Status: PASS WITH KNOWN LIMITATION. H2 adds an authorized, append-only LearningActivity feed at GET /api/learning/spaces/[spaceId]/activity. It uses server-session identity, active membership, descending occurredAt plus id ordering, 20-row cursor pages, no-store responses, and metadata allowlisting on read (including older rows). The LearningSpace History tab now shows a compact timeline with empty, loading, error/retry, mobile, and load-more states; no chat transcript or LMS sidebar is added.
+
+New content-free writes occur in existing transactions for space creation, topic create/rename/archive, task assignment, space-visible GENERAL/RECAP note creation, and LearningSpace-linked Booking creation. Existing resource, Submission/revision, and private review/revision-request events remain the source for those milestones. Unique eventKey plus upsert deduplicates retryable append calls, including repeated provider event keys. Deleted source entities do not remove their activity rows. No schema, migration, backfill, old Booking row, GP/settlement, cron, public Review/Trust, chat, provider, or notification behavior changed.
+
+Known limitation: AUTHOR_ONLY and BOOKING_PARTICIPANTS notes deliberately create no shared timeline event so their existence is not disclosed to the other member. I1/I2/I3 fulfillment writers do not yet exist; H2 reserves LEARNING_FULFILLMENT_CHANGED and the future transition owner must append it atomically with a stable key. No historical activity backfill was attempted. Rollback is file-level H2 source/test/docs reversion; existing activity rows remain harmless structured history.
+
+Verification: focused H2 and changed-service tests passed; full unit 132/132, integration 60/60, five offline legacy regression scripts, typecheck and production build passed. The standard Windows tsx launcher hit its documented pre-discovery uv_os_get_passwd ENOMEM; unchanged suites passed under a temporary getEUID preload. No database or real webhook was contacted. Next task may rely on the read/event contract and must preserve the privacy boundary; it may not infer settlement from activity.
+
+## Historical H1/LH 050 checkpoint (reconciled 2026-10-16)
 
 H1 implementation is COMPLETE in the preserved working tree. The UI labels the existing audited soft delete “Xóa ghi chú”; ADR 019 still governs privacy and deletion. Migration 007 passed disposable Supabase TEST forward, legacy/default/enum/index checks, safe rollback, unsafe rollback refusal, and fixture cleanup. Owner-authorized STAGING forward application, schema checks, and Prisma Notes queries passed. No PRODUCTION migration was performed.
 

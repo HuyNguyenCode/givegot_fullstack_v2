@@ -284,6 +284,8 @@ export async function bookAvailableSlot(
           },
         })
 
+        if (learningBooking.learningSpaceId) await tx.learningActivity.upsert({ where: { eventKey: 'learning-booking:' + booking.id + ':linked:' + learningBooking.learningSpaceId }, create: { learningSpaceId: learningBooking.learningSpaceId, bookingId: booking.id, actorId: menteeId, eventType: 'LEARNING_BOOKING_LINKED', entityType: 'Booking', entityId: booking.id, eventKey: 'learning-booking:' + booking.id + ':linked:' + learningBooking.learningSpaceId, metadata: {} }, update: {} })
+
         // Step 6a: Log transaction (AUDIT TRAIL)
         await tx.transactionLog.create({
           data: {
@@ -490,6 +492,8 @@ export async function createBooking(
           ...learningBooking,
         },
       })
+
+      if (learningBooking.learningSpaceId) await tx.learningActivity.upsert({ where: { eventKey: 'learning-booking:' + newBooking.id + ':linked:' + learningBooking.learningSpaceId }, create: { learningSpaceId: learningBooking.learningSpaceId, bookingId: newBooking.id, actorId: menteeId, eventType: 'LEARNING_BOOKING_LINKED', entityType: 'Booking', entityId: newBooking.id, eventKey: 'learning-booking:' + newBooking.id + ':linked:' + learningBooking.learningSpaceId, metadata: {} }, update: {} })
 
       // Audit trail — keeps wallet ledger in sync with bookAvailableSlot's pattern
       await tx.transactionLog.create({

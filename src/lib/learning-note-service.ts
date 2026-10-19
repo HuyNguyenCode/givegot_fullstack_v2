@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
+import { appendLearningActivity } from '@/lib/learning-activity-service'
 import { AuthorizationError, requireAuthenticatedUser } from '@/lib/server-authorization'
-import type { LearningNote, LearningNoteType, LearningNoteVisibility } from '@prisma/client'
+import type { LearningNote, LearningNoteType, LearningNoteVisibility, Prisma } from '@prisma/client'
 
 export class LearningNoteError extends Error {
   constructor(readonly status: 400 | 403 | 404 | 409, message: string) { super(message) }
@@ -35,6 +36,11 @@ export function createLearningNoteService(deps: Dependencies = defaults) {
     const membership = await deps.db.learningSpaceMember.findUnique({ where: { learningSpaceId_userId: { learningSpaceId: spaceId, userId } }, select: { status: true, learningSpace: { select: { state: true } }, user: { select: { isSuspended: true } } } })
     if (!membership || membership.status !== 'ACTIVE' || membership.user.isSuspended) throw new AuthorizationError(403, 'Learning space membership required')
     if (write && membership.learningSpace.state !== 'ACTIVE') throw new LearningNoteError(409, 'Archived learning spaces are read-only')
+  }
+  async function mutationMember(tx: Prisma.TransactionClient, spaceId: string, userId: string) {
+    const membership = await tx.learningSpaceMember.findUnique({ where: { learningSpaceId_userId: { learningSpaceId: spaceId, userId } }, select: { status: true, learningSpace: { select: { state: true } }, user: { select: { isSuspended: true } } } })
+    if (!membership || membership.status !== 'ACTIVE' || membership.user.isSuspended) throw new AuthorizationError(403, 'Learning space membership required')
+    if (membership.learningSpace.state !== 'ACTIVE') throw new LearningNoteError(409, 'Archived learning spaces are read-only')
   }
   async function booking(spaceId: string, bookingId: string | null, actorId: string) {
     if (!bookingId) return
@@ -71,7 +77,12 @@ export function createLearningNoteService(deps: Dependencies = defaults) {
     const noteVisibility = input.visibility === undefined ? 'SPACE_MEMBERS' : visibility(input.visibility)
     if (noteVisibility === 'BOOKING_PARTICIPANTS' && !bookingId) throw new LearningNoteError(400, 'Booking required for this visibility')
     await booking(spaceId, bookingId, actor.id)
-    return deps.db.learningNote.create({ data: { learningSpaceId: spaceId, authorId: actor.id, bookingId, content: content(input.content), type: input.type === undefined ? 'GENERAL' : type(input.type), visibility: noteVisibility } })
+    return deps.db.$transaction(async tx => {
+      await mutationMember(tx, spaceId, actor.id)
+      const note = await tx.learningNote.create({ data: { learningSpaceId: spaceId, authorId: actor.id, bookingId, content: content(input.content), type: input.type === undefined ? 'GENERAL' : type(input.type), visibility: noteVisibility } })
+      if (noteVisibility === 'SPACE_MEMBERS') await appendLearningActivity(tx, { learningSpaceId: spaceId, bookingId, actorId: actor.id, eventType: note.type === 'RECAP' ? 'LEARNING_RECAP_ADDED' : 'LEARNING_NOTE_ADDED', entityType: 'LearningNote', entityId: note.id, eventKey: 'learning-note:' + note.id + ':created', metadata: { noteType: note.type } })
+      return note
+    })
   }
   async function change(spaceId: string, noteId: string, input: Record<string, unknown>, remove = false) {
     allowed(input, remove ? ['expectedVersion'] : ['expectedVersion', 'content', 'type', 'visibility', 'bookingId'])
@@ -92,9 +103,24 @@ export function createLearningNoteService(deps: Dependencies = defaults) {
       type: Object.hasOwn(input, 'type') ? type(input.type) : row.type,
       visibility: nextVisibility, bookingId, version: { increment: 1 },
     }
-    const claimed = await deps.db.learningNote.updateMany({ where: { id: noteId, learningSpaceId: spaceId, authorId: actor.id, version: expectedVersion, deletedAt: null }, data })
-    if (!claimed.count) throw new LearningNoteError(409, 'Note version conflict')
-    return deps.db.learningNote.findUniqueOrThrow({ where: { id: noteId } })
+    return deps.db.$transaction(async tx => {
+      await mutationMember(tx, spaceId, actor.id)
+      const claimed = await tx.learningNote.updateMany({ where: { id: noteId, learningSpaceId: spaceId, authorId: actor.id, version: expectedVersion, deletedAt: null }, data })
+      if (!claimed.count) throw new LearningNoteError(409, 'Note version conflict')
+      if (row.visibility === 'SPACE_MEMBERS' && (remove || nextVisibility === 'SPACE_MEMBERS')) {
+        await appendLearningActivity(tx, {
+          learningSpaceId: spaceId,
+          bookingId: row.bookingId,
+          actorId: actor.id,
+          eventType: remove ? 'LEARNING_NOTE_DELETED' : 'LEARNING_NOTE_UPDATED',
+          entityType: 'LearningNote',
+          entityId: noteId,
+          eventKey: `learning-note:${noteId}:${remove ? 'deleted' : 'updated'}:${expectedVersion + 1}`,
+          metadata: { noteType: row.type, version: expectedVersion + 1 },
+        })
+      }
+      return tx.learningNote.findUniqueOrThrow({ where: { id: noteId } })
+    })
   }
   return { list, read, create, update: (spaceId: string, noteId: string, input: Record<string, unknown>) => change(spaceId, noteId, input), remove: (spaceId: string, noteId: string, input: Record<string, unknown>) => change(spaceId, noteId, input, true) }
 }

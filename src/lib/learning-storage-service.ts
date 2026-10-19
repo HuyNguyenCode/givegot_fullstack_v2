@@ -46,12 +46,13 @@ export type FileResource = {
 }
 
 type ResourceCreatedActivity = { learningSpaceId: string; actorId: string; eventType: 'LEARNING_RESOURCE_CREATED'; entityType: 'LearningResource'; entityId: string; eventKey: string; metadata: { kind: 'FILE'; status: 'READY' } }
+type ResourceDeletedActivity = { learningSpaceId: string; actorId: string; eventType: 'LEARNING_RESOURCE_DELETED'; entityType: 'LearningResource'; entityId: string; eventKey: string; metadata: { kind: 'FILE'; status: 'DELETED' } }
 
 export interface LearningStorageRepository {
   access(spaceId: string, userId: string): Promise<{ state: LearningSpaceStatus } | null>
   reserve(input: { spaceId: string; userId: string; id: string; title: string; description: string | null; bookingId: string | null; topicId: string | null; key: string; mimeType: string; sizeBytes: number; purpose: LearningResourcePurpose; quotaBytes: number }): Promise<FileResource>
   resource(spaceId: string, resourceId: string): Promise<FileResource | null>
-  deleteUnreferencedFile(input: { spaceId: string; resourceId: string; actorId: string; deletedAt: Date }): Promise<{ resource: FileResource; deleted: boolean }>
+  deleteUnreferencedFile(input: { spaceId: string; resourceId: string; actorId: string; deletedAt: Date; activity: ResourceDeletedActivity }): Promise<{ resource: FileResource; deleted: boolean }>
   transition(resourceId: string, from: LearningResourceStatus, to: LearningResourceStatus, changes?: { storageKey?: string | null; deletedAt?: Date }): Promise<boolean>
   transitionReadyWithActivity(input: { resourceId: string; storageKey: string; activity: ResourceCreatedActivity }): Promise<boolean>
   recordResourceCreated(input: ResourceCreatedActivity): Promise<void>
@@ -209,7 +210,13 @@ export function createLearningStorageService(deps: {
     const actorId = (await authenticatedUser()).id
     let result: Awaited<ReturnType<LearningStorageRepository['deleteUnreferencedFile']>>
     try {
-      result = await repository.deleteUnreferencedFile({ spaceId, resourceId, actorId, deletedAt: now() })
+      result = await repository.deleteUnreferencedFile({
+        spaceId,
+        resourceId,
+        actorId,
+        deletedAt: now(),
+        activity: { learningSpaceId: spaceId, actorId, eventType: 'LEARNING_RESOURCE_DELETED', entityType: 'LearningResource', entityId: resourceId, eventKey: `learning-resource:${resourceId}:deleted`, metadata: { kind: 'FILE', status: 'DELETED' } },
+      })
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') throw new LearningStorageError(409, 'File state changed; refresh and try again')
       throw error
@@ -281,6 +288,7 @@ export const learningStorageRepository: LearningStorageRepository = {
     if (reference) throw new LearningStorageError(409, 'File is attached to a current submission')
     const updated = await tx.learningResource.updateMany({ where: { id: resource.id, learningSpaceId: input.spaceId, kind: 'FILE', uploaderId: input.actorId, status: resource.status }, data: { status: 'DELETED', deletedAt: input.deletedAt } })
     if (updated.count !== 1) throw new LearningStorageError(409, 'File state changed')
+    await tx.learningActivity.upsert({ where: { eventKey: input.activity.eventKey }, create: input.activity, update: {} })
     return { resource: resource as FileResource, deleted: true }
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
   transition: async (resourceId, from, to, changes) => (await prisma.learningResource.updateMany({ where: { id: resourceId, status: from }, data: { status: to, ...changes } })).count === 1,

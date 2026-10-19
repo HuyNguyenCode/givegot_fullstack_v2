@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { appendLearningActivity } from '@/lib/learning-activity-service'
 import { AuthorizationError, requireAuthenticatedUser } from '@/lib/server-authorization'
 import type { Prisma } from '@prisma/client'
 
@@ -69,6 +70,7 @@ export function createLearningTaskService(deps: Dependencies = defaults) {
     return deps.db.$transaction(async tx => {
       await references(tx, spaceId, bookingId, topicId, assigneeId, actor.id)
       const task = await tx.learningTask.create({ data: { learningSpaceId: spaceId, creatorId: actor.id, assigneeId, bookingId, topicId, title, description, acceptanceCriteria, dueAt, status: 'OPEN' } })
+      await appendLearningActivity(tx, { learningSpaceId: spaceId, bookingId, actorId: actor.id, eventType: 'LEARNING_TASK_ASSIGNED', entityType: 'LearningTask', entityId: task.id, eventKey: 'learning-task:' + task.id + ':assigned', metadata: { assigneeId, topicId } })
       return task
     })
   }

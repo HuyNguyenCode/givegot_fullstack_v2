@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { History, NotebookPen } from 'lucide-react'
 import { LearningResources, type LearningResourceView } from '@/components/learning/LearningResources'
 import { LearningSubmissions } from '@/components/learning/LearningSubmissions'
 import { LearningNotes } from '@/components/learning/LearningNotes'
+import { LearningActivity } from '@/components/learning/LearningActivity'
 
 type Section = 'materials' | 'tasks' | 'notes' | 'history'
 const sections: Array<{ id: Section; label: string }> = [
@@ -16,17 +16,6 @@ const sections: Array<{ id: Section; label: string }> = [
 function sectionFromHash(): Section {
   const hash = window.location.hash.slice(1)
   return sections.find(section => section.id === hash)?.id ?? 'materials'
-}
-function Placeholder({ kind }: { kind: 'notes' | 'history' }) {
-  const notes = kind === 'notes'
-  const Icon = notes ? NotebookPen : History
-  const title = notes ? 'Ghi chú' : 'Lịch sử'
-  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby={`${kind}-heading`}>
-    <Icon aria-hidden="true" className="mb-3 h-5 w-5 text-purple-600" />
-    <h2 id={`${kind}-heading`} className="text-base font-semibold text-slate-900">{title}</h2>
-    <p className="mt-1 text-sm leading-6 text-slate-600">{notes ? 'Ghi chú và phần tóm tắt chung sẽ xuất hiện tại đây.' : 'Hoạt động học tập có cấu trúc sẽ xuất hiện tại đây.'}</p>
-    <p className="mt-3 text-xs font-medium text-slate-500">Sắp có trong Learning Hub</p>
-  </section>
 }
 export function LearningSpaceSections({ spaceId, viewerId, archived, resources, quota, topics, bookings }: {
   spaceId: string; viewerId: string; archived: boolean; resources: LearningResourceView[];
@@ -47,6 +36,6 @@ export function LearningSpaceSections({ spaceId, viewerId, archived, resources, 
     <div id="materials" hidden={selected !== 'materials'}><LearningResources spaceId={spaceId} resources={resources} quota={quota} topics={topics} archived={archived} /></div>
     <div id="tasks" hidden={selected !== 'tasks'} className="mt-4 min-w-0"><LearningSubmissions spaceId={spaceId} viewerId={viewerId} archived={archived} /></div>
     <div id="notes" hidden={selected !== 'notes'} className="mt-4"><LearningNotes spaceId={spaceId} viewerId={viewerId} archived={archived} bookings={bookings} /></div>
-    <div id="history" hidden={selected !== 'history'} className="mt-4"><Placeholder kind="history" /></div>
+    <div id="history" hidden={selected !== 'history'} className="mt-4"><LearningActivity spaceId={spaceId} /></div>
   </div>
 }

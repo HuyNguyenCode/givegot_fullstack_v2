@@ -25,6 +25,7 @@ function fixture() {
   let actor = 'mentor'
   let sequence = 0
   const tx = {
+    learningActivity: { upsert: async () => ({}) },
     learningSpace: { findUnique: async ({ where }: { where: { id: string } }) => spaces.has(where.id) ? { state: spaces.get(where.id) } : null },
     learningSpaceMember: { findMany: async ({ where }: { where: { learningSpaceId: string; userId: { in: string[] } } }) => where.userId.in.filter(id => members.get(id as 'mentor' | 'learner')?.active).map(userId => ({ userId, user: { isSuspended: members.get(userId as 'mentor' | 'learner')?.suspended } })) },
     booking: { findFirst: async ({ where }: { where: { id: string; learningSpaceId: string } }) => booking.id === where.id && booking.learningSpaceId === where.learningSpaceId ? booking : null },

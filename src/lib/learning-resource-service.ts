@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { appendLearningActivity } from '@/lib/learning-activity-service'
 import type { Prisma } from '@prisma/client'
 import { AuthorizationError, requireAuthenticatedUser } from '@/lib/server-authorization'
 
@@ -28,10 +29,16 @@ export function normalizeExternalUrl(value: unknown) {
 
 async function authorize(spaceId: string, write: boolean) {
   const actor = await requireAuthenticatedUser()
-  const member = await prisma.learningSpaceMember.findUnique({ where: { learningSpaceId_userId: { learningSpaceId: spaceId, userId: actor.id } }, select: { status: true, learningSpace: { select: { state: true } } } })
-  if (!member || member.status !== 'ACTIVE') throw new AuthorizationError(403, 'Learning space membership required')
+  const member = await prisma.learningSpaceMember.findUnique({ where: { learningSpaceId_userId: { learningSpaceId: spaceId, userId: actor.id } }, select: { status: true, user: { select: { isSuspended: true } }, learningSpace: { select: { state: true } } } })
+  if (!member || member.status !== 'ACTIVE' || member.user.isSuspended) throw new AuthorizationError(403, 'Learning space membership required')
   if (write && member.learningSpace.state !== 'ACTIVE') throw new AuthorizationError(403, 'Archived learning spaces are read-only')
   return actor.id
+}
+
+async function requireActiveMutationMember(tx: Prisma.TransactionClient, spaceId: string, actorId: string) {
+  const member = await tx.learningSpaceMember.findUnique({ where: { learningSpaceId_userId: { learningSpaceId: spaceId, userId: actorId } }, select: { status: true, user: { select: { isSuspended: true } }, learningSpace: { select: { state: true } } } })
+  if (!member || member.status !== 'ACTIVE' || member.user.isSuspended) throw new AuthorizationError(403, 'Learning space membership required')
+  if (member.learningSpace.state !== 'ACTIVE') throw new AuthorizationError(403, 'Archived learning spaces are read-only')
 }
 
 export async function createLearningLink(spaceId: string, input: Record<string, unknown>) {
@@ -71,9 +78,17 @@ export async function listLearningResources(
   return { resources: resources.map(resource => ({ id: resource.id, bookingId: resource.bookingId, topicId: resource.topicId, kind: resource.kind, title: resource.title, description: resource.description, externalUrl: resource.externalUrl, mimeType: resource.mimeType, sizeBytes: resource.sizeBytes?.toString() ?? null, status: resource.status, deletedAt: resource.deletedAt, createdAt: resource.createdAt, uploaderName: resource.uploader.name || resource.uploader.email || 'Thành viên', topicLabel: resource.topic?.label ?? null, canDelete: resource.uploaderId === actorId })), quota: { usedBytes: (total._sum.sizeBytes ?? BigInt(0)).toString(), maxBytes: LEARNING_SPACE_QUOTA_BYTES.toString() } }
 }
 
-export async function deleteLearningLink(spaceId: string, resourceId: string) {
-  const actorId = await authorize(spaceId, true)
-  const result = await prisma.learningResource.updateMany({ where: { id: resourceId, learningSpaceId: spaceId, kind: 'LINK', uploaderId: actorId, status: { not: 'DELETED' } }, data: { status: 'DELETED', deletedAt: new Date() } })
-  if (!result.count) throw new LearningResourceError(404, 'Link resource not found')
-  return { id: resourceId, status: 'DELETED' as const }
+export async function deleteLearningLink(
+  spaceId: string,
+  resourceId: string,
+  dependencies: { db: typeof prisma; authorize: typeof authorize } = { db: prisma, authorize },
+) {
+  const actorId = await dependencies.authorize(spaceId, true)
+  return dependencies.db.$transaction(async tx => {
+    await requireActiveMutationMember(tx, spaceId, actorId)
+    const result = await tx.learningResource.updateMany({ where: { id: resourceId, learningSpaceId: spaceId, kind: 'LINK', uploaderId: actorId, status: { not: 'DELETED' } }, data: { status: 'DELETED', deletedAt: new Date() } })
+    if (!result.count) throw new LearningResourceError(404, 'Link resource not found')
+    await appendLearningActivity(tx, { learningSpaceId: spaceId, actorId, eventType: 'LEARNING_RESOURCE_DELETED', entityType: 'LearningResource', entityId: resourceId, eventKey: `learning-resource:${resourceId}:deleted`, metadata: { kind: 'LINK', status: 'DELETED' } })
+    return { id: resourceId, status: 'DELETED' as const }
+  })
 }

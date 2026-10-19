@@ -1,8 +1,12 @@
 # Learning Hub Context Packet
 
-## Current H1 checkpoint (2026-10-16)
+## Current H2 checkpoint (2026-10-19)
 
-H1/LH 050 implementation is COMPLETE. Manual GENERAL/RECAP notes use server-session authorship, private visibility, optional Booking scope, version-checked author edits, and audited soft deletion labeled “Xóa ghi chú” in the UI under ADR 019. Archived spaces remain readable and reject writes; recap remains optional and legacy Bookings are unchanged. Migration 007 passed disposable TEST forward/rollback/refusal/cleanup and STAGING forward/schema/Prisma checks; PRODUCTION was not migrated. Initial full suites were 123/123 unit and 58/58 integration; latest H1-11 focused suites were 9/9 Notes unit and 2/2 route, with five legacy regressions passing at both checkpoints. Owner-reported browser H1-01–H1-20: 20/20 PASS, including H1-09/11/15 retests, H1-10 soft delete, and H1-19 Booking ownership; no independent browser automation was run. H1-UX-01/02 are deferred P2 and not H2 blockers. No AI or chat ingestion was added. H2/LH 060 is NEXT SAFE TASK and NOT STARTED. See IMPLEMENTATION_STATE, TEST_MATRIX, and IMPLEMENTATION_PLAN for evidence and backlog.
+H2/LH 060 is IMPLEMENTED. Actor attribution is fixed and owner-verified (6/6 manual PASS; historical 135/135 unit and 61/61 integration PASS). Missing activity events for resource deletion and shared-note edits/deletion are implemented and owner-verified (8/8 manual PASS); the later automated/build result for that source remains unconfirmed. The final audit repair adds transaction-local active, unsuspended membership and ACTIVE-space rechecks for LINK deletion and note create/update/delete; 20/20 focused, 139/139 unit, and 61/61 integration tests passed, along with typecheck, targeted lint, legacy regressions, and diff check. The latest production build was not rerun. A concurrent revocation/archive after the transaction-local check remains possible under existing transaction semantics. The LEARNING_SPACE_DETAILS_UPDATED Vietnamese label is fixed. AUD-03 timeline state reuse is POTENTIAL / DEFERRED with no confirmed UI reproduction. I1 remains separately owner-authorized; optional I0 is audit-only and may precede it.
+
+## Historical H1 checkpoint (2026-10-16)
+
+H1/LH 050 implementation is COMPLETE. Manual GENERAL/RECAP notes use server-session authorship, private visibility, optional Booking scope, version-checked author edits, and audited soft deletion labeled “Xóa ghi chú” in the UI under ADR 019. Archived spaces remain readable and reject writes; recap remains optional and legacy Bookings are unchanged. Migration 007 passed disposable TEST forward/rollback/refusal/cleanup and STAGING forward/schema/Prisma checks; PRODUCTION was not migrated. Initial full suites were 123/123 unit and 58/58 integration; latest H1-11 focused suites were 9/9 Notes unit and 2/2 route, with five legacy regressions passing at both checkpoints. Owner-reported browser H1-01–H1-20: 20/20 PASS, including H1-09/11/15 retests, H1-10 soft delete, and H1-19 Booking ownership; no independent browser automation was run. H1-UX-01/02 are deferred P2. This is historical H1 evidence; H2 is the current completed checkpoint.
 
 
 
@@ -70,7 +74,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Historical implementation overview (through 2026-10-14)
 
-Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMENTATION_STATE, TEST_MATRIX, and the dated sections above. They preserve their original tests, limits, and then-pending task status; the current H1 checkpoint controls today's status.
+Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMENTATION_STATE, TEST_MATRIX, and the dated sections above. They preserve their original tests, limits, and then-pending task status; the current H2 checkpoint controls today's status.
 
 ## Owner-owned dirty state before Task 00
 
@@ -137,7 +141,7 @@ Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMEN
 
 ## Next task
 
-H2/LH 060 is the next safe task after completed H1, and is NOT STARTED. I1/I2/I3 and J1 remain pending; Task COMPLETED/private feedback is not Booking delivery, acceptance, or GP settlement. The current H1 checkpoint above controls; dated historical evidence remains in its owning checkpoint.
+I1 remains the next implementation task in the playbook sequence and requires separate owner authorization; optional I0 audit-only work may precede it if the owner chooses. I2, I3, and J1 remain pending; Task COMPLETED/private feedback is not Booking delivery, acceptance, or GP settlement. The current H2 checkpoint above controls; dated historical evidence remains in its owning checkpoint.
 
 ## Completion contract
 
