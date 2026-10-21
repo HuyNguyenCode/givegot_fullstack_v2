@@ -4,6 +4,10 @@ Status: PASS WITH KNOWN LIMITATION. H2 Actor Attribution is FIXED / VERIFIED / C
 
 Verification: focused activity/resource/note unit tests 20/20, full Learning Hub unit 139/139, integration route smoke plus 61/61, typecheck, targeted ESLint, five offline legacy regression scripts, and diff check passed. The Windows tsx ENOMEM was a historical startup issue for these successfully completed suites; the temporary preload was removed. Latest production build: NOT RERUN. No database, provider, Booking, GP, schema, or migration behavior changed.
 
+## GG-LH-ACT-006 Gap A LINK creation transaction-local authorization (2026-10-19)
+
+Status: FIXED / AUTOMATED VERIFIED — PASS WITH KNOWN LIMITATION. `createLearningLink()` now rechecks active, unsuspended membership and ACTIVE LearningSpace state as its first transaction operation before reference validation, resource creation, or activity creation. Focused boundary coverage rejects membership invalidation, suspension, and archive after preflight without a resource or activity; an eligible creation writes exactly one redacted `LEARNING_RESOURCE_CREATED` event. Verification passed: focused 4/4, Learning Hub unit 141/141, integration route smoke plus 61/61, typecheck, targeted ESLint, five legacy regressions, and diff check. Production build: NOT RERUN. The guard closes the preflight-to-transaction window; it does not fix Gap B. Later real PostgreSQL TEST evidence at READ COMMITTED reproduced B1 LINK creation/archive, B3 shared Note creation/archive, and B6 LINK creation/suspension after the transaction-local check. Gap B is CONFIRMED, UNFIXED, and owner-DEFERRED for the controlled MVP pilot; no production exploit is claimed. Reassess before public launch or if product usage or risk materially changes.
+
 # Learning Hub Implementation State
 
 ## H2 missing activity events micro-repair (2026-10-18)
@@ -34,7 +38,7 @@ H1 implementation is COMPLETE in the preserved working tree. The UI labels the e
 
 The initial implementation checkpoint passed 123/123 Learning Hub unit tests, 58/58 integration tests, five legacy regressions, typecheck, targeted lint, and build. The latest H1-11 repair checkpoint passed 9/9 focused Notes unit tests, 2/2 Notes route tests, five legacy regressions, typecheck, targeted lint, and diff check; no newer full-suite run is claimed. The owner reports browser cases H1-01 through H1-20 20/20 PASS, including H1-10 soft delete and H1-19 Booking ownership, with H1-09 stale edit, H1-11 archived/deleted-note recovery, and H1-15 network retry retested PASS. These browser results are owner-reported, not independently reproduced or automated; browser automation was not run.
 
-Deferred H1-UX-01 (long/many note scrolling) and H1-UX-02 (top editor scrolling) are P2 UX backlog, not H2 blockers. Future group learning and multi-learner slots remain Post-MVP design work. H2/LH 060 is the NEXT SAFE TASK and is NOT STARTED. I1/I2/I3 and J1 remain pending; fulfillment, GivePoint settlement, and cron risks remain open. Dated sections below retain their original checkpoint scope.
+Deferred H1-UX-01 (long/many note scrolling) and H1-UX-02 (top editor scrolling) are P2 UX backlog, not H2 blockers. Future group learning and multi-learner slots remain Post-MVP design work. At this historical H1 checkpoint, H2/LH 060 was the NEXT SAFE TASK and had NOT STARTED. I1/I2/I3 and J1 remained pending; fulfillment, GivePoint settlement, and cron risks remained open. H2 is now implemented. Dated sections below retain their original checkpoint scope.
 
 ## H1-11 archived-note recovery (2026-10-16)
 

@@ -4,6 +4,10 @@ H2 Actor Attribution owner manual confirmation is 6/6 PASS; historical owner-exe
 
 Executed: focused 20/20; Learning Hub unit 139/139; integration route smoke plus 61/61; typecheck; targeted ESLint; five legacy regressions; and diff check, all PASS. The Windows tsx ENOMEM was a historical startup issue for these successfully completed suites; the temporary preload was removed. Latest production build: NOT RERUN. No database or provider was used.
 
+## GG-LH-ACT-006 Gap A LINK creation transaction-local authorization (2026-10-19)
+
+PASS WITH KNOWN LIMITATION. Focused 4/4 coverage models preflight authorization followed by transaction-time membership invalidation, suspension, or space archive; every denied case leaves no LINK or activity, while authorized creation produces one redacted event. Learning Hub unit 141/141, integration route smoke plus 61/61, typecheck, targeted ESLint, five legacy regressions, and diff check passed. Production build: NOT RERUN. The transaction-local check does not remove the residual race after the check and before commit; it does not fix Gap B. Later real PostgreSQL TEST evidence at READ COMMITTED reproduced B1 LINK creation/archive, B3 shared Note creation/archive, and B6 LINK creation/suspension after the transaction-local check. Gap B is CONFIRMED, UNFIXED, and owner-DEFERRED for the controlled MVP pilot; no production exploit is claimed. Reassess before public launch or if product usage or risk materially changes.
+
 # Learning Hub Test Matrix
 
 ## H2 missing activity events micro-repair (2026-10-18)

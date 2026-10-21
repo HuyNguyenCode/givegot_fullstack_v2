@@ -41,14 +41,19 @@ async function requireActiveMutationMember(tx: Prisma.TransactionClient, spaceId
   if (member.learningSpace.state !== 'ACTIVE') throw new AuthorizationError(403, 'Archived learning spaces are read-only')
 }
 
-export async function createLearningLink(spaceId: string, input: Record<string, unknown>) {
-  const actorId = await authorize(spaceId, true)
+export async function createLearningLink(
+  spaceId: string,
+  input: Record<string, unknown>,
+  dependencies: { db: typeof prisma; authorize: typeof authorize } = { db: prisma, authorize },
+) {
+  const actorId = await dependencies.authorize(spaceId, true)
   const title = cleanText(input.title, 'title', 255, true)!
   const description = cleanText(input.description, 'description', 10_000)
   const bookingId = cleanText(input.bookingId, 'bookingId', 191)
   const topicId = cleanText(input.topicId, 'topicId', 191)
   const externalUrl = normalizeExternalUrl(input.url)
-  return prisma.$transaction(async tx => {
+  return dependencies.db.$transaction(async tx => {
+    await requireActiveMutationMember(tx, spaceId, actorId)
     if (bookingId && !await tx.booking.findFirst({ where: { id: bookingId, learningSpaceId: spaceId }, select: { id: true } })) throw new LearningResourceError(400, 'Booking does not belong to this learning space')
     if (topicId && !await tx.learningTopic.findFirst({ where: { id: topicId, learningSpaceId: spaceId }, select: { id: true } })) throw new LearningResourceError(400, 'Topic does not belong to this learning space')
     const resource = await tx.learningResource.create({ data: { learningSpaceId: spaceId, uploaderId: actorId, bookingId, topicId, kind: 'LINK', title, description, externalUrl, status: 'READY' } })
