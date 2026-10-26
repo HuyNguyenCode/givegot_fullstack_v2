@@ -94,6 +94,7 @@ async function main() {
     '@/lib/prisma': { prisma: db }, '@prisma/client': enums, 'next/cache': { revalidatePath() {} },
     '@/lib/notifications': { createNotification: async () => { notifications++; assert.equal(skill.embeddingStatus, 'READY') } },
     '@/lib/server-authorization': { requireAuthenticatedUser: async () => ({ id: 'admin-user' }) },
+    '@/lib/learning-fulfillment-service': { mirrorTerminalFulfillment: async () => {} },
     '@/lib/google-meet': {}, '@/lib/admin': { isAdmin: async () => admin },
     '@/lib/skill-embedding': helper, '@/lib/email': { getAppUrl: () => 'http://test' },
     '@/emails/NewMatchEmail': {}, '@/emails/ReportResolutionEmail': {},

@@ -1,6 +1,10 @@
 # Learning Hub Implementation Plan
 
-## Current H2 checkpoint (2026-10-16)
+## Current post-I1 checkpoint (2026-10-26)
+
+I1 mode-aware fulfillment is implemented under ADR 020. Migration 008 passed disposable TEST and was applied to STAGING on 2026-10-21 with precheck/postcheck PASS and 102 historical Booking rows preserved; production remains unmigrated. The 11-case automated gap audit and owner-reported 2026-10-26 localhost/STAGING browser-session smoke are recorded at distinct evidence levels in IMPLEMENTATION_STATE and TEST_MATRIX. Unauthenticated GET redirected to sign-in and returned HTML after fetch followed it, rather than the expected 401 JSON; this LOW-priority API contract deviation awaits a client-compatibility/contract decision. I2 linked settlement is NEXT, NOT STARTED; I3 cron/deadline policy remains pending.
+
+## Historical H2 checkpoint (2026-10-16)
 
 H2/LH 060 is implemented with the 2026-10-19 PASS WITH KNOWN LIMITATION audit-repair checkpoint and the privacy/fulfillment limitations recorded in IMPLEMENTATION_STATE. I1 remains separately owner-authorized; optional I0 is audit-only and may precede it. Do not start I1/I2/I3 or J1 automatically. No migration or settlement action was part of H2.
 
@@ -41,7 +45,7 @@ The registry and historical task evidence below retain their original sequence.
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Use the current H2/LH 060 checkpoint (2026-10-19): H1 and H2 are implemented; H2 is PASS WITH KNOWN LIMITATION. I1 is the next implementation task in the existing registry and requires separate owner authorization; optional I0 audit-only may precede it. I2/I3 and J1 remain pending. Dated older checkpoint statements are historical.
+- Use the current post-I1 checkpoint (2026-10-26): H1, H2, and I1 are implemented; migration 008 is on TEST and STAGING, not production. I2 linked settlement is NEXT, NOT STARTED; I3 and J1 remain pending. R-004, R-010, and R-017 retain their release gates. Dated older checkpoint statements are historical.
 
 ## Task registry
 

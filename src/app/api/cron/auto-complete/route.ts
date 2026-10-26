@@ -25,6 +25,9 @@ async function handleAutoCompleteRoute(
     const expiredBookings = await dependencies.prisma.booking.findMany({
       where: {
         status: 'CONFIRMED',
+        // I1: linked modes await I2/I3 settlement; retain this legacy cron only
+        // for rows without a Learning Hub mode.
+        learningMode: null,
         endTime: {
           lt: cutoffTime,
         },
@@ -51,6 +54,7 @@ async function handleAutoCompleteRoute(
           where: {
             id: booking.id,
             status: 'CONFIRMED',
+            learningMode: null,
           },
           data: { status: 'COMPLETED' },
         })

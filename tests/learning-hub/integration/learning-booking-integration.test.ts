@@ -207,5 +207,5 @@ test('Calendar/Meet, cancellation, dispute, fixed one-GP escrow, and cron remain
   assert.equal((bookingSource.match(/givePoints: \{ decrement: 1 \}/g) ?? []).length, 2)
   assert.ok((bookingSource.match(/amount:\s+-1/g) ?? []).length >= 2)
   assert.doesNotMatch(bookingSource, /learningMode[^\n]*(?:givePoints|amount)|(?:givePoints|amount)[^\n]*learningMode/)
-  assert.doesNotMatch(cronSource, /learningMode/)
+  assert.match(cronSource, /learningMode: null/)
 })

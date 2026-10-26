@@ -1,3 +1,57 @@
+# Learning Hub Test Matrix
+
+Current checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at separate evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
+
+## Owner-reported I1 real HTTP/browser-session smoke (2026-10-26)
+
+The owner reports testing existing STAGING test data through localhost. HTTP-01: unauthenticated GET redirected to `/auth/signin`; browser fetch followed it and received HTTP 200 HTML, with no fulfillment JSON disclosed. Access control PASS; expected 401 JSON contract deviation, LOW priority, pending client-compatibility/contract decision. HTTP-02: authenticated mentor GET 200 JSON, then POST START 200 JSON with `IN_PROGRESS`/version 1 for Booking `8650dab9-5008-42bf-9e1a-55f31f935aff` in LearningSpace `e4f0b7cc-5122-44f0-bfe9-7bfbba2996b1`. HTTP-03: authenticated learner DELIVER 403, “Booking role cannot perform this transition”; subsequent GET retained `IN_PROGRESS`/version 1 on separate test Booking `demo_booking_req_id`. HTTP-04: authenticated nonmember GET 403, “Active learning space membership required”.
+
+These are owner-reported browser results, not independently reproduced by Codex or Playwright. Cookie contents/network handling and GP/ledger after the manual START were not inspected. The real disposable TEST service and concurrency results below are separate and were not rerun for this reconciliation. No settlement concurrency is claimed.
+
+## Historical Codex real HTTP verification attempt (2026-10-26)
+
+**BLOCKED — no runtime evidence recorded.** Inspection found no listener on the standard local application ports (3000–3005 or 8080), no GiveGot browser tab available to the verifier, and no already authenticated TEST provider, learner, or nonmember account. Repository DATABASE_URL and DIRECT_URL resolve to the application project, while DISPOSABLE_TEST_DATABASE_URL resolves separately to TEST; this task did not start a server, redirect a running application, create accounts/sessions, or contact STAGING/production.
+
+Required prerequisite: an already running local application or approved test deployment that includes I1 code and is configured exclusively with disposable TEST project yxyipetjooqsysdhruut, plus existing test-owned provider, learner, and nonmember browser sessions and an eligible test-owned linked Booking. With that prerequisite, run the browser-console procedure recorded in IMPLEMENTATION_STATE and retain the response/status plus a read-only persisted-state check. The existing route/service/DB results below remain separate and do not prove real HTTP or cookie-backed authentication.
+
+## Historical I1 automated API gap audit and closure (2026-10-26)
+
+The existing route test invokes Next.js handlers in process with a substituted service. The existing service unit suite uses an injected actor and in-memory Prisma mocks. The earlier PostgreSQL verifier invokes the real service on disposable TEST, but includes migration DDL and was **not rerun** here. The new post-008 runner is DML-only and invokes the real service with an injected actor on disposable TEST. None of these is a running HTTP server with a real browser session.
+
+| Case | Existing automated evidence | New evidence | Remaining gap |
+| --- | --- | --- | --- |
+| I1-01 authenticated GET | Route: `fulfillment route forwards only space/booking targets and validated body to the service` (in-process stub); unit: `all normal edges, revision loop, old null fulfillment row, and versioned audit` (mock). | Route asserts exact 200 JSON; post-008 TEST reads the persisted initial state through the real service. | Real HTTP/session authentication. |
+| I1-02 unsupported fields | Unit: `input parser rejects malformed version and arbitrary state` (mock/parser). | Route: `fulfillment route returns the exact validation and authorization JSON contracts` asserts exact 400 JSON for extra field, invalid action and invalid version. | Real HTTP/session authentication. |
+| I1-03 valid START | Unit normal-edges test; earlier real PostgreSQL `learning-i1-verification.test.ts` independent START claim. | Post-008 TEST starts EXERCISE_REVIEW and HYBRID, then checks persisted version/state/activity. | Real HTTP/session authentication. |
+| I1-04 stale START replay | Unit forbidden-edges test; earlier real PostgreSQL verifier rejected stale START without extra activity. | None; existing DB evidence is adequate. | Real HTTP/session authentication. |
+| I1-05 learner cannot DELIVER | Unit forbidden-edges test (mock). | Post-008 TEST rejects learner DELIVER with 403 and unchanged persisted version. | Real HTTP/session authentication. |
+| I1-06 provider DELIVER by mode | Unit `LIVE, EXERCISE_REVIEW and HYBRID require their own delivery evidence` (mock); earlier real PostgreSQL verifier proved LIVE delivery. | Post-008 TEST rejects EXERCISE_REVIEW before feedback, accepts reviewed feedback; rejects HYBRID after Meet end without prework, accepts after reviewed prework, Meet and recap. Persisted state/version/activity checked. | Real HTTP/session authentication. |
+| I1-07 REQUEST_REVISION | Unit normal-edges test (mock). | Post-008 TEST checks learner transition, persisted revision state/version and activity. | Real HTTP/session authentication. |
+| I1-08 RESUME | Unit normal-edges test (mock). | Post-008 TEST checks mentor transition, cleared deliveredAt and activity. | Real HTTP/session authentication. |
+| I1-09 re-DELIVER | Unit normal-edges test (mock). | Post-008 TEST checks second delivery/version/timestamp, rejects replay, and checks no duplicate activity. | Real HTTP/session authentication. |
+| I1-10 ACCEPT | Unit normal-edges test; earlier real PostgreSQL verifier proved competing LIVE ACCEPT claims. | Post-008 TEST accepts after EXERCISE_REVIEW revision loop; persisted ACCEPTED/6, deliveredAt, acceptedAt and six unique audit entries. | Real HTTP/session authentication. |
+| I1-11 nonmember | Unit `cancellation, dispute, archived/suspended pair, and legacy null mode freeze writes` (mock). | Route asserts exact GET/POST 403 JSON; post-008 TEST rejects nonmember read/write via real DB membership. | Real HTTP/session authentication. |
+
+New DML-only runner: `tests/learning-hub/postgres/learning-i1-post008-lifecycle.test.ts`. Dotenv TEST identity differed from DATABASE_URL/DIRECT_URL, SELECT 1 and required 004–008 schema passed before fixtures. Synthetic unique users/space/Bookings/tasks/submissions/reviews/notes were used; only their IDs were deleted in `finally` and the remaining-row assertion was zero. BookingStatus remained CONFIRMED, fixture GivePoints and Booking TransactionLog count were unchanged. No wallet/escrow table exists in the current Prisma schema. No settlement behavior is claimed.
+
+Execution: PostgreSQL runner PASS; focused in-process route 3/3; focused service unit 7/7; `npm run typecheck` PASS. The route test and DB runner assert different layers; neither proves actual cookie-backed server-session identity. No full build or unrelated regression suite was rerun because production code did not change. STAGING and production were not contacted.
+
+## I1 real disposable PostgreSQL verification (2026-10-21)
+
+| Check | Result |
+| --- | --- |
+| TEST target and prerequisites | PASS: dotenv-loaded `DISPOSABLE_TEST_DATABASE_URL` matched project `yxyipetjooqsysdhruut`, differed from application/direct targets, `SELECT 1` passed, two independent backend sessions opened; 004-007 schema present and 008 absent initially. |
+| Pre-008 fixtures / injected failure | PASS: old null-mode and linked null-fulfillment Bookings valid; injected abort left 008 enum/column changes absent. |
+| Forward 008 | PASS: terminal enum labels and nullable integer version without default; two old Booking rows retained null fulfillment/version/timestamps and BookingStatus; no backfill. |
+| Rollback guidance | PASS: prewrite exported fixture digest, version column dropped while labels retained, raw SQL proved old rows intact, 008 reapplied; after versioned writes guarded rollback refused and state preserved. |
+| New linked Booking | PASS: explicit `NOT_STARTED` and version 0. |
+| Independent serializable claims | PASS: two paused backend transactions per START, DELIVER, ACCEPT; one success and one 409 each; persisted status/version advanced IN_PROGRESS/1, DELIVERED/2, ACCEPTED/3. |
+| Stale/replay/audit/isolation | PASS: stale START and repeated DELIVER/ACCEPT rejected; one activity per version, no partial/lost update; fixture GivePoints and Booking TransactionLog count unchanged. |
+| Cleanup/final TEST schema | PASS: zero run-owned fixture rows; 008 remains applied only on disposable TEST. |
+| Relevant existing tests | PASS: Linux-local focused I1 unit/route 9/9; earlier full unit 148/148, integration 63/63, legacy regressions, typecheck and build are prior static evidence, not rerun here. |
+
+Scope limit: these are controlled fulfillment races. I2 GP settlement concurrency and I3 cron/deadline behavior were not verified. No application database migration was run.
+
 ## H2 audit findings repair — tests and status (2026-10-19)
 
 H2 Actor Attribution owner manual confirmation is 6/6 PASS; historical owner-executed automation is 135/135 unit and 61/61 integration PASS. H2 Missing Activity Events owner manual confirmation is 8/8 PASS; later automated-suite and production-build status for that source remains unconfirmed. AUD-01 coverage models the preflight-to-transaction boundary with existing in-memory Prisma mocks. It verifies revoked membership and archived-space LINK deletion are rejected with no source deletion or activity, and verifies note create/update/delete transaction-time denial leaves notes and activity unchanged. Existing note coverage retains valid single-event and private-note suppression assertions. AUD-02 has a direct regression assertion for the Vietnamese LEARNING_SPACE_DETAILS_UPDATED label. AUD-03 is POTENTIAL / DEFERRED with no confirmed UI reproduction.
@@ -7,8 +61,6 @@ Executed: focused 20/20; Learning Hub unit 139/139; integration route smoke plus
 ## GG-LH-ACT-006 Gap A LINK creation transaction-local authorization (2026-10-19)
 
 PASS WITH KNOWN LIMITATION. Focused 4/4 coverage models preflight authorization followed by transaction-time membership invalidation, suspension, or space archive; every denied case leaves no LINK or activity, while authorized creation produces one redacted event. Learning Hub unit 141/141, integration route smoke plus 61/61, typecheck, targeted ESLint, five legacy regressions, and diff check passed. Production build: NOT RERUN. The transaction-local check does not remove the residual race after the check and before commit; it does not fix Gap B. Later real PostgreSQL TEST evidence at READ COMMITTED reproduced B1 LINK creation/archive, B3 shared Note creation/archive, and B6 LINK creation/suspension after the transaction-local check. Gap B is CONFIRMED, UNFIXED, and owner-DEFERRED for the controlled MVP pilot; no production exploit is claimed. Reassess before public launch or if product usage or risk materially changes.
-
-# Learning Hub Test Matrix
 
 ## H2 missing activity events micro-repair (2026-10-18)
 
@@ -328,3 +380,6 @@ The unit suite uses `node:test` via the existing `tsx` dependency. The integrati
 - `tests/learning-hub/integration/learning-booking-integration.test.ts` PASS: locked-slot mentor/time/slot authority, stale rejection before debit, one create/one debit structure under the row lock, early `createBooking` LIVE/HYBRID guard, EXERCISE_REVIEW eligibility, Calendar/Meet, cancellation/dispute, fixed GP, and unchanged cron.
 - PASS: `npm run typecheck`; `npm run test:learning-hub` (41 with documented temporary host preload); `npm run test:learning-hub:integration` (25 after smoke with the same preload); `npm run test:regression` (five scripts); targeted ESLint; and production build (34 pages).
 - KNOWN LIMITATION: standard `tsx` still fails before test discovery on this Windows host because `os.userInfo()` returns ENOMEM. No test was skipped or weakened; the temporary compatibility preload was removed. The prior full-lint count/delta remains visible and was not rerun for this narrow repair.
+## I1 / LH 070 checkpoint (2026-10-21)
+
+Initial implementation checkpoint: PASS WITH KNOWN LIMITATION. Focused 9/9 service/route tests cover every normal and forbidden fulfillment edge, null linked and null legacy rows, role/session-shaped authorization, mode evidence, revision loop, retry/stale version, competing delivery and acceptance, duplicate conditional claims, cancellation/dispute freeze, activity redaction, and malformed API input. Full Learning Hub unit 148/148; integration 63/63 plus route smoke; Prisma validate and offline schema diff; typecheck; targeted ESLint; five legacy regression scripts; production build; diff check PASS. At this initial checkpoint concurrent claims used an in-memory conditional update and migration 008 had not been applied. The subsequent real disposable PostgreSQL verification is recorded above. I2 GP settlement and I3 cron/deadline policy remain untested and pending.

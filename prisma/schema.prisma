@@ -213,6 +213,7 @@ model Booking {
   objective         String?            @db.Text
   definitionOfDone  String?            @db.Text
   fulfillmentStatus FulfillmentStatus?
+  fulfillmentVersion Int?
   deliveredAt       DateTime?
   acceptedAt        DateTime?
 
@@ -306,6 +307,8 @@ enum FulfillmentStatus {
   DELIVERED
   REVISION_REQUESTED
   ACCEPTED
+  DISPUTED
+  CANCELLED
   SETTLED
 }
 

@@ -39,7 +39,7 @@ test('B1 schema contains the approved domain and separate Booking lifecycle', ()
   assert.match(schema, /enum LearningMode \{\s+LIVE\s+EXERCISE_REVIEW\s+HYBRID\s+\}/)
   assert.match(
     schema,
-    /enum FulfillmentStatus \{\s+NOT_STARTED\s+IN_PROGRESS\s+DELIVERED\s+REVISION_REQUESTED\s+ACCEPTED\s+SETTLED\s+\}/,
+    /enum FulfillmentStatus \{\s+NOT_STARTED\s+IN_PROGRESS\s+DELIVERED\s+REVISION_REQUESTED\s+ACCEPTED\s+DISPUTED\s+CANCELLED\s+SETTLED\s+\}/,
   )
 
   const booking = modelBlock('Booking')
@@ -50,6 +50,7 @@ test('B1 schema contains the approved domain and separate Booking lifecycle', ()
     'objective',
     'definitionOfDone',
     'fulfillmentStatus',
+    'fulfillmentVersion',
     'deliveredAt',
     'acceptedAt',
   ]) {

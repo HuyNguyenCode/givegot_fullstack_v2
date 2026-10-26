@@ -1,6 +1,15 @@
 # Learning Hub Regression Checklist
 
-## Current H1/LH 050 regression checkpoint (reconciled 2026-10-16)
+Current checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at distinct evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
+
+## I1 owner-reported localhost/STAGING HTTP smoke (2026-10-26)
+
+- HTTP-01: unauthenticated GET redirected to `/auth/signin`; fetch followed it to HTTP 200 HTML without fulfillment JSON. Access control PASS; expected 401 JSON API contract deviation is LOW priority and awaits a client-compatibility/contract decision.
+- HTTP-02: authenticated mentor GET 200 JSON and POST START 200 JSON, `IN_PROGRESS`/version 1, for Booking `8650dab9-5008-42bf-9e1a-55f31f935aff` in LearningSpace `e4f0b7cc-5122-44f0-bfe9-7bfbba2996b1`.
+- HTTP-03: authenticated learner DELIVER 403 with “Booking role cannot perform this transition”; subsequent GET stayed `IN_PROGRESS`/version 1 on separate test Booking `demo_booking_req_id`. HTTP-04: authenticated nonmember GET 403 with “Active learning space membership required”.
+- This is owner-reported browser evidence, not a Codex rerun or Playwright result. Network cookies and GP/ledger after manual START were not inspected. Existing automated and real disposable PostgreSQL evidence remain separate; I2 settlement concurrency and I3 cron/deadline policy are pending.
+
+## Historical H1/LH 050 regression checkpoint (reconciled 2026-10-16)
 
 H1 implementation COMPLETE. Migration 007 passed disposable TEST forward, legacy/default/index/enum checks, safe rollback, unsafe rollback refusal, and cleanup; STAGING forward, schema, and Prisma Notes query checks passed. No PRODUCTION migration. The initial implementation gate passed 123/123 Learning Hub unit, 58/58 integration, five legacy regressions, typecheck, targeted lint, and build. Latest H1-11 repair gate passed 9/9 focused Notes unit, 2/2 route, five legacy regressions, typecheck, targeted lint, and diff check; no newer full-suite run is claimed.
 
@@ -186,3 +195,6 @@ The baseline smoke command is `npm run test:learning-hub:integration`. It import
 - The existing row lock, post-lock `isBooked` rejection, locked mentor/start/end authority, one Booking create, one GP debit, `slotId`, and slot update remain intact. Failed slot requests refresh availability.
 - The mentor-profile slot component, Calendar/Meet acceptance, cancellation/decline slot handling, no-show/dispute, GP/ledger, cron, chat, dashboard, and history code were unchanged.
 - PASS: typecheck; 41 unit tests; route smoke plus 25 integration tests; all five offline legacy regressions; targeted ESLint; and the 34-page production build. The standard `tsx` host limitation reproduced before discovery; suites passed with the documented temporary preload, which was removed.
+## I1 checkpoint (2026-10-21)
+
+The Booking transition inventory is `I1_TRANSITION_AUDIT.md`. Legacy null-mode creation, scheduling, cancellation receipt/Trust/slot policy, no-show, dispute, public Review, GP/ledger, and PA-02 deadline notification regressions passed. Linked modes are excluded from the existing manual completion and auto-complete payout entries; the cron otherwise retains its legacy 72-hour logic. Focused fulfillment tests cover mode evidence, null rows, terminal freeze, retries, and conditional claims. I2/I3 must test real database payout races, reconciliation, and new deadline behavior before deployment.

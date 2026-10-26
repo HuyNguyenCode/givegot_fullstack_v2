@@ -75,7 +75,7 @@ BookingStatus remains:
 
 `PENDING -> CONFIRMED -> COMPLETED | CANCELLED | MISSED | DISPUTED`
 
-FulfillmentStatus is introduced separately in a future approved migration:
+FulfillmentStatus is separate from BookingStatus; I1 added its terminal labels and version through approved migration 008:
 
 `NOT_STARTED -> IN_PROGRESS -> DELIVERED -> ACCEPTED -> SETTLED`
 

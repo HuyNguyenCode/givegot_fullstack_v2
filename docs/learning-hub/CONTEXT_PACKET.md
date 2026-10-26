@@ -1,6 +1,10 @@
 # Learning Hub Context Packet
 
-## Current H2 checkpoint (2026-10-19)
+## Current post-I1 checkpoint (2026-10-26)
+
+I1 mode-aware fulfillment is implemented with ADR 020 and the pre-code matrix in `I1_TRANSITION_AUDIT.md`. Migration 008 passed disposable PostgreSQL TEST forward/guarded rollback and controlled START/DELIVER/ACCEPT races, then was applied to STAGING project `tuamfxfquhyccserzmab` on 2026-10-21 with precheck/postcheck PASS and all 102 historical Booking rows preserved; production remains unmigrated. Server-session-authorized, version-conditional transitions require mode evidence and write deduplicated activity; legacy manual completion and auto-complete payout are gated to null-mode rows. I1 itself does not release GP. The automated gap audit mapped 11 cases across unit, in-process route, and real TEST PostgreSQL evidence. Owner-reported localhost/STAGING browser-session smoke on 2026-10-26 passed mentor GET/START, learner DELIVER denial, and nonmember GET denial. Unauthenticated GET redirected to `/auth/signin`; fetch followed it to HTTP 200 HTML without fulfillment JSON, an access-control PASS with a LOW-priority deviation from the expected 401 JSON contract. Codex did not independently reproduce the browser run or inspect its GP/ledger. I2 linked settlement is NEXT, NOT STARTED; I3 cron/deadline policy remains pending. R-004, R-010, and R-017 stay open/partial, and the H2 Gap B pilot/public-launch distinction remains.
+
+## Historical H2 checkpoint (2026-10-19)
 
 H2/LH 060 is IMPLEMENTED. Actor attribution is fixed and owner-verified (6/6 manual PASS; historical 135/135 unit and 61/61 integration PASS). Missing activity events for resource deletion and shared-note edits/deletion are implemented and owner-verified (8/8 manual PASS); the later automated/build result for that source remains unconfirmed. The final audit repair adds transaction-local active, unsuspended membership and ACTIVE-space rechecks for LINK deletion and note create/update/delete; 20/20 focused, 139/139 unit, and 61/61 integration tests passed, along with typecheck, targeted lint, legacy regressions, and diff check. The latest production build was not rerun. A concurrent revocation/archive after the transaction-local check remains possible under existing transaction semantics. The LEARNING_SPACE_DETAILS_UPDATED Vietnamese label is fixed. AUD-03 timeline state reuse is POTENTIAL / DEFERRED with no confirmed UI reproduction. I1 remains separately owner-authorized; optional I0 is audit-only and may precede it.
 
@@ -74,7 +78,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Historical implementation overview (through 2026-10-14)
 
-Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMENTATION_STATE, TEST_MATRIX, and the dated sections above. They preserve their original tests, limits, and then-pending task status; the current H2 checkpoint controls today's status.
+Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMENTATION_STATE, TEST_MATRIX, and the dated sections above. They preserve their original tests, limits, and then-pending task status; the current post-I1 checkpoint controls today's status.
 
 ## Owner-owned dirty state before Task 00
 
@@ -117,7 +121,7 @@ Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMEN
 - CLOSED IN A1 SCOPE: Booking lifecycle/review actor IDs and private Booking list/receipt reads are session-bound; notification reads/read-state are session-bound; internal notification creation is no longer a server action; admin actions guard role at the action boundary.
 - CLOSED: conversation and user-targeted realtime channels are private and authorized from the server session; guessed conversation/user IDs fail before Pusher signing.
 - CLOSED: LearningSpace channel names are private and authorized through B2's active-membership lookup.
-- Auto-complete selects `CONFIRMED` plus `endTime < now - 72h`, with no mode/fulfillment predicate.
+- After I1, auto-complete retains the legacy `CONFIRMED` plus `endTime < now - 72h` rule only for null-mode Bookings; linked modes are excluded at selection and conditional claim. I3 owns mode-aware timing.
 - CLOSED: auto-complete, reminders, and review-deadlines enforce the shared production `CRON_SECRET` guard; middleware exposure does not bypass route authentication.
 - Other legacy action families outside the explicitly audited A1 boundaries still require case-by-case authorization review before they are reused for Learning Hub data.
 
@@ -130,9 +134,9 @@ Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMEN
     - F2 resource collection/item routes,
     - G1 task list/create/update routes,
     - G2 current-submission route: `/api/learning/spaces/[spaceId]/tasks/[taskId]/submission`; G3 private review GET/POST appends `/review`.
-    - H1 Notes collection/item APIs: `/api/learning/spaces/[spaceId]/notes` and `/api/learning/spaces/[spaceId]/notes/[noteId]`; Learning invite APIs: `/api/learning/invites/*`.
-- Schema has 27 models, including the ten Learning Hub domain models. Booking has eight nullable Learning Hub fields and keeps its original status enum unchanged.
-- Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. Additive migration 005 adds only `LearningTask.version` with default 1 and has executable rollback SQL plus a rollback note. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with the `LEGACY_UNCLASSIFIED` database default, plus its guarded rollback. Migration 007 adds H1 note type/default, audited soft deletion, and an active-list index; TEST rehearsal and STAGING forward passed. None backfills Booking; PRODUCTION migration 007 remains unapplied.
+    - H1 Notes collection/item APIs: `/api/learning/spaces/[spaceId]/notes` and `/api/learning/spaces/[spaceId]/notes/[noteId]`; Learning invite APIs: `/api/learning/invites/*`; I1 fulfillment GET/POST: `/api/learning/spaces/[spaceId]/bookings/[bookingId]/fulfillment`.
+- Schema has 27 models, including the ten Learning Hub domain models. Booking retains additive nullable Learning Hub fields, including I1 fulfillment version/timestamps, and keeps its original status enum unchanged.
+- Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. Additive migration 005 adds only `LearningTask.version` with default 1 and has executable rollback SQL plus a rollback note. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with the `LEGACY_UNCLASSIFIED` database default, plus its guarded rollback. Migration 007 adds H1 note type/default, audited soft deletion, and an active-list index; TEST rehearsal and STAGING forward passed. Migration 008 adds nullable `Booking.fulfillmentVersion` and terminal fulfillment labels; TEST rehearsal and STAGING forward passed with no Booking backfill. Production remains unmigrated for 007/008.
 - Canonical commands include `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, `test:learning-hub:migration`, and `test:regression`.
 
 ## Environment names only
@@ -141,7 +145,7 @@ Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMEN
 
 ## Next task
 
-I1 remains the next implementation task in the playbook sequence and requires separate owner authorization; optional I0 audit-only work may precede it if the owner chooses. I2, I3, and J1 remain pending; Task COMPLETED/private feedback is not Booking delivery, acceptance, or GP settlement. The current H2 checkpoint above controls; dated historical evidence remains in its owning checkpoint.
+I2 linked GivePoint settlement is next and NOT STARTED; I3 mode-aware cron/deadline policy and J1 remain pending. I2 must independently prove atomic, idempotent GP/TransactionLog release and reconciliation without changing legacy Booking semantics or assuming I1's controlled fulfillment races prove settlement. Task COMPLETED/private feedback is not Booking delivery, acceptance, or GP settlement. The current post-I1 checkpoint above controls; dated historical evidence remains in its owning checkpoint.
 
 ## Completion contract
 

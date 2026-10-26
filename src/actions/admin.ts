@@ -15,6 +15,7 @@ import { createNotification } from '@/lib/notifications'
 import { verifyMeetingAttendance } from '@/lib/google-meet'
 import { isAdmin } from '@/lib/admin'
 import { requireAuthenticatedUser } from '@/lib/server-authorization'
+import { mirrorTerminalFulfillment } from '@/lib/learning-fulfillment-service'
 import { refreshApprovedSkillEmbedding } from '@/lib/skill-embedding'
 import { sendEmail, getAppUrl, formatEmailDateTime } from '@/lib/email'
 import NewMatchEmail from '@/emails/NewMatchEmail'
@@ -444,6 +445,7 @@ export async function resolveAbsenceReport({
     if (!(await isAdmin())) {
       return { success: false, message: 'Unauthorized' }
     }
+    const adminId = (await requireAuthenticatedUser()).id
 
     // ── 1. Fetch report + booking (with both parties) ─────────────────────
     const [report, booking] = await Promise.all([
@@ -542,6 +544,7 @@ export async function resolveAbsenceReport({
       }
 
       await tx.booking.update({ where: { id: bookingId }, data: { status: newBookingStatus } })
+      await mirrorTerminalFulfillment(tx, bookingId, 'CANCELLED', adminId)
 
       await tx.report.update({
         where: { id: reportId },

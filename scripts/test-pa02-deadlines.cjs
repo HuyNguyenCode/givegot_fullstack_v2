@@ -117,6 +117,7 @@ async function main() {
   result = await autoRoute.GET({})
   assert.equal(result.body.processed, 1)
   assert.equal(transactionCalls.filter(call => call[0] === 'booking').length, 1)
+  assert.equal(transactionCalls.find(call => call[0] === 'booking')[1].where.learningMode, null)
   assert.equal(transactionCalls.filter(call => call[0] === 'user').length, 1)
   assert.equal(transactionCalls.filter(call => call[0] === 'log').length, 1)
   assert.equal(autoNotifications.length, 2)

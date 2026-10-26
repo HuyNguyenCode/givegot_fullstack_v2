@@ -84,6 +84,7 @@ async function main() {
       LearningBookingValidationError: class LearningBookingValidationError extends Error {},
       prepareLearningBookingSnapshot: async () => ({}),
     },
+    '@/lib/learning-fulfillment-service': { mirrorTerminalFulfillment: async () => {} },
     '@/lib/trust-algorithm': { calculateAndUpdateTrustScore: async () => {} },
     '@/lib/google-meet': { verifyMeetingAttendance: async () => ({}) },
     '@/lib/gcal': { createGoogleMeetForMentor: async () => null },

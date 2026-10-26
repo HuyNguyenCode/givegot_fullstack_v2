@@ -1,5 +1,23 @@
 # Learning Hub Changelog
 
+Current checkpoint: post-I1 reconciliation (2026-10-26); I2 is NEXT, NOT STARTED, and I3 remains pending. Dated entries retain their original evidence levels.
+
+## 2026-10-26 — Post-I1 evidence reconciliation
+
+Recorded the 2026-10-21 STAGING migration 008 deployment and owner-reported localhost/STAGING browser-session smoke alongside the prior I1 implementation, disposable PostgreSQL, and 11-case automated audit. Owner HTTP-01 denied unauthenticated fulfillment data through a sign-in redirect; fetch followed it to 200 HTML rather than expected 401 JSON, a LOW-priority API contract deviation pending client compatibility/contract decision. Owner HTTP-02 mentor GET/START returned 200 with IN_PROGRESS/version 1; HTTP-03 learner DELIVER returned 403 with unchanged IN_PROGRESS/version 1 on a separate test Booking; HTTP-04 nonmember GET returned 403. Codex did not reproduce browser traffic, inspect cookies or GP/ledger for the manual POST, or rerun automated/PostgreSQL tests. I2 linked settlement remains next and unstarted; I3 remains pending.
+
+## 2026-10-26 — Historical I1 automated test gap closure
+
+Mapped I1-01–I1-11 to existing mock, route, and disposable PostgreSQL evidence. Added exact in-process route response/error contract assertions and a DML-only post-008 TEST runner for EXERCISE_REVIEW revision/acceptance, HYBRID prework after Meet end, persisted versions/timestamps, audit entries, nonmember/role denial, BookingStatus and GP/TransactionLog invariance, and run-owned cleanup. PostgreSQL PASS; focused route 3/3, unit 7/7, and typecheck PASS. Actual HTTP/browser-session authentication remains unverified; no production code/schema/migration, STAGING or production data, I2 or I3 change occurred.
+
+## 2026-10-21 — I1 migration 008 STAGING deployment
+
+Migration 008 was applied once to STAGING project `tuamfxfquhyccserzmab` after prerequisite precheck PASS. Postcheck PASS confirmed the intended nullable version column and enum labels, preserved all 102 historical Booking rows and BookingStatus values, and found no unrelated schema change. No production migration or I2 settlement occurred; RUNBOOK and IMPLEMENTATION_STATE retain the detailed evidence.
+
+## 2026-10-21 — I1 disposable PostgreSQL verification
+
+Added an opt-in focused PostgreSQL verification runner. On the disposable TEST project only, migration 008 passed pre-008 fixture, injected failure atomicity, forward, safe prewrite rollback/reforward, postwrite rollback refusal, nullable/default/no-backfill, and cleanup checks. Two independent serializable sessions produced one winning START, DELIVER, and ACCEPT claim apiece; stale/replayed claims produced no duplicate activity, and fixture GP/TransactionLog values were unchanged. Final TEST schema retains 008 with zero test-owned rows. Linux focused I1 unit/route tests passed 9/9. Existing static/full-suite evidence remains separate. No application/staging/production migration, production feature edit, I2 settlement, or I3 cron work occurred; controlled fulfillment races do not establish settlement concurrency. See IMPLEMENTATION_STATE and TEST_MATRIX for assertions and limits.
+
 ## 2026-10-19 — H2 audit repair and documentation reconciliation
 
 Recorded the current H2 checkpoint: transaction-local membership/space rechecks for LINK deletion and note writes, the Vietnamese LearningSpace-details event label, and AUD-03 as deferred potential state reuse. Current H2 evidence is 20/20 focused, 139/139 unit, and 61/61 integration PASS; the latest production build was not rerun. Actor attribution and missing activity-events owner manual confirmations are 6/6 and 8/8 PASS respectively.
@@ -319,3 +337,9 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - Added an early `createBooking` rejection for linked LIVE/HYBRID before review-gate work or any GP, Booking, ledger, notification, or email side effect. EXERCISE_REVIEW and unlinked legacy manual booking remain unchanged; the mentor-profile slot component was not modified.
 - No schema, migration, lifecycle, GP/pricing, wallet, settlement, provider, cron, artifact, or fulfillment-state-machine change. F1 remains unstarted.
 - PASS WITH KNOWN LIMITATION: typecheck; 41 unit tests; route smoke plus 25 integration tests; all five legacy regressions; targeted ESLint; and production build with 34 pages. Standard `tsx` reproduced the documented Windows `os.userInfo()` ENOMEM before discovery; suites passed under the temporary compatibility preload, which was removed. This narrow repair did not rerun full lint. Later reconciliation classifies the earlier 151-error/34-warning result as 77 errors/32 warnings of unrelated legacy debt plus 74 errors/2 warnings introduced by B2/C1.
+## 2026-10-21 — I1 fulfillment state machine
+
+- Audited every existing Booking status/financial/deadline writer in `I1_TRANSITION_AUDIT.md`; accepted ADR 020.
+- Added nullable fulfillment version and terminal fulfillment enum values (manual migration 008), a server-session-bound GET/POST transition service, mode evidence checks, conditional Serializable claims, and versioned content-free activity.
+- Mirrored Booking cancellation/no-show/dispute outcomes into linked fulfillment and prevented legacy manual/auto-complete time-only payouts for linked modes. No new GivePoint release, ledger write, public Review/Trust mutation, or full cron redesign was added.
+- Initial implementation verification and limitations are recorded in IMPLEMENTATION_STATE and TEST_MATRIX. At this initial checkpoint migration 008 had not been applied; the later disposable TEST rehearsal is recorded above. Application/staging/production remain unmigrated. I2/I3 are separate tasks.

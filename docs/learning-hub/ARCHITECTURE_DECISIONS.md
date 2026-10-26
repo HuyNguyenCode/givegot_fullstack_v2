@@ -141,3 +141,23 @@ No schema/migration, Booking lifecycle/fulfillment, public Review/Trust, GivePoi
 **Status:** Accepted for H1 MVP (2026-10-16)
 
 New notes default to SPACE_MEMBERS. AUTHOR_ONLY restricts reads to the author; BOOKING_PARTICIPANTS requires a linked Booking in the same space and reads only for its participants who remain active space members. Only the author may edit or soft delete. Delete sets deletedAt/deletedById with an optimistic version claim and retains the row for audit; ordinary reads hide it. Archived spaces permit authorized reads but no note writes. Notes render as escaped plain text and are never sent to AI by H1.
+
+## ADR 020 I1 mode-aware fulfillment, without settlement
+
+**Status:** Accepted for I1 (2026-10-21)
+
+The existing nullable `Booking.fulfillmentStatus` is the separate learning lifecycle. Add `DISPUTED` and `CANCELLED` to its enum, retain `SETTLED` for I2, and add nullable `fulfillmentVersion`. A linked row with null status is treated as `NOT_STARTED` at version zero only by the fulfillment service; a legacy row with null `learningMode` is never enrolled. The first successful transition materializes the status and increments the version. No old row is backfilled.
+
+| Current fulfillment | Authorized next state | Evidence and guard |
+| --- | --- | --- |
+| null (linked) or NOT_STARTED | IN_PROGRESS | Either active Booking participant; Booking CONFIRMED |
+| IN_PROGRESS | DELIVERED | Mentor; LIVE requires objective, ended scheduled component, Meet link, and visible Booking recap; EXERCISE_REVIEW requires a completed linked task, current reviewed Submission, and matching reviewed feedback; HYBRID requires completed linked prework and reviewed Submission, mentor acknowledgement, ended scheduled component, Meet link, and visible Booking recap |
+| DELIVERED | ACCEPTED | Mentee; Booking CONFIRMED; delivery evidence still present |
+| DELIVERED | REVISION_REQUESTED | Mentee; Booking CONFIRMED |
+| REVISION_REQUESTED | IN_PROGRESS | Mentor; Booking CONFIRMED; prior `deliveredAt` cleared |
+| Any unsettled state | DISPUTED or CANCELLED | Only the existing Booking dispute/cancellation/no-show writer, in the same transaction; terminal Booking state blocks all normal fulfillment writes |
+| ACCEPTED, DISPUTED, CANCELLED, SETTLED | no participant action in I1 | I2 owns settlement and admin resolution policy |
+
+Every transition requires server-session identity, active unsuspended membership, the Booking pair, exact expected version, and a conditional status/version/BookingStatus claim inside a Serializable transaction. A stable version-keyed, content-free LearningActivity is written in that transaction. Retries with the prior version receive 409; competing delivery/acceptance attempts cannot both win. `deliveredAt` is set only on delivery, cleared on a revision restart, and is not derived from `endTime`. `acceptedAt` is set only on learner acceptance. The service never changes BookingStatus, wallet, ledger, public Review, or Trust. Existing Booking cancellation/dispute paths may mirror their own terminal outcome into fulfillment; they keep ownership of BookingStatus and financial policy. I1 guards existing legacy payout entry points for linked bookings; I2/I3 will implement mode-aware payout and cron timing.
+
+For I1, LIVE delivery uses elapsed Booking time plus a mentor-authored visible recap as its current session evidence; learner acceptance is separate. EXERCISE_REVIEW evidence is a linked mentor-created task with the learner's current reviewed submission and matching private feedback. HYBRID uses that reviewed prework submitted before the scheduled start as its acknowledgement, plus the scheduled Meet component and a mentor-authored visible recap. A Meet `endTime` alone never supplies delivery evidence. These concrete evidence rules can be expanded only by an explicit later ADR when new artifact types exist.

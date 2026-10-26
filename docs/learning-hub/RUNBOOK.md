@@ -68,6 +68,12 @@ Failure protocol:
 - Run Prisma generate/validate, migration tests, legacy dashboard/history tests, and rollback rehearsal.
 - Stop if Prisma generation remains blocked or rollback cannot be described and exercised.
 
+### I1 migration 008 STAGING record (2026-10-21)
+
+Migration `008_learning_fulfillment_state.sql` was applied once through the existing Linux Prisma manual-migration workflow using repository `DIRECT_URL`. The non-secret STAGING Supabase project reference is `tuamfxfquhyccserzmab`; repository `DATABASE_URL`, `DIRECT_URL`, and `SUPABASE_URL` agreed, and the disposable TEST project `yxyipetjooqsysdhruut` was excluded. Precheck confirmed the 004–007 schema, exact BookingStatus and pre-008 FulfillmentStatus labels, absence of all 008 changes, and no partial state. **STAGING MIGRATION: APPLIED; PRECHECK: PASS; POSTCHECK: PASS.** No production connection, earlier migration, `db push`, reset, rollback, fixture, backfill, or settlement action ran.
+
+The pre-DDL restricted Booking snapshot is retained at `/home/huynguyenquoc/givegot-test-linux/.i1-staging-008-booking-snapshot-1792575463985.json` (102 rows; SHA-256 `24b195499736744e00f4b1ce3ac71f71db8685ebc7a09bf06870ec5a2e77c364`). Postcheck found exactly the nullable, no-default integer version column and two new fulfillment enum labels, all historical versions null, identical pre/post Booking digest, preserved BookingStatus, unchanged related table counts, and no unrelated catalog/index/constraint change. Updated Prisma Booking and LearningNote reads passed. Do not run a rollback rehearsal on STAGING; the reviewed 008 rollback note requires pausing writers and exporting fulfillment/activity history, and prefers roll-forward after versioned writes. Production remains unmigrated. I2 must separately verify atomic GP settlement; I3 owns cron/deadline policy.
+
 ### D0a resource purpose record (complete 2026-10-07)
 
 Migration 006 adds only `LearningResourcePurpose` and a non-null `LearningResource.purpose` column whose database default is `LEGACY_UNCLASSIFIED`; unknown legacy intent is never inferred. The paired rollback refuses to drop the column while any `MATERIAL` or `SUBMISSION_ATTACHMENT` row exists, so classified data is preserved and roll-forward is preferred after classified writes begin.

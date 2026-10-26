@@ -16,6 +16,7 @@ import NoShowReportEmail from '@/emails/NoShowReportEmail'
 import NewBookingEmail from '@/emails/NewBookingEmail'
 import { requireAdminUser, requireAuthenticatedUser } from '@/lib/server-authorization'
 import { privateUserChannel } from '@/lib/realtime-channels'
+import { mirrorTerminalFulfillment } from '@/lib/learning-fulfillment-service'
 import {
   LearningBookingAuthorizationError,
   LearningBookingValidationError,
@@ -710,6 +711,7 @@ export async function declineBooking(bookingId: string, mentorId: string): Promi
         where: { id: bookingId },
         data: { status: BookingStatus.CANCELLED, slotId: null },
       })
+      await mirrorTerminalFulfillment(tx, bookingId, 'CANCELLED', mentorId)
 
       // Mentor declined → they are still busy at that time, so permanently
       // remove the slot instead of making it available to other mentees.
@@ -814,6 +816,7 @@ export async function completeSessionWithReview(
     if (booking.menteeId !== menteeId) {
       return { success: false, message: 'Unauthorized: You are not the mentee for this session' }
     }
+    if (booking.learningMode !== null) return { success: false, message: 'Learning Hub fulfillment uses its separate delivery and acceptance flow.' }
     if (booking.status !== BookingStatus.CONFIRMED) {
       return {
         success: false,
@@ -996,6 +999,7 @@ export async function completeBooking(bookingId: string, menteeId: string): Prom
     if (booking.menteeId !== menteeId) {
       return { success: false, message: 'Unauthorized: You are not the mentee for this session' }
     }
+    if (booking.learningMode !== null) return { success: false, message: 'Learning Hub fulfillment uses its separate delivery and acceptance flow.' }
 
     // Idempotent: if it's already completed (e.g. re-invoked), treat as success
     // rather than erroring — avoids double-paying the mentor.
@@ -1379,6 +1383,7 @@ export async function cancelBooking(bookingId: string, canceledByUserId: string)
         where: { id: bookingId },
         data: { status: BookingStatus.CANCELLED, slotId: null },
       })
+      await mirrorTerminalFulfillment(tx, bookingId, 'CANCELLED', canceledByUserId)
 
       // b) Slot handling depends on who is cancelling:
       //    • Mentee cancels → mentor is still free at that time, restore the slot.
@@ -1910,6 +1915,7 @@ export async function reportNoShow(
           where: { id: bookingId },
           data: { status: 'MISSED' as BookingStatus },
         })
+        await mirrorTerminalFulfillment(tx, bookingId, 'CANCELLED', menteeId)
 
         // b) Refund mentee +1 GivePoint
         await tx.user.update({
@@ -1983,6 +1989,7 @@ export async function reportNoShow(
           where: { id: bookingId },
           data: { status: 'DISPUTED' as BookingStatus },
         })
+        await mirrorTerminalFulfillment(tx, bookingId, 'DISPUTED', menteeId)
       }
     })
 
