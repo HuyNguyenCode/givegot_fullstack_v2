@@ -168,17 +168,31 @@ export async function getAvailableSlots(mentorId: string) {
   } catch (error) { return [] }
 }
 
-export async function getAllMentorSlots(mentorId: string) {
+export async function getAllMentorSlots(
+  mentorId: string,
+  dateRange?: { start: Date; end: Date },
+) {
   try {
-    noStore(); 
-    
-    const startLimit = new Date();
-    startLimit.setDate(startLimit.getDate() - 7);
+    noStore();
+
+    const start = dateRange ? new Date(dateRange.start) : new Date()
+    const end = dateRange ? new Date(dateRange.end) : null
+    if (dateRange) {
+      if (!Number.isFinite(start.getTime()) || !end || !Number.isFinite(end.getTime()) || end <= start) {
+        throw new Error('Invalid calendar date range')
+      }
+    } else {
+      // Preserve the historical cutoff for callers that do not supply a range.
+      start.setDate(start.getDate() - 7)
+    }
 
     const slots = await prisma.availableSlot.findMany({
       where: {
         mentorId,
-        startTime: { gte: startLimit }, 
+        ...(end
+          // FullCalendar supplies absolute instants with an exclusive range end.
+          ? { startTime: { lt: end }, endTime: { gt: start } }
+          : { startTime: { gte: start } }),
       },
       include: {
         booking: {
@@ -197,6 +211,8 @@ export async function getAllMentorSlots(mentorId: string) {
     return slots
   } catch (error) {
     console.error('Error fetching mentor slots:', error)
+    // Range callers must distinguish a failed read from a successful empty range.
+    if (dateRange) throw new Error('Failed to load mentor calendar slots')
     return []
   }
 }

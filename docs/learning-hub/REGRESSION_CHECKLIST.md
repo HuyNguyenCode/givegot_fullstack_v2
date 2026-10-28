@@ -2,6 +2,15 @@
 
 Current checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at distinct evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
 
+## Standalone Teaching Calendar A2 regression evidence (2026-10-28)
+
+- Problem: the fixed now-minus-seven-days AvailableSlot cutoff could leave older Teaching Calendar weeks blank while Learning Calendar displayed historical Bookings. Visible-range reads now retrieve surviving mentor slots using `startTime < rangeEnd` and `endTime > rangeStart`; existing one-argument `getAllMentorSlots` callers retain their prior behavior.
+- Targeted Calendar tests: 15/15 PASS for historical/future slots, linked Booking display, mentor isolation, week/day ranges, exclusive and overlapping boundaries, timezone/DST instants, out-of-order responses, explicit read errors/retry, current-range refresh after create/move/resize and dialog mutation/deletion callbacks, conflict rejection, existing noneditable Booking/past-slot rules, and Booking dialog payloads. Data access and FullCalendar are mocked; these tests do not verify browser layout or actual pointer interactions.
+- Learning Hub unit 148/148 and integration 64/64 PASS; legacy route smoke and all five existing regression scripts PASS. Typecheck, targeted lint, production build, and `git diff --check` PASS, retaining the six pre-existing lint warnings and middleware deprecation warning as non-blocking. These are prior implementation results; tests/build were not rerun for this documentation update.
+- OWNER-REPORTED manual SQL-fixture Calendar rendering: TC-A2 and TC-C01 through TC-C04, 5/5 PASS. Cancelled Booking display tests used STAGING SQL fixtures, not end-to-end cancellation workflow execution. Codex did not independently reproduce these manual results; other browser smoke tests have not been confirmed as completed.
+- Remaining boundaries: Teaching Calendar stays AvailableSlot-based; Bookings without a surviving linked Slot do not appear as Booking events. The 07:00–22:00 display window remains unchanged. Current-range refresh, stale-response protection, and explicit load errors do not change the existing event mapping, styling, dialogs, or slot management business rules.
+- This standalone Calendar bug fix is separate from Learning Hub implementation checkpoint A2. No Booking lifecycle, GivePoint, wallet, escrow, settlement, database schema, or migration change occurred. I1 implementation and I2/I3 dependencies, scope, and sequencing remain intact; I2 is NEXT, NOT STARTED, and I3 remains pending.
+
 ## I1 owner-reported localhost/STAGING HTTP smoke (2026-10-26)
 
 - HTTP-01: unauthenticated GET redirected to `/auth/signin`; fetch followed it to HTTP 200 HTML without fulfillment JSON. Access control PASS; expected 401 JSON API contract deviation is LOW priority and awaits a client-compatibility/contract decision.

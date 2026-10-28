@@ -11,6 +11,7 @@ import type {
   EventClickArg,
   EventDropArg,
   CalendarApi,
+  DatesSetArg,
 } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
 import { differenceInHours } from 'date-fns'
@@ -73,12 +74,16 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
   const [isSaving, setIsSaving]           = useState(false)
   const [mounted, setMounted]             = useState(false)
   const [toasts, setToasts]               = useState<Toast[]>([])
+  const [visibleRange, setVisibleRange] = useState<{ start: Date; end: Date } | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // SessionDetailDialog state
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null)
   const [dialogOpen, setDialogOpen]           = useState(false)
 
   const calendarRef = useRef<FullCalendar>(null)
+  const visibleRangeRef = useRef(visibleRange)
+  const loadRequestId = useRef(0)
 
   useEffect(() => setMounted(true), [])
 
@@ -89,13 +94,40 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
   }, [])
 
   const loadSlots = useCallback(async () => {
+    const range = visibleRangeRef.current
+    if (!range) return
+    const requestId = ++loadRequestId.current
     setIsLoading(true)
-    const slots = await getAllMentorSlots(mentorId)
-    setExistingSlots(slots as ExistingSlot[])
-    setIsLoading(false)
+    setLoadError(null)
+    setExistingSlots([])
+    try {
+      const slots = await getAllMentorSlots(mentorId, range)
+      if (requestId === loadRequestId.current) setExistingSlots(slots as ExistingSlot[])
+    } catch {
+      if (requestId === loadRequestId.current) {
+        setLoadError('Không thể tải lịch. Nhấn Làm mới để thử lại.')
+      }
+    } finally {
+      if (requestId === loadRequestId.current) setIsLoading(false)
+    }
   }, [mentorId])
 
-  useEffect(() => { loadSlots() }, [loadSlots])
+  const handleDatesSet = useCallback(({ start, end }: DatesSetArg) => {
+    const previous = visibleRangeRef.current
+    if (previous?.start.getTime() === start.getTime() && previous.end.getTime() === end.getTime()) return
+    const range = { start, end }
+    visibleRangeRef.current = range
+    // Invalidate immediately, before the effect starts the next range request.
+    loadRequestId.current += 1
+    setExistingSlots([])
+    setLoadError(null)
+    setVisibleRange(range)
+  }, [])
+
+  useEffect(() => {
+    if (visibleRange) loadSlots()
+    return () => { loadRequestId.current += 1 }
+  }, [loadSlots, visibleRange])
 
   // ── Calendar event mapping ────────────────────────────────────────────────
 
@@ -406,6 +438,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
       </div>
 
       {/* ── Saving Overlay ──────────────────────────────────────────────── */}
+      {loadError && <p role="alert" className="mx-6 mt-3 text-sm text-red-600">{loadError}</p>}
       <div className={`relative mx-6 mb-6 mt-3 transition-opacity ${isSaving ? 'opacity-60 pointer-events-none' : ''}`}>
         {isSaving && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 rounded-xl">
@@ -447,6 +480,7 @@ export default function MentorCalendarManager({ mentorId }: MentorCalendarManage
             slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: true }}
             dayHeaderFormat={{ weekday: 'short', month: 'short', day: 'numeric', omitCommas: true }}
             events={calendarEvents}
+            datesSet={handleDatesSet}
             select={handleSelect}
             eventDrop={handleEventDrop}
             eventResize={handleEventResize}
