@@ -21,10 +21,11 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <nav aria-label="Điều hướng LearningSpace" className="mb-5">
-          <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-lg text-sm font-medium text-purple-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">
+          <Link href="/learning" className="inline-flex items-center gap-2 rounded-lg text-sm font-medium text-purple-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">
             <ArrowRight aria-hidden="true" className="h-4 w-4 rotate-180" />
-            Bảng điều khiển
+            Không gian của tôi
           </Link>
+          <Link href="/dashboard" className="ml-5 rounded-lg text-sm font-medium text-purple-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600">Bảng điều khiển</Link>
         </nav>
 
         {archived && (

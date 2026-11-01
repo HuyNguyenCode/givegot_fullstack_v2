@@ -2,6 +2,14 @@
 
 Current checkpoint: post-I1 reconciliation (2026-10-26); I2 is NEXT, NOT STARTED, and I3 remains pending. Dated entries retain their original evidence levels.
 
+## 2026-11-01 — Task 1 real PostgreSQL listing verification
+
+Added a focused disposable TEST PostgreSQL runner for My Spaces. Preflight confirmed approved project `yxyipetjooqsysdhruut`, source/client parity, `SELECT 1` and required schema. Nine focused cases passed through the actual listing query and an in-process handler with injected session identity; cleanup confirmed zero test-owned rows. At that checkpoint this closed the Task 1 real-database listing gap without changing production code, schema or migrations. Previous mock/static evidence remains separate; browser E2E and middleware behavior were not exercised.
+
+## 2026-11-01 — Task 1 account eligibility repair
+
+My Spaces GET now checks the session user's current database account status before listing: suspended users, users with Trust Score below 30 and missing accounts receive 403. This follows the existing sign-in and page-access policy. The Space membership query and POST remain unchanged. Focused verification and the limits of the earlier PostgreSQL evidence are recorded in IMPLEMENTATION_STATE and TEST_MATRIX.
+
 ## 2026-10-28 — Standalone Teaching Calendar A2 date-range bug fix
 
 - Teaching Calendar previously loaded only AvailableSlot records newer than seven days before the current date. Older weeks could appear blank while Learning Calendar displayed historical Bookings. `MentorCalendarManager` now requests surviving mentor slots overlapping the displayed FullCalendar week/day range through optional `getAllMentorSlots` range arguments: `startTime < rangeEnd` and `endTime > rangeStart`. Existing one-argument callers retain their prior behavior. Current-range mutation refresh, stale-response protection, and explicit load errors preserve the existing slot event mapping, styling, dialogs, and interaction rules.
@@ -350,3 +358,7 @@ Production behavior and data compatibility are unchanged. Rollback consists only
 - Added nullable fulfillment version and terminal fulfillment enum values (manual migration 008), a server-session-bound GET/POST transition service, mode evidence checks, conditional Serializable claims, and versioned content-free activity.
 - Mirrored Booking cancellation/no-show/dispute outcomes into linked fulfillment and prevented legacy manual/auto-complete time-only payouts for linked modes. No new GivePoint release, ledger write, public Review/Trust mutation, or full cron redesign was added.
 - Initial implementation verification and limitations are recorded in IMPLEMENTATION_STATE and TEST_MATRIX. At this initial checkpoint migration 008 had not been applied; the later disposable TEST rehearsal is recorded above. Application/staging/production remain unmigrated. I2/I3 are separate tasks.
+
+## MVP Gap Repair Task 1 (2026-11-01)
+
+Dashboard exposes Learning Hub creation and My Spaces. `/learning` lists session-owned ACTIVE memberships, including archived spaces, with a link back from the space shell. GET `/api/learning/spaces` selects listing metadata only, ignores client identity, and leaves POST and invitation creation/acceptance unchanged. No schema, migration, Booking, financial, or fulfillment changes. Listing is unpaginated; at the initial implementation checkpoint, browser and real-database listing verification had not been performed. The later real PostgreSQL follow-up is recorded above. Existing middleware may redirect unauthenticated API requests to sign-in before the handler returns 401. Task 2, Task 3 and I2–L1 remain outside this repair.

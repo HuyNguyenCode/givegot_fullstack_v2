@@ -207,3 +207,18 @@ The baseline smoke command is `npm run test:learning-hub:integration`. It import
 ## I1 checkpoint (2026-10-21)
 
 The Booking transition inventory is `I1_TRANSITION_AUDIT.md`. Legacy null-mode creation, scheduling, cancellation receipt/Trust/slot policy, no-show, dispute, public Review, GP/ledger, and PA-02 deadline notification regressions passed. Linked modes are excluded from the existing manual completion and auto-complete payout entries; the cron otherwise retains its legacy 72-hour logic. Focused fulfillment tests cover mode evidence, null rows, terminal freeze, retries, and conditional claims. I2/I3 must test real database payout races, reconciliation, and new deadline behavior before deployment.
+
+## MVP Gap Repair Task 1 — initial implementation checkpoint (2026-11-01)
+
+The existing invite, shell, archived member and legacy regression suites passed; no Booking, provider, wallet, or lifecycle code was changed. Dashboard adds two local links, and the shell retains its dashboard link while adding My Spaces. Browser interaction and real-database listing tests were not run.
+
+Task 1 follow-up (2026-11-01): focused disposable TEST PostgreSQL listing test passed 9/9 cases (10/10 TAP), including active/archived membership, nonmember/LEFT/REMOVED exclusion, response minimization and session-bound handler behavior. Fixture cleanup asserted zero run-owned rows. No production source changed, so prior invite, shell, POST and five legacy regression results remain the applicable regression evidence. Browser interaction remains untested.
+
+### Task 1 reusable pre-launch manual regression (2026-11-01)
+
+The statements above describe the earlier implementation and PostgreSQL checkpoints. The owner subsequently reports **16/16 manual PASS**, not independently reproduced by Codex or automated with Playwright. Retain these cases for pre-launch regression:
+
+- T1-M01 Learning Hub entry; M02 Bring Your Pair invitation creation; M03 invitation acceptance and Space creation; M04 inviter finds Space; M05 recipient finds Space; M06 nonmember isolation; M07 active/archived Space; M08 Back/Forward navigation; M09 empty state; M10 responsive layout at 375px, 768px and desktop; M11 keyboard navigation; M12 API failure and Retry. Each is owner-reported PASS. M12 used Chrome DevTools Network Request Blocking, not a full-page offline reload.
+- T1-M13 suspended user retaining an existing session: HTTP 403; M14 Trust Score 29: HTTP 403; M15 Trust Score 30: HTTP 200; M16 eligible account: HTTP 200 and normal My Spaces behavior. Each is owner-reported PASS.
+
+Initial automated evidence remains 151/151 unit, 66/66 integration and five legacy regression scripts PASS; the later authorization repair has 7/7 focused mocked tests PASS. The real PostgreSQL listing test passed 9/9 before the authorization repair, and its updated account-read dependency was not rerun against PostgreSQL.

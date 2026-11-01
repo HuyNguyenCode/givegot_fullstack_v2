@@ -383,3 +383,42 @@ The unit suite uses `node:test` via the existing `tsx` dependency. The integrati
 ## I1 / LH 070 checkpoint (2026-10-21)
 
 Initial implementation checkpoint: PASS WITH KNOWN LIMITATION. Focused 9/9 service/route tests cover every normal and forbidden fulfillment edge, null linked and null legacy rows, role/session-shaped authorization, mode evidence, revision loop, retry/stale version, competing delivery and acceptance, duplicate conditional claims, cancellation/dispute freeze, activity redaction, and malformed API input. Full Learning Hub unit 148/148; integration 63/63 plus route smoke; Prisma validate and offline schema diff; typecheck; targeted ESLint; five legacy regression scripts; production build; diff check PASS. At this initial checkpoint concurrent claims used an in-memory conditional update and migration 008 had not been applied. The subsequent real disposable PostgreSQL verification is recorded above. I2 GP settlement and I3 cron/deadline policy remain untested and pending.
+
+## MVP Gap Repair Task 1 — initial implementation checkpoint (2026-11-01)
+
+Automated evidence: Learning Hub unit 151/151 and integration 66/66 plus route smoke passed with the established temporary Windows tsx preload; standard launch hit the pre-existing uv_os_get_passwd ENOMEM. Tests exercise session identity, unauthenticated handler denial, query membership predicate and minimal fields, active/archived rendering, links, empty/loading/error markup and focus/responsive classes, alongside existing invite and shell regression coverage. Query and UI evidence is mocked/static; real database, interactive browser, keyboard and mobile viewport verification were not run. Legacy regression scripts passed. See IMPLEMENTATION_STATE for scope and limitations.
+
+### Task 1 real PostgreSQL follow-up (2026-11-01)
+
+Browser statements in this historical follow-up describe its evidence at the time; the later owner-reported manual cases are recorded below.
+
+Preflight PASS: explicit dotenv TEST target `yxyipetjooqsysdhruut`, distinct from application targets; Prisma `SELECT 1`; required LearningSpace/member schema and LEFT enum; authoritative source and Linux Prisma Client schema parity. Focused real PostgreSQL test: **9/9 cases PASS, 10/10 TAP including parent**, with production `findListingSpaces` querying persisted synthetic rows. Cases: active A, active partner B, nonmember C, A's three Spaces without duplicates, archived status, REMOVED/LEFT exclusion, five-field metadata and private-content exclusion, injected session identity and handler 401, unchanged POST handler binding. Cleanup assertion: zero run-owned rows. Windows typecheck, focused ESLint and diff check PASS. POST compatibility also has the prior mock/regression evidence; no new POST mutation was performed. This closes only the real-database listing gap. Browser E2E, live middleware redirect, concurrency and migration were not tested.
+
+### Task 1 account eligibility repair (2026-11-01)
+
+Focused listing unit/handler tests passed **7/7** using injected account reads and the actual eligibility decision. They cover a still-valid session after suspension, Trust Score 29 denial, score 30 acceptance, missing-account denial, no listing read after denial, active and archived success payloads, nonmember isolation and spoofed query identity. Typecheck, targeted ESLint and `git diff --check` passed. The Windows test launcher used the established temporary getEUID preload, removed after the run. These are mocked account/listing boundaries, not real-session or database evidence. The earlier real PostgreSQL result remains evidence for the unchanged Space listing query only; the updated PostgreSQL test was not rerun for this repair.
+
+### Task 1 owner-reported manual verification (2026-11-01)
+
+The owner reports **16/16 PASS**: M01–M12 12/12 and M13–M16 4/4. Codex did not independently reproduce these cases or run Playwright. M12 used Chrome DevTools Network Request Blocking, not a full-page offline reload.
+
+| Case | Owner-reported coverage and expected result | Result |
+| --- | --- | --- |
+| T1-M01 | Learning Hub entry | PASS |
+| T1-M02 | Bring Your Pair invitation creation | PASS |
+| T1-M03 | Invitation acceptance and Space creation | PASS |
+| T1-M04 | Inviter finds Space | PASS |
+| T1-M05 | Recipient finds Space | PASS |
+| T1-M06 | Nonmember isolation | PASS |
+| T1-M07 | Active/archived Space | PASS |
+| T1-M08 | Back/Forward navigation | PASS |
+| T1-M09 | Empty state | PASS |
+| T1-M10 | Responsive layout at 375px, 768px and desktop | PASS |
+| T1-M11 | Keyboard navigation | PASS |
+| T1-M12 | API failure and Retry using Network Request Blocking | PASS |
+| T1-M13 | Suspended user retaining an existing session: HTTP 403 | PASS |
+| T1-M14 | Trust Score 29: HTTP 403 | PASS |
+| T1-M15 | Trust Score 30: HTTP 200 | PASS |
+| T1-M16 | Eligible account: HTTP 200 and normal My Spaces behavior | PASS |
+
+Evidence remains separate: initial automated unit 151/151, integration 66/66 and five legacy regression scripts passed; post-repair focused authorization tests passed 7/7 with mocked account/listing boundaries. The real PostgreSQL listing test passed 9/9 (10/10 TAP including parent) before the repair; its updated account-read dependency has not been rerun against PostgreSQL and the earlier run does not prove the new account-status check.

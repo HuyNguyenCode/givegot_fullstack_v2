@@ -1,5 +1,11 @@
 # Learning Hub Context Packet
 
+## Latest MVP Gap Task 1 checkpoint (2026-11-01)
+
+Task 1 Learning Hub entry and My Spaces is implemented. Its authorization repair checks current account status and denies suspended users and Trust Score below 30. The owner reports manual T1-M01–M16 **16/16 PASS**, including retained-session 403, Trust Score 29/30 boundaries and normal eligible access; Codex did not independently reproduce these cases or run Playwright. M12 used Chrome DevTools Network Request Blocking. Earlier real PostgreSQL listing verification passed 9/9 before the authorization repair; the updated account-read dependency was not rerun against PostgreSQL and that earlier result does not verify the new check. Listing is unpaginated; account-status races and live middleware redirect behavior remain unverified.
+
+MVP Gap Task 2 Create Task UI and Task 3 Discover-to-Space are separate pending tasks. They are distinct from the existing Learning Hub implementation sequence: I2 linked settlement is NEXT, NOT STARTED, and I3 cron/deadline policy remains pending.
+
 ## Current post-I1 checkpoint (2026-10-26)
 
 I1 mode-aware fulfillment is implemented with ADR 020 and the pre-code matrix in `I1_TRANSITION_AUDIT.md`. Migration 008 passed disposable PostgreSQL TEST forward/guarded rollback and controlled START/DELIVER/ACCEPT races, then was applied to STAGING project `tuamfxfquhyccserzmab` on 2026-10-21 with precheck/postcheck PASS and all 102 historical Booking rows preserved; production remains unmigrated. Server-session-authorized, version-conditional transitions require mode evidence and write deduplicated activity; legacy manual completion and auto-complete payout are gated to null-mode rows. I1 itself does not release GP. The automated gap audit mapped 11 cases across unit, in-process route, and real TEST PostgreSQL evidence. Owner-reported localhost/STAGING browser-session smoke on 2026-10-26 passed mentor GET/START, learner DELIVER denial, and nonmember GET denial. Unauthenticated GET redirected to `/auth/signin`; fetch followed it to HTTP 200 HTML without fulfillment JSON, an access-control PASS with a LOW-priority deviation from the expected 401 JSON contract. Codex did not independently reproduce the browser run or inspect its GP/ledger. I2 linked settlement is NEXT, NOT STARTED; I3 cron/deadline policy remains pending. R-004, R-010, and R-017 stay open/partial, and the H2 Gap B pilot/public-launch distinction remains.
@@ -196,3 +202,11 @@ For each task: check every requirement; list changed files and reasons; report s
 - Later correction (2026-09-20): this preserves the B2 checkpoint result. The then-current 151/34 result was classified as 77/32 unrelated legacy debt, 46/1 B2 debt, and 28/1 C1 debt. The B2/C1 findings were repaired on 2026-09-21 before F2.
 - Compatibility/rollback: no schema/data migration or backfill; legacy Bookings with null Learning Hub fields remain unchanged/readable. Rollback is file-level reversion of B2 routes, services, tests, realtime authorizer wiring, and docs.
 - At the B2 checkpoint, C1 was the next planned task; it is now complete.
+
+## Historical MVP Gap Repair Task 1 checkpoints (2026-11-01)
+
+The following statements describe evidence available at those earlier checkpoints; the later owner-reported manual verification is summarized at the top of this packet.
+
+Dashboard exposes Learning Hub creation and My Spaces. `/learning` lists session-owned ACTIVE memberships, including archived spaces, with a link back from the space shell. GET `/api/learning/spaces` selects listing metadata only, ignores client identity, and leaves POST and invitation creation/acceptance unchanged. No schema, migration, Booking, financial, or fulfillment changes. Listing is unpaginated; browser and real-database listing verification were not performed. Existing middleware may redirect unauthenticated API requests to sign-in before the handler returns 401. Task 2, Task 3 and I2–L1 remain outside this repair.
+
+Follow-up real PostgreSQL TEST verification on 2026-11-01 closed the database listing gap: 9/9 focused cases passed on disposable project `yxyipetjooqsysdhruut`, with zero test-owned rows remaining. This used the production listing query and an injected session identity at the handler boundary; browser E2E remains untested.

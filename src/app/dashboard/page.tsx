@@ -210,6 +210,14 @@ export default function DashboardPage() {
           </button>
         </div>
 
+        <section aria-labelledby="learning-hub-heading" className="mb-8 rounded-xl bg-white p-6 shadow-md">
+          <h2 id="learning-hub-heading" className="text-xl font-semibold text-gray-900">Learning Hub</h2>
+          <p className="mt-1 text-gray-600">Cùng bạn học xây dựng không gian học tập riêng.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/learning/new" className="rounded-lg bg-purple-600 px-4 py-3 font-medium text-white hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">Tạo không gian</Link>
+            <Link href="/learning" className="rounded-lg border border-purple-600 px-4 py-3 font-medium text-purple-700 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2">Không gian của tôi</Link>
+          </div>
+        </section>
         {/* ── Anti-Scam Early Warning Banner ─────────────────────────────── */}
         {currentUser.trustScore <= 40 && (
           <div
