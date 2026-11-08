@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import LearningSubmissionReview from '@/components/learning/LearningSubmissionReview'
+import { BookingContext, CreateTask, type Booking, type Member, type Topic } from '@/components/learning/LearningTaskCreate'
 
 import {
   finalizeLearningFileUpload,
@@ -11,7 +12,7 @@ import {
   uploadLearningFileToProvider,
 } from '@/components/learning/LearningResources'
 
-export type Task = { id: string; title: string; description: string | null; acceptanceCriteria: string | null; assigneeId: string; status: string; dueAt: string | null }
+export type Task = { id: string; title: string; description: string | null; acceptanceCriteria: string | null; assigneeId: string; creatorId?: string; bookingId?: string | null; status: string; dueAt: string | null }
 type Submission = { id: string; content: string | null; linkUrl: string | null; attachmentResourceId: string | null; revisionCount: number; status: string; submittedAt: string }
 type Resource = { id: string; title: string; kind: string; status: string }
 type Row = { task: Task; submission: Submission | null }
@@ -157,10 +158,16 @@ export function Form({ spaceId, row, draft, uploadState, submitState, updateDraf
     </div>
   </form>
 }
-export function LearningSubmissions({ spaceId, viewerId, archived }: { spaceId: string; viewerId: string; archived: boolean }) {
+export type TaskFilter = 'assigned' | 'created' | 'all'
+export function filterLearningTasks(rows: Row[], viewerId: string, filter: TaskFilter) {
+  return rows.filter(({ task }) => filter === 'assigned' ? task.assigneeId === viewerId : filter === 'created' ? task.creatorId === viewerId : task.assigneeId === viewerId || task.creatorId === viewerId)
+}
+export function LearningSubmissions({ spaceId, viewerId, archived, members, topics, bookings }: { spaceId: string; viewerId: string; archived: boolean; members: Member[]; topics: Topic[]; bookings: Booking[] }) {
   const [rows, setRows] = useState<Row[]>([])
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [taskPage, setTaskPage] = useState(1)
+  const [filter, setFilter] = useState<TaskFilter>('all')
+  const [createdMessage, setCreatedMessage] = useState(false)
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [uploadStates, setUploadStates] = useState<Record<string, TaskRequestState>>({})
   const [submitStates, setSubmitStates] = useState<Record<string, TaskRequestState>>({})
@@ -195,8 +202,9 @@ export function LearningSubmissions({ spaceId, viewerId, archived }: { spaceId: 
     void load()
     return () => { active = false }
   }, [spaceId, reload])
-  const row = rows.find(item => item.task.id === selectedTaskId)
-  const taskPagination = paginateLearningTasks(rows, taskPage)
+  const filteredRows = filterLearningTasks(rows, viewerId, filter)
+  const row = filteredRows.find(item => item.task.id === selectedTaskId)
+  const taskPagination = paginateLearningTasks(filteredRows, taskPage)
   const editable = !!row && !archived && row.task.assigneeId === viewerId && ((!row.submission && ['OPEN', 'IN_PROGRESS'].includes(row.task.status)) || (row.submission?.status === 'REVISION_REQUESTED' && row.task.status === 'REVISION_REQUESTED'))
   const attachment = row?.submission?.attachmentResourceId ? readyFiles.find(file => file.id === row.submission?.attachmentResourceId) : null
   function updateDraft(taskId: string, change: Partial<Draft>) { if (submittingTasks.current.has(taskId)) return; setDrafts(previous => ({ ...previous, [taskId]: { ...(previous[taskId] ?? emptyDraft()), ...change } })) }
@@ -227,6 +235,14 @@ export function LearningSubmissions({ spaceId, viewerId, archived }: { spaceId: 
     catch (cause) { setAttachmentDownloadError(cause instanceof Error ? cause.message : 'Không thể tạo liên kết tải xuống') }
     finally { attachmentDownloadInFlight.current = false; setDownloadingAttachmentId(null) }
   }
+  function changeFilter(next: TaskFilter) {
+    const nextRows = filterLearningTasks(rows, viewerId, next)
+    const index = nextRows.findIndex(item => item.task.id === selectedTaskId)
+    setFilter(next)
+    setTaskPage(index >= 0 ? Math.floor(index / TASK_PAGE_SIZE) + 1 : 1)
+    if (index < 0) setSelectedTaskId(null)
+    setAttachmentDownloadError(null)
+  }
   function selectTask(taskId: string) {
     setSelectedTaskId(taskId)
     setAttachmentDownloadError(null)
@@ -237,18 +253,21 @@ export function LearningSubmissions({ spaceId, viewerId, archived }: { spaceId: 
     window.requestAnimationFrame(() => listHeading.current?.focus())
   }
   return <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="tasks-heading"><h2 id="tasks-heading" className="text-base font-semibold text-slate-900">Công việc & bài nộp</h2>
+    {!archived && !loading && !error && <CreateTask spaceId={spaceId} viewerId={viewerId} members={members} topics={topics} bookings={bookings} onCreated={task => { setRows(previous => [{ task, submission: null }, ...previous.filter(item => item.task.id !== task.id)]); setFilter('created'); setTaskPage(1); setSelectedTaskId(task.id); setCreatedMessage(true); window.requestAnimationFrame(() => detailHeading.current?.focus()) }} />}
+    {createdMessage && <p role="status" className="mt-3 text-sm text-emerald-700">Đã tạo công việc.</p>}
     {loading && <p role="status" className="mt-3 text-sm text-slate-600">Đang tải công việc…</p>}
     {error && <div className="mt-3"><p role="alert" className="text-sm text-red-700">{error}</p><button type="button" onClick={() => { setError(null); setLoading(true); setReload(value => value + 1) }} className="mt-2 min-h-10 rounded-lg border border-slate-300 px-3 text-sm">Thử lại</button></div>}
-    {!loading && !error && rows.length === 0 && <p className="mt-3 text-sm text-slate-600">Chưa có công việc nào được giao.</p>}
-    {!loading && !error && rows.length > 0 && <div className="mt-5 min-w-0 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,13fr)] lg:gap-5">
+    {!loading && !error && <div className="mt-5 min-w-0 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,13fr)] lg:gap-5">
       <div className={`${row ? 'hidden lg:block' : 'block'} min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3`}>
         <h3 ref={listHeading} tabIndex={-1} className="text-sm font-semibold text-slate-900">Danh sách công việc</h3>
+        <div role="group" aria-label="Lọc công việc theo trách nhiệm" className="mt-3 flex flex-wrap gap-2">{([{ id: 'assigned', label: 'Cần làm' }, { id: 'created', label: 'Đã giao' }, { id: 'all', label: 'Tất cả' }] as const).map(item => <button key={item.id} type="button" aria-pressed={filter === item.id} onClick={() => changeFilter(item.id)} className={`min-h-10 rounded-lg border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 ${filter === item.id ? 'border-purple-700 bg-purple-700 text-white' : 'border-slate-300 bg-white'}`}>{item.label}</button>)}</div>
+        {filteredRows.length === 0 && <p className="mt-3 text-sm text-slate-600">Không có công việc trong mục này.</p>}
         <ul className="mt-2 space-y-2">{taskPagination.rows.map(item => <li key={item.task.id} className="min-w-0"><TaskListRow task={item.task} selected={selectedTaskId === item.task.id} onSelect={() => selectTask(item.task.id)} /></li>)}</ul>
         {taskPagination.pageCount > 1 && <nav aria-label="Phân trang công việc" className="mt-3 flex items-center justify-between gap-2"><button type="button" disabled={taskPagination.page === 1} onClick={() => setTaskPage(taskPagination.page - 1)} className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium disabled:opacity-50">← Trước</button><span className="text-xs text-slate-600">Trang {taskPagination.page} / {taskPagination.pageCount}</span><button type="button" disabled={taskPagination.page === taskPagination.pageCount} onClick={() => setTaskPage(taskPagination.page + 1)} className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium disabled:opacity-50">Sau →</button></nav>}
       </div>
       <div className={`${row ? 'block' : 'hidden lg:block'} min-w-0 rounded-xl border border-slate-200 p-4 sm:p-5`}>
         {!row && <div className="flex min-h-48 items-center justify-center text-center"><div><p className="font-medium text-slate-800">Chọn một công việc</p><p className="mt-1 text-sm text-slate-600">Chi tiết và bài nộp sẽ xuất hiện tại đây.</p></div></div>}
-        {row && <><button type="button" onClick={showTaskList} className="mb-4 min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 lg:hidden">← Quay lại danh sách</button><TaskRequirements task={row.task} headingRef={detailHeading} />{row.submission && <div className="mt-5 min-w-0 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-purple-950">Đã nộp · bản {row.submission.revisionCount}</p><time className="text-xs text-purple-800" dateTime={row.submission.submittedAt}>{formatDateTime(row.submission.submittedAt)}</time></div>{row.submission.content && <p className="mt-3 whitespace-pre-wrap break-words text-slate-800">{row.submission.content}</p>}{row.submission.linkUrl && <a href={row.submission.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-3 block break-all font-medium text-purple-700 underline-offset-4 hover:underline">Mở liên kết bài nộp</a>}{attachment && <button type="button" disabled={downloadingAttachmentId === attachment.id} onClick={() => void downloadAttachment(attachment)} aria-label={`Tải tệp đính kèm ${attachment.title}`} className="mt-3 block break-all text-left font-medium text-purple-700 disabled:opacity-60 cursor-pointer">{downloadingAttachmentId === attachment.id ? 'Đang chuẩn bị tải xuống…' : `Tệp đính kèm: ${attachment.title}`}</button>}{row.submission.attachmentResourceId && !attachment && <p role="alert" className="mt-3 text-red-700">{readyFilesError ? 'Không thể kiểm tra tệp đính kèm. Hãy thử tải lại trang.' : 'Tệp đính kèm không còn khả dụng.'}</p>}{attachmentDownloadError && <p role="alert" className="mt-3 text-red-700">{attachmentDownloadError}</p>}</div>}{editable && <Form key={row.task.id} spaceId={spaceId} row={row} draft={drafts[row.task.id] ?? emptyDraft()} uploadState={uploadStates[row.task.id] ?? idleRequest} submitState={submitStates[row.task.id] ?? idleRequest} updateDraft={change => updateDraft(row.task.id, change)} uploadAttachment={selected => uploadAttachment(row.task.id, selected)} submitDraft={draft => submitDraft(row.task.id, draft)} clearUploadError={() => clearUploadError(row.task.id)} clearSubmitError={() => clearSubmitError(row.task.id)} />}</>}
+        {row && <><button type="button" onClick={showTaskList} className="mb-4 min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 lg:hidden">← Quay lại danh sách</button><TaskRequirements task={row.task} headingRef={detailHeading} />{row.task.bookingId ? <BookingContext booking={bookings.find(booking => booking.id === row.task.bookingId)} members={members} creatorId={row.task.creatorId ?? ''} assigneeId={row.task.assigneeId} /> : <p className="mt-2 text-sm text-slate-600">Không gắn buổi học</p>}{row.submission && <div className="mt-5 min-w-0 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-purple-950">Đã nộp · bản {row.submission.revisionCount}</p><time className="text-xs text-purple-800" dateTime={row.submission.submittedAt}>{formatDateTime(row.submission.submittedAt)}</time></div>{row.submission.content && <p className="mt-3 whitespace-pre-wrap break-words text-slate-800">{row.submission.content}</p>}{row.submission.linkUrl && <a href={row.submission.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-3 block break-all font-medium text-purple-700 underline-offset-4 hover:underline">Mở liên kết bài nộp</a>}{attachment && <button type="button" disabled={downloadingAttachmentId === attachment.id} onClick={() => void downloadAttachment(attachment)} aria-label={`Tải tệp đính kèm ${attachment.title}`} className="mt-3 block break-all text-left font-medium text-purple-700 disabled:opacity-60 cursor-pointer">{downloadingAttachmentId === attachment.id ? 'Đang chuẩn bị tải xuống…' : `Tệp đính kèm: ${attachment.title}`}</button>}{row.submission.attachmentResourceId && !attachment && <p role="alert" className="mt-3 text-red-700">{readyFilesError ? 'Không thể kiểm tra tệp đính kèm. Hãy thử tải lại trang.' : 'Tệp đính kèm không còn khả dụng.'}</p>}{attachmentDownloadError && <p role="alert" className="mt-3 text-red-700">{attachmentDownloadError}</p>}</div>}{editable && <Form key={row.task.id} spaceId={spaceId} row={row} draft={drafts[row.task.id] ?? emptyDraft()} uploadState={uploadStates[row.task.id] ?? idleRequest} submitState={submitStates[row.task.id] ?? idleRequest} updateDraft={change => updateDraft(row.task.id, change)} uploadAttachment={selected => uploadAttachment(row.task.id, selected)} submitDraft={draft => submitDraft(row.task.id, draft)} clearUploadError={() => clearUploadError(row.task.id)} clearSubmitError={() => clearSubmitError(row.task.id)} />}</>}
         {row?.submission && <LearningSubmissionReview key={`${row.task.id}:${row.submission.revisionCount}`} spaceId={spaceId} taskId={row.task.id} submissionId={row.submission.id} revisionCount={row.submission.revisionCount} archived={archived} onReviewed={() => setReload(value => value + 1)} />}
       </div>
     </div>}

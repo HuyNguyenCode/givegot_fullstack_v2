@@ -1,5 +1,15 @@
 # Learning Hub Implementation State
 
+## Current Task 2 pre-repair reconciliation (2026-11-08)
+
+Task 2 pre-repair checkpoint (2026-11-08): implementation exists, but owner manual acceptance is not complete. Owner reports 19 PASS, 5 FAIL, 2 PASS with known bug/limitation and 1 partial out of 27; Codex did not independently execute browser QA. Owner also reports standard Windows unit 156/156 and integration 68/68, zero failures/skips, including route-import smoke. This is separate from the earlier Codex ENOMEM and workaround evidence below; no ENOMEM root-cause fix is established. Earlier Codex typecheck, targeted ESLint, five legacy regressions and build passed, not rerun for this reconciliation.
+
+Open: G1-A missing linkage on Task cards (M01/M08); G1-B missing creator in detail (M02); G1-C missing Topic in detail (M06); G4 unclear browser-generated network errors (M17); G7 success message is set without a clearing path. G6-A manual Task refresh is owner-approved but unimplemented. G2: owner reports “Hàng không vũ trụ” in a Booking-related area of a Singing Space; exact label/record relation and cause are unconfirmed, with no data-integrity conclusion. Deferred: G3 date-picker locale UX (P2), G5 Task edit/delete (separate backlog), G6-B assignment/deadline notifications (J1 or separately approved). I1 remains implemented; I2 is next and not started, I3 pending. No repairs are claimed.
+
+## Task 2 UI checkpoint (2026-11-02)
+
+Task 2 Create Task UI and responsibility presentation is implemented, with verification limitations. The existing G1 POST creates Tasks for the other active member; the UI inserts the returned Task, filters the complete list before eight-item pagination, and displays Booking roles and nonblocking reversed-direction/frozen-status guidance. The authorized page projection adds only Booking mentorId/menteeId. G1/G2/G3/I1 services, schema, Booking and financial behavior are unchanged. Windows typecheck, targeted ESLint, five legacy regression scripts and production build passed. Standard Learning Hub unit and integration commands failed before discovery on the documented Windows tsx uv_os_get_passwd ENOMEM; an inline workaround also failed in its worker. A file-free inline tsx/cjs workaround passed all 156 unit tests including five new focused cases; the same workaround passed 67/68 integration tests but could not resolve an extensionless dynamic import in the legacy smoke case. The separate route smoke failed for the same workaround limitation. Browser behavior remains unverified. git diff --check reports the pre-existing user-owned trailing blank lines in LearningSpaceShell.tsx. No database or browser QA was run.
+
 Current checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at their stated evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
 
 ## Standalone Teaching Calendar A2 date-range bug fix (2026-10-28)

@@ -1,5 +1,15 @@
 # Learning Hub Test Matrix
 
+## Current Task 2 pre-repair reconciliation (2026-11-08)
+
+Task 2 pre-repair owner evidence (2026-11-08): standard Windows PowerShell `npm run test:learning-hub` 156/156 PASS, 0 failed/skipped; `npm run test:learning-hub:integration` 68/68 PASS, 0 failed/skipped, including prerequisite route-import smoke. Owner-reported, not independently rerun here. Earlier Codex ENOMEM and workaround evidence remains below; no root-cause fix is asserted.
+
+Owner-reported manual cases, 27 total: PASS (19): T2-M03, M04, M05, M10, M12, M13, M14, M15, M16, M18, M19, M20, M21, M22, M23, M24, M25, M26, M27. FAIL (5): T2-M01 and M08 (G1-A linkage), M02 (G1-B creator), M06 (G1-C Topic), M17 (G4 network error). PASS WITH KNOWN BUG/LIMITATION (2): T2-M07, M09. PARTIALLY VERIFIED (1): T2-M11 CANCELLED checked; DISPUTED and MISSED unverified. Codex/Playwright did not execute these browser cases. G7 persistent success message and G6-A approved manual refresh are separate pending repair/retest cases, not additional outcomes among the 27.
+
+## Task 2 UI checkpoint (2026-11-02)
+
+Task 2: added focused unit coverage for counterpart derivation, payload, filter-before-pagination, Booking direction and source-level continuity guards. The standard commands failed before discovery with uv_os_get_passwd ENOMEM. A file-free inline tsx/cjs workaround passed all 156 unit tests including G1/G2/G3/I1 and the new cases; 67/68 integration cases passed, with extensionless dynamic import resolution blocking the legacy smoke and separate route smoke under that workaround. Typecheck, targeted ESLint, five legacy regression scripts and production build passed. Manual browser QA is pending; source-level assertions do not establish interactive behavior.
+
 Current checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at separate evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
 
 ## Owner-reported I1 real HTTP/browser-session smoke (2026-10-26)

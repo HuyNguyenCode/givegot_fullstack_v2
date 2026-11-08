@@ -17,7 +17,7 @@ async function findShell(spaceId: string): Promise<LearningSpaceShellData | null
       primarySkill: { select: { name: true } },
       members: { where: { status: 'ACTIVE' }, orderBy: { joinedAt: 'asc' }, select: { user: { select: { id: true, name: true, email: true } } } },
       topics: { orderBy: { createdAt: 'asc' }, select: { id: true, label: true, state: true } },
-      bookings: { orderBy: { startTime: 'asc' }, select: { id: true, startTime: true, endTime: true, status: true } },
+      bookings: { orderBy: { startTime: 'asc' }, select: { id: true, startTime: true, endTime: true, status: true, mentorId: true, menteeId: true } },
     },
   })
   if (!space) return null

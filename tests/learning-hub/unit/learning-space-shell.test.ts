@@ -11,7 +11,7 @@ const base: LearningSpaceShellData = {
   objective: 'Tự tin trình bày trong cuộc họp.', definitionOfDone: 'Nói rõ ràng trong phần trình bày năm phút.',
   members: [{ id: 'member-1', name: 'An', email: 'an@example.test' }, { id: 'member-2', name: 'Bình', email: 'binh@example.test' }],
   topics: [{ id: 'topic-1', label: 'Ngữ điệu', state: 'ACTIVE' }],
-  bookings: [{ id: 'booking-1', startTime: new Date('2030-01-02T03:00:00.000Z'), endTime: new Date('2030-01-02T04:00:00.000Z'), status: 'CONFIRMED' }],
+  bookings: [{ id: 'booking-1', startTime: new Date('2030-01-02T03:00:00.000Z'), endTime: new Date('2030-01-02T04:00:00.000Z'), status: 'CONFIRMED', mentorId: 'member-1', menteeId: 'member-2' }],
 }
 
 const memberShell = { ...base, viewerId: 'member-1' }

@@ -1,5 +1,13 @@
 # Learning Hub Changelog
 
+## Current Task 2 pre-repair reconciliation (2026-11-08)
+
+Task 2 pre-repair QA reconciliation (2026-11-08): recorded owner-reported standard Windows unit 156/156 and integration 68/68 plus route smoke PASS, and manual outcomes of 19 PASS, 5 FAIL, 2 qualified PASS and 1 partial. G1-A/B/C, G4, G7 and approved G6-A remain open; G2 Booking label cause is unconfirmed. Historical Codex startup limitation is retained. No repairs implemented.
+
+## Task 2 UI checkpoint (2026-11-02)
+
+Task 2 adds a Create Task form, participant responsibility filters, and Booking role/direction presentation to the existing master/detail UI. The authorized Booking projection includes mentorId and menteeId. Existing services and schema are unchanged. Typecheck, targeted ESLint, legacy regressions and build passed; standard unit/integration startup failed; a file-free workaround passed 156 unit tests and 67/68 integration tests, with smoke imports unresolved. Browser QA remains pending as recorded in IMPLEMENTATION_STATE.
+
 Current checkpoint: post-I1 reconciliation (2026-10-26); I2 is NEXT, NOT STARTED, and I3 remains pending. Dated entries retain their original evidence levels.
 
 ## 2026-11-01 — Task 1 real PostgreSQL listing verification

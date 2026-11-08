@@ -1,5 +1,13 @@
 # Learning Hub Regression Checklist
 
+## Current Task 2 pre-repair reconciliation (2026-11-08)
+
+Task 2 pre-repair regression: owner reports unit 156/156 and integration 68/68 plus route smoke PASS; 27 manual cases include five failures and three qualified/partial results, detailed in TEST_MATRIX. Retest G1-A card linkage for linked/unlinked Tasks, G1-B creator and G1-C Topic detail, G4 failed network request and retained draft/retry, G7 success-message clearing, and G6-A manual refresh once implemented. Preserve G2 Submission/resubmission, G3 private review/revision, ownership filtering across pages, selection, per-Task drafts, uploads and in-flight requests; verify archived reads/write denial and I1 evidence boundaries. G2 Booking label report remains unconfirmed and must not be treated as a fixed data-integrity defect. No browser tests or repairs were performed in this reconciliation.
+
+## Task 2 UI checkpoint (2026-11-02)
+
+Task 2 regression evidence: typecheck, targeted ESLint, five legacy regression scripts and production build passed. Standard Learning Hub unit/integration commands failed before discovery on the known Windows tsx host ENOMEM. A file-free tsx/cjs workaround passed 156 unit tests including G1/G2/G3/I1 and 67/68 integration tests; legacy and route smoke dynamic imports failed to resolve under that workaround. No browser QA is claimed. Preserve the existing shell whitespace when interpreting git diff --check. No backend state machine or financial code changed.
+
 Current checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at distinct evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
 
 ## Standalone Teaching Calendar A2 regression evidence (2026-10-28)

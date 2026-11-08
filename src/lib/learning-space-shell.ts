@@ -12,7 +12,7 @@ export type LearningSpaceShellData = {
   definitionOfDone: string | null
   members: Array<{ id: string; name: string | null; email: string | null }>
   topics: Array<{ id: string; label: string; state: 'ACTIVE' | 'ARCHIVED' }>
-  bookings: Array<{ id: string; startTime: Date; endTime: Date; status: string }>
+  bookings: Array<{ id: string; startTime: Date; endTime: Date; status: string; mentorId: string; menteeId: string }>
 }
 
 export type AuthorizedLearningSpaceShellData = LearningSpaceShellData & { viewerId: string }
