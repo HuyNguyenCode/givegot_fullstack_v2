@@ -21,6 +21,14 @@ export function createTaskPayload(draft: CreateDraft, assigneeId: string, now = 
 }
 export const bookingLabel = (booking: Booking) => `Buổi học ${new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(booking.startTime))} · ${booking.status}`
 export const memberLabel = (members: Member[], id: string) => { const member = members.find(item => item.id === id); return member?.name || member?.email || 'Thành viên' }
+export async function requestTaskCreation(spaceId: string, payload: ReturnType<typeof createTaskPayload>, request: typeof fetch = fetch) {
+  let response: Response
+  try { response = await request('/api/learning/spaces/' + encodeURIComponent(spaceId) + '/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }) }
+  catch { throw new Error('Không thể kết nối. Hãy kiểm tra mạng và thử lại.') }
+  const result = await response.json()
+  if (!response.ok) throw new Error(result.error || 'Không thể tạo công việc.')
+  return result as Task
+}
 export function BookingContext({ booking, members, creatorId, assigneeId }: { booking: Booking | undefined; members: Member[]; creatorId: string; assigneeId: string }) {
   if (!booking) return <p className="mt-2 text-sm text-slate-600">Không có thông tin buổi học liên kết.</p>
   const reversed = creatorId === booking.menteeId && assigneeId === booking.mentorId
@@ -42,10 +50,8 @@ export function CreateTask({ spaceId, viewerId, members, topics, bookings, onCre
       if (draft.topicId && !topics.some(topic => topic.id === draft.topicId && topic.state === 'ACTIVE')) throw new Error('Chủ đề không còn khả dụng.')
       if (draft.bookingId && !bookings.some(booking => booking.id === draft.bookingId && [booking.mentorId, booking.menteeId].includes(viewerId) && [booking.mentorId, booking.menteeId].includes(peer.id))) throw new Error('Buổi học không còn khả dụng.')
       const payload = createTaskPayload(draft, peer.id)
-      const response = await fetch('/api/learning/spaces/' + encodeURIComponent(spaceId) + '/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Không thể tạo công việc.')
-      onCreated(result as Task)
+      const result = await requestTaskCreation(spaceId, payload)
+      onCreated(result)
       setDraft({ title: '', acceptanceCriteria: '', description: '', topicId: '', bookingId: '', dueAt: '' }); setOpen(false)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Không thể tạo công việc.') }
     finally { pending.current = false; setBusy(false) }

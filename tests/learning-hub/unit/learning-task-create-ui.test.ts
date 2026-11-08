@@ -3,12 +3,27 @@ import test from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { readFileSync } from 'node:fs'
-import { BookingContext, counterpart, createTaskPayload, CreateTask } from '../../../src/components/learning/LearningTaskCreate'
+import { BookingContext, counterpart, createTaskPayload, CreateTask, requestTaskCreation } from '../../../src/components/learning/LearningTaskCreate'
 import { filterLearningTasks, paginateLearningTasks } from '../../../src/components/learning/LearningSubmissions'
 
 const members = [{ id: 'a', name: 'An', email: null }, { id: 'b', name: 'Bình', email: null }]
 const booking = { id: 'booking', startTime: new Date('2030-01-01T00:00:00Z'), endTime: new Date('2030-01-01T01:00:00Z'), status: 'CONFIRMED', mentorId: 'a', menteeId: 'b' }
 const draft = { title: ' Bài tập ', acceptanceCriteria: ' Hoàn thành ', description: '', topicId: '', bookingId: '', dueAt: '' }
+test('request failure is distinct from HTTP errors and manual retry sends one request per attempt', async () => {
+  const payload = createTaskPayload({ ...draft, description: 'Mô tả', topicId: 't', bookingId: 'booking', dueAt: '2099-01-01T12:00' }, 'b')
+  let calls = 0
+  const request = (async () => { calls++; if (calls === 1) throw new TypeError('Failed to fetch'); if (calls === 2) return Response.json({ error: 'Không được phép' }, { status: 403 }); return Response.json({ id: 'created' }) }) as typeof fetch
+  await assert.rejects(requestTaskCreation('s', payload, request), /Không thể kết nối\. Hãy kiểm tra mạng và thử lại\./)
+  assert.equal(calls, 1)
+  await assert.rejects(requestTaskCreation('s', payload, request), /Không được phép/)
+  assert.equal(calls, 2)
+  assert.equal((await requestTaskCreation('s', payload, request)).id, 'created')
+  assert.equal(calls, 3)
+  const form = readFileSync('src/components/learning/LearningTaskCreate.tsx', 'utf8')
+  assert.match(form, /finally \{ pending\.current = false; setBusy\(false\) \}/)
+  assert.ok(form.indexOf('onCreated(result)') > form.indexOf('await requestTaskCreation'))
+  assert.ok(form.indexOf("setDraft({ title: ''") > form.indexOf('onCreated(result)'))
+})
 test('both members derive only the other active participant; ambiguous pairs cannot create', () => {
   assert.equal(counterpart(members, 'a')?.id, 'b'); assert.equal(counterpart(members, 'b')?.id, 'a')
   assert.equal(counterpart([members[0]], 'a'), null); assert.equal(counterpart([...members, members[1]], 'a'), null)
