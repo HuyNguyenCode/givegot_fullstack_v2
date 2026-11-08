@@ -97,6 +97,19 @@ test('D0d-UX2 displays an explicit accessible fallback for an invalid missing ti
   assert.match(detail, /Tiêu đề công việc không khả dụng/)
   assert.ok(list.indexOf('Tiêu đề công việc không khả dụng') < list.indexOf('Chưa bắt đầu'))
 })
+test('task metadata uses authorized members and topics with explicit fallbacks', () => {
+  const task: Task = { id: 't', title: 'Bài tập', description: null, acceptanceCriteria: null, assigneeId: 'a', creatorId: 'c', bookingId: 'b', topicId: 'topic', status: 'OPEN', dueAt: null }
+  const card = (value: Task) => renderToStaticMarkup(createElement(TaskListRow, { task: value, selected: false, onSelect: () => undefined }))
+  const detail = (value: Task) => renderToStaticMarkup(createElement(TaskRequirements, { task: value, members: [{ id: 'c', name: 'An', email: null }], topics: [{ id: 'topic', label: 'Phát âm', state: 'ARCHIVED' }] }))
+  assert.match(card(task), />Gắn buổi học</)
+  assert.match(card({ ...task, bookingId: null }), />Không gắn buổi học</)
+  assert.match(detail(task), /Người giao: An/)
+  assert.match(detail(task), /Chủ đề: Phát âm/)
+  assert.match(detail({ ...task, topicId: null }), /Chủ đề: Không chọn/)
+  const unavailable = detail({ ...task, creatorId: 'missing', topicId: 'missing' })
+  assert.match(unavailable, /Người giao: Không khả dụng/)
+  assert.match(unavailable, /Chủ đề: Không khả dụng/)
+})
 test('D0d-UX2 renders accessible styled file selection and a distinct READY card', () => {
   const task: Task = { id: 'task', title: 'Bài tập', description: null, acceptanceCriteria: 'Nộp bài', dueAt: null, assigneeId: 'learner', status: 'OPEN' }
   const row = { task, submission: null }
