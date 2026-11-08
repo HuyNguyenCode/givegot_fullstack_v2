@@ -1,6 +1,8 @@
 # Learning Hub Test Matrix
+## Task 2 final reconciliation (2026-11-08)
+Founder-reported Windows automation: initial unit 156/156 and integration 68/68 including route smoke; after G1, G4 and G7 respectively unit 157/157, 158/158 and 159/159. Founder reports G1 manual retests all PASS, G4 3 PASS/1 BLOCKED (RT-G4-04 could not reach HTTP error because client validation intervened), and G7 6 PASS/1 BLOCKED (RT-G7-05 stale timer overlap not reproduced through normal UI). These are owner reports, not Codex browser execution; neither blocked result establishes a defect. G2 was a mentor teaching skill and the Space title was correct. Original M11 DISPUTED/MISSED remain unverified. The current Codex standard unit and integration commands failed before discovery due to Windows tsx uv_os_get_passwd ENOMEM; regression, typecheck, targeted Task UI ESLint and production build passed. The build reported the existing middleware deprecation warning. Source-level timer checks do not prove interactive timing. G3-A P3, G3-B P2 and G6-A P3 deferred; G5 separate backlog; G6-B future J1 candidate. Response loss after server creation makes manual retry potentially ambiguous.
 
-## Current Task 2 pre-repair reconciliation (2026-11-08)
+## Historical Task 2 pre-repair reconciliation (2026-11-08)
 
 Task 2 pre-repair owner evidence (2026-11-08): standard Windows PowerShell `npm run test:learning-hub` 156/156 PASS, 0 failed/skipped; `npm run test:learning-hub:integration` 68/68 PASS, 0 failed/skipped, including prerequisite route-import smoke. Owner-reported, not independently rerun here. Earlier Codex ENOMEM and workaround evidence remains below; no root-cause fix is asserted.
 

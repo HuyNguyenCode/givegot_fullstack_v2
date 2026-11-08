@@ -1,6 +1,8 @@
 # Learning Hub Regression Checklist
+## Task 2 final reconciliation (2026-11-08)
+Task 2 and G1/G4/G7 fixes are committed; owner-reported manual retests are recorded in TEST_MATRIX, including two blocked cases without a confirmed defect. G2 is expected mentor skill display. Current Codex regression, typecheck and targeted Task UI ESLint passed; standard unit and integration startup hit tsx ENOMEM before discovery. G3-A P3, G3-B P2, G6-A P3 deferred; G5 backlog and G6-B J1 candidate. Preserve existing Task, Submission, review, Booking and I1 behavior; network response-loss retry remains ambiguous.
 
-## Current Task 2 pre-repair reconciliation (2026-11-08)
+## Historical Task 2 pre-repair reconciliation (2026-11-08)
 
 Task 2 pre-repair regression: owner reports unit 156/156 and integration 68/68 plus route smoke PASS; 27 manual cases include five failures and three qualified/partial results, detailed in TEST_MATRIX. Retest G1-A card linkage for linked/unlinked Tasks, G1-B creator and G1-C Topic detail, G4 failed network request and retained draft/retry, G7 success-message clearing, and G6-A manual refresh once implemented. Preserve G2 Submission/resubmission, G3 private review/revision, ownership filtering across pages, selection, per-Task drafts, uploads and in-flight requests; verify archived reads/write denial and I1 evidence boundaries. G2 Booking label report remains unconfirmed and must not be treated as a fixed data-integrity defect. No browser tests or repairs were performed in this reconciliation.
 

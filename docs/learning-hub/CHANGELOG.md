@@ -1,6 +1,8 @@
 # Learning Hub Changelog
+## Task 2 final reconciliation (2026-11-08)
+Recorded committed Task 2 UI and accepted G1/G4/G7 repair evidence, owner-reported QA and blocked retests, G2 expected mentor skill display, and approved G3/G5/G6 deferrals. Standard Codex unit/integration startup encountered tsx ENOMEM; regression, typecheck, targeted ESLint and production build passed. No product, API, schema or business behavior changed in this documentation reconciliation.
 
-## Current Task 2 pre-repair reconciliation (2026-11-08)
+## Historical Task 2 pre-repair reconciliation (2026-11-08)
 
 Task 2 pre-repair QA reconciliation (2026-11-08): recorded owner-reported standard Windows unit 156/156 and integration 68/68 plus route smoke PASS, and manual outcomes of 19 PASS, 5 FAIL, 2 qualified PASS and 1 partial. G1-A/B/C, G4, G7 and approved G6-A remain open; G2 Booking label cause is unconfirmed. Historical Codex startup limitation is retained. No repairs implemented.
 

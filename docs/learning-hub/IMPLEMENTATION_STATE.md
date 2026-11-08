@@ -1,6 +1,9 @@
 # Learning Hub Implementation State
+## Task 2 final reconciliation (2026-11-08)
+Task 2 UI and G1 metadata, G4 network-message, and G7 success-message repairs are committed in 88ff5b3, af20727, 3142b95 and cdf2ed6. Founder accepts the focused repairs: G1 manual retests all pass; G4 3 pass/1 blocked (RT-G4-04 client validation prevented an HTTP error); G7 6 pass/1 blocked (RT-G7-05 stale-timer overlap not reproduced through normal UI). Neither blocked case establishes a defect. G2 is closed as expected mentor teaching-skill display, separate from the correct Space title. Founder defers G3-A P3, G3-B P2, G6-A P3; G5 is separate backlog and G6-B a future J1 candidate. A lost response after server creation can make manual retry ambiguous. No idempotency infrastructure was added. Task 2 acceptance is PASS WITH KNOWN LIMITATION, Task 2 — ACCEPTED: PASS WITH KNOWN LIMITATION; see TEST_MATRIX. Task 3 Discover-to-Space remains unstarted; separately I2 is the next unfinished playbook task.
 
-## Current Task 2 pre-repair reconciliation (2026-11-08)
+## Historical Task 2 pre-repair reconciliation (2026-11-08)
+Historical snapshot only. The final reconciliation above supersedes these open findings.
 
 Task 2 pre-repair checkpoint (2026-11-08): implementation exists, but owner manual acceptance is not complete. Owner reports 19 PASS, 5 FAIL, 2 PASS with known bug/limitation and 1 partial out of 27; Codex did not independently execute browser QA. Owner also reports standard Windows unit 156/156 and integration 68/68, zero failures/skips, including route-import smoke. This is separate from the earlier Codex ENOMEM and workaround evidence below; no ENOMEM root-cause fix is established. Earlier Codex typecheck, targeted ESLint, five legacy regressions and build passed, not rerun for this reconciliation.
 
