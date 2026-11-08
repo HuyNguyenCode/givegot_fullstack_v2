@@ -34,7 +34,7 @@ export function BookingContext({ booking, members, creatorId, assigneeId }: { bo
   const reversed = creatorId === booking.menteeId && assigneeId === booking.mentorId
   return <div className="mt-2 text-sm text-slate-700"><p>{bookingLabel(booking)}</p><p>Mentor: {memberLabel(members, booking.mentorId)} · Mentee: {memberLabel(members, booking.menteeId)}</p>{reversed && <p className="mt-2 text-amber-800">Hướng giao việc đảo với vai trò của buổi học; công việc này có thể không được tính làm minh chứng hoàn thành buổi học.</p>}{['CANCELLED', 'DISPUTED', 'MISSED'].includes(booking.status) && <p className="mt-2 text-amber-800">Trạng thái buổi học này có thể chặn đánh giá bài nộp.</p>}</div>
 }
-export function CreateTask({ spaceId, viewerId, members, topics, bookings, onCreated }: { spaceId: string; viewerId: string; members: Member[]; topics: Topic[]; bookings: Booking[]; onCreated(task: Task): void }) {
+export function CreateTask({ spaceId, viewerId, members, topics, bookings, onCreated, onOpen }: { spaceId: string; viewerId: string; members: Member[]; topics: Topic[]; bookings: Booking[]; onCreated(task: Task): void; onOpen?(): void }) {
   const peer = counterpart(members, viewerId)
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<CreateDraft>({ title: '', acceptanceCriteria: '', description: '', topicId: '', bookingId: '', dueAt: '' })
@@ -57,7 +57,7 @@ export function CreateTask({ spaceId, viewerId, members, topics, bookings, onCre
     finally { pending.current = false; setBusy(false) }
   }
   const choice = bookings.find(booking => booking.id === draft.bookingId)
-  return <div className="mt-3"><button type="button" disabled={!peer} onClick={() => setOpen(value => !value)} aria-expanded={open} className="min-h-11 rounded-xl bg-purple-700 px-4 font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:opacity-50">Tạo công việc</button>{!peer && <p className="mt-2 text-sm">Cần hai thành viên đang hoạt động để giao công việc.</p>}
+  return <div className="mt-3"><button type="button" disabled={!peer} onClick={() => { if (!open) onOpen?.(); setOpen(value => !value) }} aria-expanded={open} className="min-h-11 rounded-xl bg-purple-700 px-4 font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:opacity-50">Tạo công việc</button>{!peer && <p className="mt-2 text-sm">Cần hai thành viên đang hoạt động để giao công việc.</p>}
     {open && peer && <form onSubmit={submit} className="mt-4 space-y-3 rounded-xl border border-slate-200 p-4" aria-label="Tạo công việc"><p className="text-sm">Giao cho: {memberLabel(members, peer.id)}</p>
       <label className="block text-sm font-medium">Tiêu đề<input required maxLength={255} value={draft.title} onChange={e => change('title', e.target.value)} className="mt-1 block w-full rounded-lg border p-2" /></label>
       <label className="block text-sm font-medium">Yêu cầu hoàn thành<textarea required maxLength={10000} value={draft.acceptanceCriteria} onChange={e => change('acceptanceCriteria', e.target.value)} className="mt-1 block w-full rounded-lg border p-2" /></label>

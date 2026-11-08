@@ -170,7 +170,8 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [taskPage, setTaskPage] = useState(1)
   const [filter, setFilter] = useState<TaskFilter>('all')
-  const [createdMessage, setCreatedMessage] = useState(false)
+  const [createdMessage, setCreatedMessage] = useState<number | null>(null)
+  const creationSequence = useRef(0)
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [uploadStates, setUploadStates] = useState<Record<string, TaskRequestState>>({})
   const [submitStates, setSubmitStates] = useState<Record<string, TaskRequestState>>({})
@@ -186,6 +187,11 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
   const attachmentDownloadInFlight = useRef(false)
   const listHeading = useRef<HTMLHeadingElement>(null)
   const detailHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (createdMessage === null) return
+    const timer = window.setTimeout(() => setCreatedMessage(current => current === createdMessage ? null : current), 4000)
+    return () => window.clearTimeout(timer)
+  }, [createdMessage])
   useEffect(() => {
     let active = true
     async function load() {
@@ -239,6 +245,7 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
     finally { attachmentDownloadInFlight.current = false; setDownloadingAttachmentId(null) }
   }
   function changeFilter(next: TaskFilter) {
+    setCreatedMessage(null)
     const nextRows = filterLearningTasks(rows, viewerId, next)
     const index = nextRows.findIndex(item => item.task.id === selectedTaskId)
     setFilter(next)
@@ -247,6 +254,7 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
     setAttachmentDownloadError(null)
   }
   function selectTask(taskId: string) {
+    if (taskId !== selectedTaskId) setCreatedMessage(null)
     setSelectedTaskId(taskId)
     setAttachmentDownloadError(null)
     window.requestAnimationFrame(() => detailHeading.current?.focus())
@@ -256,7 +264,7 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
     window.requestAnimationFrame(() => listHeading.current?.focus())
   }
   return <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="tasks-heading"><h2 id="tasks-heading" className="text-base font-semibold text-slate-900">Công việc & bài nộp</h2>
-    {!archived && !loading && !error && <CreateTask spaceId={spaceId} viewerId={viewerId} members={members} topics={topics} bookings={bookings} onCreated={task => { setRows(previous => [{ task, submission: null }, ...previous.filter(item => item.task.id !== task.id)]); setFilter('created'); setTaskPage(1); setSelectedTaskId(task.id); setCreatedMessage(true); window.requestAnimationFrame(() => detailHeading.current?.focus()) }} />}
+    {!archived && !loading && !error && <CreateTask spaceId={spaceId} viewerId={viewerId} members={members} topics={topics} bookings={bookings} onOpen={() => setCreatedMessage(null)} onCreated={task => { setRows(previous => [{ task, submission: null }, ...previous.filter(item => item.task.id !== task.id)]); setFilter('created'); setTaskPage(1); setSelectedTaskId(task.id); setCreatedMessage(++creationSequence.current); window.requestAnimationFrame(() => detailHeading.current?.focus()) }} />}
     {createdMessage && <p role="status" className="mt-3 text-sm text-emerald-700">Đã tạo công việc.</p>}
     {loading && <p role="status" className="mt-3 text-sm text-slate-600">Đang tải công việc…</p>}
     {error && <div className="mt-3"><p role="alert" className="text-sm text-red-700">{error}</p><button type="button" onClick={() => { setError(null); setLoading(true); setReload(value => value + 1) }} className="mt-2 min-h-10 rounded-lg border border-slate-300 px-3 text-sm">Thử lại</button></div>}

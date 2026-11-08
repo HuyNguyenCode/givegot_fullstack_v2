@@ -110,6 +110,19 @@ test('task metadata uses authorized members and topics with explicit fallbacks',
   assert.match(unavailable, /Người giao: Không khả dụng/)
   assert.match(unavailable, /Chủ đề: Không khả dụng/)
 })
+test('creation feedback has an isolated timed lifecycle and navigation dismissals', () => {
+  const createSource = readFileSync('src/components/learning/LearningTaskCreate.tsx', 'utf8')
+  assert.match(source, /setCreatedMessage\(\+\+creationSequence\.current\)/)
+  assert.match(source, /current === createdMessage \? null : current/)
+  assert.match(source, /4000\)/)
+  assert.match(source, /return \(\) => window\.clearTimeout\(timer\)/)
+  assert.match(source, /function changeFilter\(next: TaskFilter\) \{\s*setCreatedMessage\(null\)/)
+  assert.match(source, /if \(taskId !== selectedTaskId\) setCreatedMessage\(null\)/)
+  assert.match(source, /onOpen=\{\(\) => setCreatedMessage\(null\)\}/)
+  assert.match(createSource, /if \(!open\) onOpen\?\.\(\)/)
+  assert.match(source, /Đã tạo công việc\./)
+  assert.match(source, /setRows\(previous => \[\{ task, submission: null \}/)
+})
 test('D0d-UX2 renders accessible styled file selection and a distinct READY card', () => {
   const task: Task = { id: 'task', title: 'Bài tập', description: null, acceptanceCriteria: 'Nộp bài', dueAt: null, assigneeId: 'learner', status: 'OPEN' }
   const row = { task, submission: null }
