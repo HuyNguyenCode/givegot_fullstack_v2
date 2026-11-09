@@ -1,4 +1,7 @@
 # Learning Hub Regression Checklist
+## Topic management UI slice (2026-11-09)
+Retest in browser before acceptance: create Topic and confirm it appears in the list and the already-open Create Task selector without losing title, description, acceptance criteria, due date, or other form fields; rename and confirm the new label in both places; archive and confirm archived history remains visible, the option disappears, and an already-selected archived Topic cannot be submitted. Also check blank/overlong validation, server/network error input retention, duplicate-submit prevention, keyboard/focus and 375px/mobile layout, and Task creation with no Topic. Existing nonmember/archived-Space API authorization and Task/Submission/review flows must remain unchanged. Automated tests are added but were not run due to Windows tsx startup ENOMEM; manual acceptance remains pending. The existing current-account eligibility gap in management endpoints remains a separate follow-up.
+
 ## Task 2 final reconciliation (2026-11-08)
 Task 2 and G1/G4/G7 fixes are committed; owner-reported manual retests are recorded in TEST_MATRIX, including two blocked cases without a confirmed defect. G2 is expected mentor skill display. Current Codex regression, typecheck and targeted Task UI ESLint passed; standard unit and integration startup hit tsx ENOMEM before discovery. G3-A P3, G3-B P2, G6-A P3 deferred; G5 backlog and G6-B J1 candidate. Preserve existing Task, Submission, review, Booking and I1 behavior; network response-loss retry remains ambiguous.
 

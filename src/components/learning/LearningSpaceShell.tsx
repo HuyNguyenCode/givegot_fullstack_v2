@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Archive, ArrowRight, BookOpen, CalendarDays, Users } from 'lucide-react'
+import { Archive, ArrowRight, BookOpen, CalendarDays } from 'lucide-react'
 
 import type { AuthorizedLearningSpaceShellData } from '@/lib/learning-space-shell'
 import type { LearningResourceView } from '@/components/learning/LearningResources'
@@ -56,11 +56,6 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
             <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{space.definitionOfDone || 'Hai bạn chưa xác định tiêu chí hoàn thành.'}</p>
           </section>
         </div>
-
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="topics-heading">
-          <div className="flex items-center gap-2"><Users aria-hidden="true" className="h-5 w-5 text-purple-600" /><h2 id="topics-heading" className="text-base font-semibold text-slate-900">Chủ đề phụ</h2></div>
-          {space.topics.length ? <ul className="mt-3 flex flex-wrap gap-2">{space.topics.map(topic => <li key={topic.id} className={`max-w-full break-words rounded-full px-3 py-1.5 text-sm ${topic.state === 'ARCHIVED' ? 'bg-slate-100 text-slate-600 line-through' : 'bg-purple-50 text-purple-800'}`}>{topic.label}{topic.state === 'ARCHIVED' ? ' (đã lưu trữ)' : ''}</li>)}</ul> : <p className="mt-3 text-sm leading-6 text-slate-600">Chưa có chủ đề phụ. Không gian này vẫn sẵn sàng cho buổi học đầu tiên.</p>}
-        </section>
 
         <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="booking-heading">
           <div className="flex items-center gap-2"><CalendarDays aria-hidden="true" className="h-5 w-5 text-purple-600" /><h2 id="booking-heading" className="text-base font-semibold text-slate-900">Buổi học hiện tại hoặc tiếp theo</h2></div>

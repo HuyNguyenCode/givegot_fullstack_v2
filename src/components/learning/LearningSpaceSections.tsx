@@ -5,6 +5,7 @@ import { LearningResources, type LearningResourceView } from '@/components/learn
 import { LearningSubmissions } from '@/components/learning/LearningSubmissions'
 import { LearningNotes } from '@/components/learning/LearningNotes'
 import { LearningActivity } from '@/components/learning/LearningActivity'
+import { LearningTopicManagement } from '@/components/learning/LearningTopicManagement'
 
 type Section = 'materials' | 'tasks' | 'notes' | 'history'
 const sections: Array<{ id: Section; label: string }> = [
@@ -23,6 +24,7 @@ export function LearningSpaceSections({ spaceId, viewerId, archived, resources, 
   topics: Array<{ id: string; label: string; state: 'ACTIVE' | 'ARCHIVED' }>; bookings: Array<{ id: string; startTime: Date; endTime: Date; status: string; mentorId: string; menteeId: string }>; members: Array<{ id: string; name: string | null; email: string | null }>
 }) {
   const [selected, setSelected] = useState<Section>('materials')
+  const [currentTopics, setCurrentTopics] = useState(topics)
   useEffect(() => {
     const sync = () => setSelected(sectionFromHash())
     sync()
@@ -30,11 +32,12 @@ export function LearningSpaceSections({ spaceId, viewerId, archived, resources, 
     return () => window.removeEventListener('hashchange', sync)
   }, [])
   return <div className="mt-6 min-w-0">
+    <LearningTopicManagement spaceId={spaceId} archived={archived} topics={currentTopics} onTopicsChange={setCurrentTopics} />
     <nav aria-label="Các phần LearningSpace" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {sections.map(section => <a key={section.id} href={`#${section.id}`} aria-current={selected === section.id ? 'page' : undefined} onClick={() => setSelected(section.id)} className={`flex min-h-11 min-w-0 items-center justify-center rounded-xl border px-2 py-2 text-center text-sm font-semibold leading-snug break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 ${selected === section.id ? 'border-purple-700 bg-purple-700 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-purple-50'}`}>{section.label}</a>)}
     </nav>
-    <div id="materials" hidden={selected !== 'materials'}><LearningResources spaceId={spaceId} resources={resources} quota={quota} topics={topics} archived={archived} /></div>
-    <div id="tasks" hidden={selected !== 'tasks'} className="mt-4 min-w-0"><LearningSubmissions spaceId={spaceId} viewerId={viewerId} archived={archived} members={members} topics={topics} bookings={bookings} /></div>
+    <div id="materials" hidden={selected !== 'materials'}><LearningResources spaceId={spaceId} resources={resources} quota={quota} topics={currentTopics} archived={archived} /></div>
+    <div id="tasks" hidden={selected !== 'tasks'} className="mt-4 min-w-0"><LearningSubmissions spaceId={spaceId} viewerId={viewerId} archived={archived} members={members} topics={currentTopics} bookings={bookings} /></div>
     <div id="notes" hidden={selected !== 'notes'} className="mt-4"><LearningNotes spaceId={spaceId} viewerId={viewerId} archived={archived} bookings={bookings} /></div>
     <div id="history" hidden={selected !== 'history'} className="mt-4"><LearningActivity spaceId={spaceId} /></div>
   </div>

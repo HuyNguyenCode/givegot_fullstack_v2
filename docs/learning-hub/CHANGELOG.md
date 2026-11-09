@@ -1,4 +1,9 @@
 # Learning Hub Changelog
+## 2026-11-09 — Topic management UI slice
+- Added in-Space Topic create, active Topic rename/archive, and archived Topic display using the existing B2 endpoints. A shared client Topic list refreshes Task 2 options in place while preserving the mounted Create Task draft; optional Topic selection and the Task API contract are unchanged.
+- No API/service/schema/business-rule, Booking, GivePoint, or settlement changes. The known current-account suspension/Trust Score eligibility gap in Space/Topic management handlers remains out of scope and must be addressed separately before public launch.
+- Typecheck, targeted ESLint, and diff check passed. Focused unit and integration commands were not run because the Windows tsx runner failed before discovery with `uv_os_get_passwd` ENOMEM; no browser acceptance is claimed.
+
 ## Task 2 final reconciliation (2026-11-08)
 Recorded committed Task 2 UI and accepted G1/G4/G7 repair evidence, owner-reported QA and blocked retests, G2 expected mentor skill display, and approved G3/G5/G6 deferrals. Standard Codex unit/integration startup encountered tsx ENOMEM; regression, typecheck, targeted ESLint and production build passed. No product, API, schema or business behavior changed in this documentation reconciliation.
 
