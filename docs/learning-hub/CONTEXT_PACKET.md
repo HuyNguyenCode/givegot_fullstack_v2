@@ -1,4 +1,7 @@
 # Learning Hub Context Packet
+## Space details UI slice (2026-11-09)
+Objective and DoD editing uses B2 expectedVersion, supports clearing, and reports conflicts with an explicit page reload path. Browser acceptance and runtime tests remain pending; the separate B2 account eligibility gap remains open.
+
 ## Topic management UI handoff (2026-11-09)
 Topic create/rename/archive UI is now part of the existing Space shell. The shared client Topic state refreshes the list and Task 2 Topic options without remounting Create Task; archived Topics remain visible but unavailable for new Task selection. Existing B2 APIs, optional `topicId`, duplicate-label behavior, and Task payload remain unchanged. Typecheck, targeted ESLint, and diff check passed; focused test commands were blocked before discovery by the known Windows tsx ENOMEM, and manual browser acceptance is pending. The current account suspension/Trust Score check is still absent from B2 management APIs and remains a separate security slice. See IMPLEMENTATION_STATE and TEST_MATRIX for exact evidence.
 

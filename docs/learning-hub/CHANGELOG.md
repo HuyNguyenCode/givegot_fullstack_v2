@@ -1,4 +1,7 @@
 # Learning Hub Changelog
+## 2026-11-09 — Space details UI
+Added Objective and Definition of Done editing using the existing versioned Space PATCH contract. Archived edits remain disabled. Runtime tests and browser acceptance remain pending; the existing management account eligibility gap remains open.
+
 ## 2026-11-09 — Topic management UI slice
 - Added in-Space Topic create, active Topic rename/archive, and archived Topic display using the existing B2 endpoints. A shared client Topic list refreshes Task 2 options in place while preserving the mounted Create Task draft; optional Topic selection and the Task API contract are unchanged.
 - No API/service/schema/business-rule, Booking, GivePoint, or settlement changes. The known current-account suspension/Trust Score eligibility gap in Space/Topic management handlers remains out of scope and must be addressed separately before public launch.

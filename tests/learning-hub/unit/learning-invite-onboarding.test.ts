@@ -16,7 +16,7 @@ test('C2 creator journey uses clear Vietnamese labels, optional objective, and a
 
 test('C2 presents exactly the available first-value action after invite acceptance', () => {
   const html = renderToStaticMarkup(createElement(LearningSpaceShell, { showFirstValue: true, space: {
-    id: 'space-1', viewerId: 'a', title: 'Learning: TypeScript', state: 'ACTIVE', primarySkillName: 'TypeScript', objective: null, definitionOfDone: null,
+    id: 'space-1', viewerId: 'a', title: 'Learning: TypeScript', version: 1, state: 'ACTIVE', primarySkillName: 'TypeScript', objective: null, definitionOfDone: null,
     members: [{ id: 'a', name: 'An', email: 'a@example.test' }, { id: 'b', name: 'Bình', email: 'b@example.test' }], topics: [], bookings: [],
   } }))
   assert.match(html, /Đặt buổi học đầu tiên/)

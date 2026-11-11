@@ -13,7 +13,7 @@ async function findShell(spaceId: string): Promise<LearningSpaceShellData | null
   const space = await prisma.learningSpace.findUnique({
     where: { id: spaceId },
     select: {
-      id: true, title: true, state: true, objective: true, definitionOfDone: true,
+      id: true, title: true, version: true, state: true, objective: true, definitionOfDone: true,
       primarySkill: { select: { name: true } },
       members: { where: { status: 'ACTIVE' }, orderBy: { joinedAt: 'asc' }, select: { user: { select: { id: true, name: true, email: true } } } },
       topics: { orderBy: { createdAt: 'asc' }, select: { id: true, label: true, state: true } },

@@ -1,4 +1,7 @@
 # Learning Hub Regression Checklist
+## Space details UI slice (2026-11-09)
+Pending acceptance: verify Objective and DoD edit, clearing, sequential saves, conflict/reload, failed-save draft retention, cancel, archived read-only controls, and Topic/Task draft continuity. The management account eligibility gap remains open.
+
 ## Topic management UI slice (2026-11-09)
 Retest in browser before acceptance: create Topic and confirm it appears in the list and the already-open Create Task selector without losing title, description, acceptance criteria, due date, or other form fields; rename and confirm the new label in both places; archive and confirm archived history remains visible, the option disappears, and an already-selected archived Topic cannot be submitted. Also check blank/overlong validation, server/network error input retention, duplicate-submit prevention, keyboard/focus and 375px/mobile layout, and Task creation with no Topic. Existing nonmember/archived-Space API authorization and Task/Submission/review flows must remain unchanged. Automated tests are added but were not run due to Windows tsx startup ENOMEM; manual acceptance remains pending. The existing current-account eligibility gap in management endpoints remains a separate follow-up.
 

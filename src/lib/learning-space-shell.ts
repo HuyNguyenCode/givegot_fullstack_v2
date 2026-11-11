@@ -6,6 +6,7 @@
 export type LearningSpaceShellData = {
   id: string
   title: string
+  version: number
   state: 'ACTIVE' | 'ARCHIVED'
   primarySkillName: string
   objective: string | null

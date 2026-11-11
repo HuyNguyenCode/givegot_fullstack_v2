@@ -4,6 +4,7 @@ import { Archive, ArrowRight, BookOpen, CalendarDays } from 'lucide-react'
 import type { AuthorizedLearningSpaceShellData } from '@/lib/learning-space-shell'
 import type { LearningResourceView } from '@/components/learning/LearningResources'
 import { LearningSpaceSections } from '@/components/learning/LearningSpaceSections'
+import { LearningSpaceDetails } from '@/components/learning/LearningSpaceDetails'
 
 type Props = { space: AuthorizedLearningSpaceShellData; showFirstValue?: boolean; resources?: LearningResourceView[]; quota?: { usedBytes: string; maxBytes: string } }
 
@@ -46,16 +47,7 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
           </div>
         </header>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="objective-heading">
-            <h2 id="objective-heading" className="text-base font-semibold text-slate-900">Mục tiêu chung</h2>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{space.objective || 'Hai bạn chưa thêm mục tiêu chung.'}</p>
-          </section>
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="done-heading">
-            <h2 id="done-heading" className="text-base font-semibold text-slate-900">Định nghĩa hoàn thành</h2>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{space.definitionOfDone || 'Hai bạn chưa xác định tiêu chí hoàn thành.'}</p>
-          </section>
-        </div>
+        <LearningSpaceDetails spaceId={space.id} archived={archived} version={space.version} objective={space.objective} definitionOfDone={space.definitionOfDone} />
 
         <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="booking-heading">
           <div className="flex items-center gap-2"><CalendarDays aria-hidden="true" className="h-5 w-5 text-purple-600" /><h2 id="booking-heading" className="text-base font-semibold text-slate-900">Buổi học hiện tại hoặc tiếp theo</h2></div>

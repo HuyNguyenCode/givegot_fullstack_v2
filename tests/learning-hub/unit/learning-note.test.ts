@@ -124,7 +124,7 @@ test('deleted note is absent from reads and cannot be edited twice', async () =>
 })
 
 test('dashboard and history navigation stay available in shell', () => {
-  const shell = { id: 'space', viewerId: 'member-a', title: 'Không gian', state: 'ACTIVE' as const, primarySkillName: 'Việt', objective: null, definitionOfDone: null, members: [{ id: 'member-a', name: 'A', email: null }, { id: 'member-b', name: 'B', email: null }], topics: [], bookings: [] }
+  const shell = { id: 'space', viewerId: 'member-a', title: 'Không gian', version: 1, state: 'ACTIVE' as const, primarySkillName: 'Việt', objective: null, definitionOfDone: null, members: [{ id: 'member-a', name: 'A', email: null }, { id: 'member-b', name: 'B', email: null }], topics: [], bookings: [] }
   const html = renderToStaticMarkup(createElement(LearningSpaceShell, { space: shell }))
   assert.match(html, /href="\/dashboard"/)
   assert.match(html, /href="#history"/)

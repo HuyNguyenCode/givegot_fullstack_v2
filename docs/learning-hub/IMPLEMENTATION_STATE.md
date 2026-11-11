@@ -1,4 +1,7 @@
 # Learning Hub Implementation State
+## Space details UI slice (2026-11-09)
+Objective and Definition of Done editing uses the existing B2 versioned PATCH contract, including null clearing and explicit conflict feedback. Archived spaces remain read-only. Browser acceptance is pending. Existing B2 account suspension/Trust Score checks remain a separate Slice 4 security repair; this is not public-launch ready. The Windows tsx runner could not start because of uv_os_get_passwd ENOMEM; focused runtime coverage remains pending.
+
 ## Topic management UI slice (2026-11-09)
 Topic management controls are implemented in the existing LearningSpace view: members of an ACTIVE Space can create, rename ACTIVE Topics, and archive ACTIVE Topics; archived Topics remain visible, and archived Spaces remain read-only. The existing B2 POST/PATCH contracts and session/membership authorization are reused without API, schema, or business-rule changes. Topic state is held by the mounted LearningSpace sections client component and passed to both the Topic list and the still-mounted Create Task form; mutation success updates options immediately and invalidates an archived selection through the form's existing active-topic guard. Create Task remains optional-topic and its API contract is unchanged. Duplicate labels remain allowed.
 

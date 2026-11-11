@@ -7,7 +7,7 @@ import { LearningSpaceShell } from '../../../src/components/learning/LearningSpa
 import { loadLearningSpaceShell, type LearningSpaceShellData } from '../../../src/lib/learning-space-shell'
 
 const base: LearningSpaceShellData = {
-  id: 'space-1', title: 'Luyện phát âm tiếng Việt', state: 'ACTIVE', primarySkillName: 'Giao tiếp',
+  id: 'space-1', title: 'Luyện phát âm tiếng Việt', version: 1, state: 'ACTIVE', primarySkillName: 'Giao tiếp',
   objective: 'Tự tin trình bày trong cuộc họp.', definitionOfDone: 'Nói rõ ràng trong phần trình bày năm phút.',
   members: [{ id: 'member-1', name: 'An', email: 'an@example.test' }, { id: 'member-2', name: 'Bình', email: 'binh@example.test' }],
   topics: [{ id: 'topic-1', label: 'Ngữ điệu', state: 'ACTIVE' }],

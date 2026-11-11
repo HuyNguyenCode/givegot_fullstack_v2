@@ -1,4 +1,7 @@
 # Learning Hub Test Matrix
+## Space details UI slice (2026-11-09)
+Added static render coverage for details and archived controls. The Windows tsx unit command failed before discovery on uv_os_get_passwd ENOMEM; interactive edit, clear, sequential version, conflict, error, cancel, and task-draft cases remain unverified. No browser acceptance is claimed.
+
 ## Topic management UI slice (2026-11-09)
 Focused tests added in `tests/learning-hub/unit/learning-topic-management-ui.test.ts` cover the POST/PATCH request contracts, API/network error handling, Topic upsert behavior, active versus archived controls, and shared Topic wiring with the existing Task form. They were NOT RUN: both the standard unit command and standard integration command stopped before discovery with Windows Node/tsx `uv_os_get_passwd` ENOMEM; a focused inline runner retry failed identically. Typecheck, targeted ESLint, and `git diff --check` PASS. No manual browser, database, migration, full build, or broad regression result is claimed. Existing Create Task optional-topic/active-topic filter and stale-selection guard remain in `LearningTaskCreate.tsx`; no Task API test contract changed.
 
