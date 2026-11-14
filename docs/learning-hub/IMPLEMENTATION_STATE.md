@@ -1,4 +1,14 @@
 # Learning Hub Implementation State
+## Slice 1–3 Owner Acceptance Reconciliation (2026-11-14)
+
+This checkpoint supersedes the older pending statements below for current status. The owner reports `npm run test:learning-hub` and `npm run test:learning-hub:integration` PASS for each slice; Codex did not independently run those later tests or the owner’s manual browser cases. Earlier Codex tsx `uv_os_get_passwd` ENOMEM failures remain historical implementation-time evidence; no root-cause fix is claimed.
+
+- Slice 1 Topic Management: **ACCEPTED WITH KNOWN LIMITATION**. All owner-executed manual cases PASS. Create/rename/archive and historical Topic display refresh Task options while retaining the open Task draft and optional `topicId`. The stale parent-props concern is a conditional risk, medium confidence, with no reachable problematic refresh path confirmed; owner deferred it P3 pending a real refresh path or reproduction. Codex reported implementation-time typecheck, targeted ESLint and diff check PASS.
+- Slice 2 Objective/DoD: **ACCEPTED WITH KNOWN ISSUE**. Owner manual S01–S04 and S06–S10 PASS; S05 FAIL and deferred. Whitespace-only input reports success then shows the empty state; null clearing is supported, and whether this is validation or UX remains unresolved. Source-only `findShell` version check is **CLOSED: VERIFIED — NO FIX REQUIRED**: version is selected, projected and passed from the required Prisma integer field; no alternative production path was found in the inspected flow.
+- Slice 3 Archive/Restore: **ACCEPTED**, owner manual ARC-01–ARC-16 16/16 PASS. Owner-approved Option A retains drafts on cancel/failure/409, discards the unsaved Create Task draft after confirmed archive, and does not restore it. Codex reported implementation-time typecheck, targeted ESLint and diff check PASS.
+
+The management API current-account suspension/Trust Score eligibility gap remains OPEN for Slice 4; Space title editing is pending Slice 5. MVP Gap Task 3 Discover-to-Space, I2 GivePoint settlement and I3 mode-aware cron/deadline work remain separate and unfinished.
+
 ## Space archive/restore UI slice (2026-11-11)
 The Space shell shares lifecycle state and version with details editing and uses the existing B2 archive/restore PATCH. A shared in-flight guard prevents overlapping local Space mutations. Archive requires confirmation; under owner-approved Option A, unsaved Task drafts are discarded only after confirmed archive success, and restore does not recover them. Archived read access and rebooking remain available. Typecheck and targeted ESLint passed; the focused tsx tests could not start due to Windows `uv_os_get_passwd` ENOMEM. Browser acceptance remains pending. The existing management account eligibility gap remains assigned to Slice 4 and precludes a public-launch claim. Slice 1 stale Topic props and Slice 2 S05 remain deferred.
 

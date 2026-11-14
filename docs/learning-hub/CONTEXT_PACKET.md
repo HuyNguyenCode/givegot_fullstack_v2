@@ -1,4 +1,10 @@
 # Learning Hub Context Packet
+## Current Slice 1–3 handoff (2026-11-14)
+
+Slice 1 **ACCEPTED WITH KNOWN LIMITATION** (conditional stale Topic parent-props risk deferred P3); Slice 2 **ACCEPTED WITH KNOWN ISSUE** (S05 whitespace observation deferred; `findShell` version finding CLOSED, verified); Slice 3 **ACCEPTED** (owner manual ARC-01–ARC-16 16/16 PASS). For each slice the owner reports unit and integration PASS; all owner Slice 1 manual cases passed, and Slice 2 manual results were 9 PASS / 1 FAIL deferred. These are owner reports, not Codex or Playwright execution. Earlier Codex tsx ENOMEM failures are historical, with no root-cause fix established. Option A keeps Task drafts on archive cancel/failure/409, discards them on confirmed success, and does not restore them.
+
+Do not reimplement or retest these slices solely because older checkpoints below say pending. The next MVP UI gap-repair work is the **Slice 4 focused audit** of the open management API account eligibility gap; Slice 5 Space title editing follows later. Separately, MVP Gap Task 3 Discover-to-Space remains unstarted; I2 GivePoint settlement and I3 mode-aware cron/deadline work remain unfinished in their own implementation sequence.
+
 ## Space archive/restore UI (2026-11-11)
 The shell now shares Space version/state with details saves and B2 lifecycle actions. Archive requires confirmation and, per owner-approved Option A, discards an unsaved Task draft only on confirmed success; restore does not recover it. Focused runtime tests and browser acceptance remain pending after Windows tsx ENOMEM. The management account eligibility gap remains a separate Slice 4 repair; stale Topic props and S05 remain deferred.
 

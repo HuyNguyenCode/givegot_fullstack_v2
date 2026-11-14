@@ -1,4 +1,10 @@
 # Learning Hub Changelog
+## 2026-11-14 — Slice 1–3 owner acceptance reconciliation
+
+The owner reports unit and integration PASS for each slice and manual results: Slice 1 all executed cases PASS, ACCEPTED WITH KNOWN LIMITATION (conditional stale Topic parent-props risk deferred P3); Slice 2 9 PASS / 1 FAIL, ACCEPTED WITH KNOWN ISSUE (S05 whitespace observation deferred); Slice 3 ARC-01–ARC-16 16/16 PASS, ACCEPTED. Source inspection closed the `findShell` version finding. Codex’s earlier tsx ENOMEM failures remain historical; no root-cause repair, Codex rerun or automated browser pass is claimed. Slice 4 account eligibility audit is next; Slice 5 title editing is pending. MVP Gap Task 3, I2 settlement and I3 cron remain separate and unfinished.
+
+Documentation-only change. No application behavior changed and no tests were executed in this task. No backend, API, business rule, schema, migration, Booking, or GP modification.
+
 ## 2026-11-11 — Space archive and restore UI
 - Added archive confirmation and restore controls using B2, with shared Space lifecycle/version and a guard against overlapping local Space mutations. Owner-approved Option A discards unsaved Task drafts on confirmed archive; restore does not recover them.
 - Typecheck and targeted ESLint passed. Focused tests could not start on Windows tsx `uv_os_get_passwd` ENOMEM; browser acceptance remains pending. The existing account eligibility gap remains assigned to Slice 4.

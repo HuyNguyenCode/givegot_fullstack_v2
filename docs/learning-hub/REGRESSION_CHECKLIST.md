@@ -1,4 +1,12 @@
 # Learning Hub Regression Checklist
+## Slice 1–3 accepted checkpoint (2026-11-14)
+
+The owner reports unit and integration PASS for each slice. Slice 1 is ACCEPTED WITH KNOWN LIMITATION (all owner-executed manual cases PASS); Slice 2 is ACCEPTED WITH KNOWN ISSUE (S01–S04 and S06–S10 PASS, S05 FAIL/deferred); Slice 3 is ACCEPTED (ARC-01–ARC-16 16/16 PASS). These are owner-reported manual and automation results, not Codex reruns or automated browser results. The dated pending-acceptance checklists below are historical and remain reusable regression scenarios; earlier Codex tsx ENOMEM failures remain recorded.
+
+For future regressions retain Topic create/rename/archive, archived visibility, Task option and draft continuity; Objective/DoD edit/clear, version/conflict, cancel and archived reads; archive confirmation/cancel, failure/409, restore, shared version, open editors, history and rebooking. Under Option A, cancel/failure/409 retains the Task draft; confirmed archive discards it and restore does not recover it.
+
+Deferred: conditional Topic parent-props risk P3 (no reachable problematic refresh confirmed); S05 whitespace-only input reports success then empty state, with validation versus UX unresolved; current-account eligibility gap remains OPEN for Slice 4. The source-only `findShell` version finding is CLOSED. Slice 5 title editing is pending; MVP Gap Task 3, I2 and I3 remain separate and unfinished.
+
 ## Space archive/restore UI (2026-11-11)
 Before acceptance execute ARC-01–ARC-21: confirm/cancel and draft behavior; archive/restore and sequential versions after details edits; conflict, failed request and duplicate clicks; open details and Topic editors; archived reads, rebooking and My Spaces; and existing Topic and Task flows. Option A discards the Task draft only after confirmed archive success. Manual acceptance and focused runtime execution are pending; the Windows tsx runner failed before discovery.
 
