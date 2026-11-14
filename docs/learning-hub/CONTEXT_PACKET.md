@@ -1,4 +1,7 @@
 # Learning Hub Context Packet
+## Space archive/restore UI (2026-11-11)
+The shell now shares Space version/state with details saves and B2 lifecycle actions. Archive requires confirmation and, per owner-approved Option A, discards an unsaved Task draft only on confirmed success; restore does not recover it. Focused runtime tests and browser acceptance remain pending after Windows tsx ENOMEM. The management account eligibility gap remains a separate Slice 4 repair; stale Topic props and S05 remain deferred.
+
 ## Space details UI slice (2026-11-09)
 Objective and DoD editing uses B2 expectedVersion, supports clearing, and reports conflicts with an explicit page reload path. Browser acceptance and runtime tests remain pending; the separate B2 account eligibility gap remains open.
 

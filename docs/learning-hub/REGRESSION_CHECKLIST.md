@@ -1,4 +1,7 @@
 # Learning Hub Regression Checklist
+## Space archive/restore UI (2026-11-11)
+Before acceptance execute ARC-01–ARC-21: confirm/cancel and draft behavior; archive/restore and sequential versions after details edits; conflict, failed request and duplicate clicks; open details and Topic editors; archived reads, rebooking and My Spaces; and existing Topic and Task flows. Option A discards the Task draft only after confirmed archive success. Manual acceptance and focused runtime execution are pending; the Windows tsx runner failed before discovery.
+
 ## Space details UI slice (2026-11-09)
 Pending acceptance: verify Objective and DoD edit, clearing, sequential saves, conflict/reload, failed-save draft retention, cancel, archived read-only controls, and Topic/Task draft continuity. The management account eligibility gap remains open.
 

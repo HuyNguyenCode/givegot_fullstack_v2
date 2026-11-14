@@ -1,4 +1,7 @@
 # Learning Hub Implementation State
+## Space archive/restore UI slice (2026-11-11)
+The Space shell shares lifecycle state and version with details editing and uses the existing B2 archive/restore PATCH. A shared in-flight guard prevents overlapping local Space mutations. Archive requires confirmation; under owner-approved Option A, unsaved Task drafts are discarded only after confirmed archive success, and restore does not recover them. Archived read access and rebooking remain available. Typecheck and targeted ESLint passed; the focused tsx tests could not start due to Windows `uv_os_get_passwd` ENOMEM. Browser acceptance remains pending. The existing management account eligibility gap remains assigned to Slice 4 and precludes a public-launch claim. Slice 1 stale Topic props and Slice 2 S05 remain deferred.
+
 ## Space details UI slice (2026-11-09)
 Objective and Definition of Done editing uses the existing B2 versioned PATCH contract, including null clearing and explicit conflict feedback. Archived spaces remain read-only. Browser acceptance is pending. Existing B2 account suspension/Trust Score checks remain a separate Slice 4 security repair; this is not public-launch ready. The Windows tsx runner could not start because of uv_os_get_passwd ENOMEM; focused runtime coverage remains pending.
 

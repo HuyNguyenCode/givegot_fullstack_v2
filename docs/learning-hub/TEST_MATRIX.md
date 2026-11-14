@@ -1,4 +1,7 @@
 # Learning Hub Test Matrix
+## Space archive/restore UI (2026-11-11)
+Added focused tests for archive/restore request payloads, sequential returned versions, conflict and failure handling, active/archived shell controls and rebooking rendering. Focused test execution failed before discovery with Windows tsx `uv_os_get_passwd` ENOMEM; no runtime pass is claimed. Typecheck and targeted ESLint passed. Interactive confirmation, draft retention/discard and full ARC-01–ARC-21 owner acceptance remain pending; static rendering and request mocks do not establish browser behavior.
+
 ## Space details UI slice (2026-11-09)
 Added static render coverage for details and archived controls. The Windows tsx unit command failed before discovery on uv_os_get_passwd ENOMEM; interactive edit, clear, sequential version, conflict, error, cancel, and task-draft cases remain unverified. No browser acceptance is claimed.
 

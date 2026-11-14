@@ -32,7 +32,7 @@ export function LearningSpaceSections({ spaceId, viewerId, archived, resources, 
     return () => window.removeEventListener('hashchange', sync)
   }, [])
   return <div className="mt-6 min-w-0">
-    <LearningTopicManagement spaceId={spaceId} archived={archived} topics={currentTopics} onTopicsChange={setCurrentTopics} />
+    <LearningTopicManagement key={archived ? 'archived' : 'active'} spaceId={spaceId} archived={archived} topics={currentTopics} onTopicsChange={setCurrentTopics} />
     <nav aria-label="Các phần LearningSpace" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {sections.map(section => <a key={section.id} href={`#${section.id}`} aria-current={selected === section.id ? 'page' : undefined} onClick={() => setSelected(section.id)} className={`flex min-h-11 min-w-0 items-center justify-center rounded-xl border px-2 py-2 text-center text-sm font-semibold leading-snug break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 ${selected === section.id ? 'border-purple-700 bg-purple-700 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-purple-50'}`}>{section.label}</a>)}
     </nav>

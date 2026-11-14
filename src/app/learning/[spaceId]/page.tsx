@@ -44,5 +44,5 @@ export default async function LearningSpacePage({ params, searchParams }: { para
   // route response from disclosing whether a private space exists.
   if (!space) notFound()
   const resourceData = await listLearningResources(spaceId, 'materials')
-  return <LearningSpaceShell space={space} showFirstValue={onboarding === 'invite'} resources={resourceData.resources} quota={resourceData.quota} />
+  return <LearningSpaceShell key={space.id} space={space} showFirstValue={onboarding === 'invite'} resources={resourceData.resources} quota={resourceData.quota} />
 }

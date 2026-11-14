@@ -1,4 +1,8 @@
 # Learning Hub Changelog
+## 2026-11-11 — Space archive and restore UI
+- Added archive confirmation and restore controls using B2, with shared Space lifecycle/version and a guard against overlapping local Space mutations. Owner-approved Option A discards unsaved Task drafts on confirmed archive; restore does not recover them.
+- Typecheck and targeted ESLint passed. Focused tests could not start on Windows tsx `uv_os_get_passwd` ENOMEM; browser acceptance remains pending. The existing account eligibility gap remains assigned to Slice 4.
+
 ## 2026-11-09 — Space details UI
 Added Objective and Definition of Done editing using the existing versioned Space PATCH contract. Archived edits remain disabled. Runtime tests and browser acceptance remain pending; the existing management account eligibility gap remains open.
 

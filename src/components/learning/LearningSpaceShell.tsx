@@ -1,3 +1,6 @@
+'use client'
+
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { Archive, ArrowRight, BookOpen, CalendarDays } from 'lucide-react'
 
@@ -8,15 +11,52 @@ import { LearningSpaceDetails } from '@/components/learning/LearningSpaceDetails
 
 type Props = { space: AuthorizedLearningSpaceShellData; showFirstValue?: boolean; resources?: LearningResourceView[]; quota?: { usedBytes: string; maxBytes: string } }
 
+export class SpaceLifecycleConflict extends Error {}
+export class SpaceLifecycleRequestError extends Error {}
+export async function requestSpaceLifecycle(spaceId: string, action: 'archive' | 'restore', version: number, request: typeof fetch = fetch): Promise<{ state: 'ACTIVE' | 'ARCHIVED'; version: number }> {
+  const response = await request(`/api/learning/spaces/${encodeURIComponent(spaceId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, expectedVersion: version }) })
+  if (response.status === 409) throw new SpaceLifecycleConflict()
+  const data = await response.json()
+  if (!response.ok) throw new SpaceLifecycleRequestError(typeof data.error === 'string' ? data.error : 'Không thể cập nhật không gian.')
+  const state = action === 'archive' ? 'ARCHIVED' : 'ACTIVE'
+  if (data.space?.state !== state || !Number.isInteger(data.space?.version)) throw new Error('Phản hồi không hợp lệ.')
+  return { state, version: data.space.version }
+}
+
 const formatDate = (date: Date) => new Intl.DateTimeFormat('vi-VN', {
   dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh',
 }).format(date)
 
 export function LearningSpaceShell({ space, showFirstValue = false, resources = [], quota = { usedBytes: '0', maxBytes: String(500 * 1024 * 1024) } }: Props) {
   const now = new Date()
+  const [state, setState] = useState(space.state)
+  const [version, setVersion] = useState(space.version)
+  const [details, setDetails] = useState({ objective: space.objective, definitionOfDone: space.definitionOfDone })
+  const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [conflict, setConflict] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const pending = useRef(false)
+  const beginMutation = () => { if (pending.current) return false; pending.current = true; setBusy(true); return true }
+  const endMutation = () => { pending.current = false; setBusy(false) }
+  async function changeState(action: 'archive' | 'restore') {
+    if (!beginMutation()) return
+    setError(null); setMessage(null)
+    try {
+      const result = await requestSpaceLifecycle(space.id, action, version)
+      setVersion(result.version); setState(result.state); setConfirming(false)
+      setMessage(action === 'archive' ? 'Đã lưu trữ không gian.' : 'Đã khôi phục không gian.')
+    } catch (cause) {
+      if (cause instanceof SpaceLifecycleConflict) { setConflict(true); setError('Không gian đã thay đổi. Hãy tải lại để xem trạng thái mới; nội dung chưa lưu sẽ bị mất.') }
+      else if (cause instanceof SpaceLifecycleRequestError) setError(`Không thể cập nhật không gian: ${cause.message}`)
+      else setError('Không thể xác nhận thay đổi. Hãy kiểm tra kết nối và tải lại để xem trạng thái; nội dung chưa lưu sẽ bị mất.')
+    }
+    finally { endMutation() }
+  }
   const nextBooking = space.bookings.find(booking => booking.endTime >= now && !['CANCELLED', 'MISSED'].includes(booking.status))
   const partner = space.members.find(member => member.id !== space.viewerId)
-  const archived = space.state === 'ARCHIVED'
+  const archived = state === 'ARCHIVED'
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
@@ -47,7 +87,16 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
           </div>
         </header>
 
-        <LearningSpaceDetails spaceId={space.id} archived={archived} version={space.version} objective={space.objective} definitionOfDone={space.definitionOfDone} />
+        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-4" aria-label="Trạng thái không gian">
+          <p className="text-sm font-medium">{archived ? 'Đã lưu trữ · Chỉ xem' : 'Đang hoạt động'}</p>
+          {!confirming && <button type="button" disabled={busy || conflict} onClick={() => archived ? void changeState('restore') : setConfirming(true)} className="mt-2 min-h-11 rounded-lg border border-slate-300 px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 disabled:opacity-50">{busy ? 'Đang xử lý…' : archived ? 'Khôi phục không gian' : 'Lưu trữ không gian'}</button>}
+          {confirming && <div role="group" aria-labelledby="archive-confirm-title" className="mt-3"><h2 id="archive-confirm-title" className="font-semibold">Lưu trữ LearningSpace?</h2><p className="mt-2 text-sm">Bạn vẫn có thể xem lịch sử học tập và khôi phục không gian sau này; đây không phải xóa vĩnh viễn. Các thao tác chỉnh sửa tạm thời không khả dụng. Nội dung công việc chưa lưu (nếu có) sẽ bị mất khi lưu trữ thành công.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" autoFocus disabled={busy} onClick={() => setConfirming(false)} className="min-h-11 rounded-lg border px-4 focus-visible:ring-2 focus-visible:ring-purple-600">Hủy</button><button type="button" disabled={busy || conflict} onClick={() => void changeState('archive')} className="min-h-11 rounded-lg bg-purple-700 px-4 text-white focus-visible:ring-2 focus-visible:ring-purple-600 disabled:opacity-50">{busy ? 'Đang lưu trữ…' : 'Tiếp tục lưu trữ'}</button></div></div>}
+          {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+          {error && <button type="button" onClick={() => { if (window.confirm('Tải lại trang sẽ làm mất nội dung chưa lưu. Tiếp tục?')) window.location.reload() }} className="mt-2 min-h-11 rounded-lg border px-3 focus-visible:ring-2 focus-visible:ring-purple-600">Tải lại trang</button>}
+          {message && <p role="status" className="mt-3 text-sm text-emerald-700">{message}</p>}
+        </section>
+
+        <LearningSpaceDetails key={state} spaceId={space.id} archived={archived} version={version} objective={details.objective} definitionOfDone={details.definitionOfDone} mutationBusy={busy} beginMutation={beginMutation} endMutation={endMutation} onSaved={(field, value, nextVersion) => { setDetails(previous => ({ ...previous, [field]: value })); setVersion(nextVersion) }} />
 
         <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="booking-heading">
           <div className="flex items-center gap-2"><CalendarDays aria-hidden="true" className="h-5 w-5 text-purple-600" /><h2 id="booking-heading" className="text-base font-semibold text-slate-900">Buổi học hiện tại hoặc tiếp theo</h2></div>
