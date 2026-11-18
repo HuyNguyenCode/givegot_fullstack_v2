@@ -9,13 +9,15 @@ type Dependencies = {
   findSpaces(userId: string): Promise<SpaceListingItem[]>
 }
 
+export function assertAccountAccess(account: { isSuspended: boolean; trustScore: number } | null): void {
+  if (!account || account.isSuspended || account.trustScore < 30) throw new AuthorizationError(403, 'Account access required')
+}
+
 export function createSpaceListing(deps: Dependencies) {
   return async () => {
     const user = await deps.authenticate()
     const account = await deps.findAccount(user.id)
-    if (!account || account.isSuspended || account.trustScore < 30) {
-      throw new AuthorizationError(403, 'Account access required')
-    }
+    assertAccountAccess(account)
     return deps.findSpaces(user.id)
   }
 }

@@ -1,4 +1,34 @@
 # Learning Hub Test Matrix
+## Slice 4A/5 owner verification reconciliation (2026-11-18)
+
+Current: Slice 4A is **IMPLEMENTED — OWNER AUTOMATED VERIFICATION PASS — SEPARATE MANUAL API ACCEPTANCE NOT CONFIRMED**; Slice 5 is **ACCEPTED / CLOSED**. For each, the owner reports `npm run test:learning-hub` and `npm run test:learning-hub:integration` PASS. Separate Slice 4A manual API acceptance is not confirmed. Codex implementation-time runs stopped before discovery with Windows tsx `uv_os_get_passwd` ENOMEM and were NOT RUN; no root-cause repair or independent Codex rerun is claimed. Slice 5 Codex typecheck, targeted ESLint, legacy regressions and diff check passed, with line-ending warnings.
+
+Owner-reported Slice 5 manual browser results, **12/12 PASS** (not Codex, Playwright or real-database verification):
+
+| Case | Owner-reported result |
+| --- | --- |
+| S5-M01 | Title input appears — PASS |
+| S5-M02 | Rename/save updates heading — PASS |
+| S5-M03 | Reload preserves title — PASS |
+| S5-M04 | My Spaces shows title — PASS |
+| S5-M05 | Cancel preserves old title — PASS |
+| S5-M06 | Blank/whitespace rejected — PASS |
+| S5-M07 | Over 200 UTF-16 units rejected — PASS |
+| S5-M08 | Duplicate title permitted — PASS |
+| S5-M09 | Rename with linked Booking; Booking unchanged — PASS |
+| S5-M10 | Archived Space cannot edit title — PASS |
+| S5-M11 | Rename, Archive, Restore — PASS |
+| S5-M12 | Two-tab stale version returns 409 — PASS |
+
+Existing focused automated coverage is partial; suite PASS does not establish dedicated automated coverage for every S5-01–S5-26 case. Dated pending statements below describe their earlier checkpoints. Deferred: LH-TOPIC-002 / GG-LH-TD-001 conditional Topic P3; Slice 2 S05; Slice 4A pre-transaction race; Slice 4B restricted-account experience and read consistency. F1/F3 are closed; F2 incomplete-success response risk and separate shell details stale-props risk are not reproduced, with P3 deferral proposed. The possible `addMember()` eligibility gap remains deferred pending inspection, without proven bypass; see IMPLEMENTATION_STATE. MVP Gap Task 3, I2 and I3 remain separate and unfinished. Git commit status for this work is not verified as complete by this reconciliation.
+
+## Slice 5 title editing (2026-11-16)
+Added focused service coverage for trimmed title, combined update, version/activity, invalid input and boundary. The Learning Hub unit/integration commands failed before discovery with Windows tsx `uv_os_get_passwd` ENOMEM; these tests were NOT RUN. Legacy regressions passed. Owner manual acceptance remains pending, including S5-01–S5-26; no browser or database result is claimed.
+
+## Slice 4A mutation eligibility (2026-11-14)
+
+Added in-process service/route coverage for account-based denial on Space PATCH, Topic POST/PATCH, score 29/30, missing account, session and membership, unchanged active/archived GET, restore, validation/conflict, `addMember`, and denial side effects. The actual guard runs with mocked account and repository boundaries. Learning Hub unit and integration commands both failed before discovery with Windows tsx `uv_os_get_passwd` ENOMEM; these tests were NOT RUN. Typecheck, targeted ESLint and legacy regression scripts PASS. Owner runtime verification is pending; no browser, live session, or database claim is made. Account eligibility precedes the write transaction, leaving a concurrent account-change timing window.
+
 ## Slice 1–3 verification reconciliation (2026-11-14)
 
 The owner reports both `npm run test:learning-hub` and `npm run test:learning-hub:integration` PASS for each slice. These later owner-reported automation results do not erase the earlier Codex tsx `uv_os_get_passwd` ENOMEM failures before discovery; the root cause is not established as fixed. Codex reported implementation-time typecheck, targeted ESLint and diff check PASS for Slices 1 and 3. Manual browser results below are owner-reported, not Codex reproduction or automated browser/Playwright evidence; suite PASS does not imply automated coverage for every manual case.
@@ -9,7 +39,7 @@ The owner reports both `npm run test:learning-hub` and `npm run test:learning-hu
 | 2 — Objective/DoD | S01–S04 and S06–S10 PASS; S05 FAIL, owner-deferred (9 PASS / 1 FAIL). | ACCEPTED WITH KNOWN ISSUE. S05: whitespace-only input reports “Đã lưu thay đổi” then displays the empty state. Null clearing is supported; a validation defect versus unclear UX is unconfirmed. Source inspection verified `findShell` selects and projects the required integer version and passes it to the editor; finding CLOSED. |
 | 3 — Archive/Restore | ARC-01–ARC-16: 16/16 PASS. | ACCEPTED. Option A preserves drafts on cancel/failure/409; confirmed archive discards the unsaved Task draft and restore does not recover it. |
 
-The current-account eligibility gap remains OPEN for Slice 4; Space title editing is pending Slice 5. MVP Gap Task 3, I2 settlement and I3 cron/deadline work remain separate and unfinished. The dated Slice 1–3 entries below retain their implementation-time scope.
+At this 2026-11-14 checkpoint, the current-account eligibility gap remained open for Slice 4 and title editing was pending Slice 5; see the current Slice 4A/5 reconciliation above. MVP Gap Task 3, I2 settlement and I3 cron/deadline work remain separate and unfinished. The dated Slice 1–3 entries below retain their implementation-time scope.
 
 ## Space archive/restore UI (2026-11-11)
 Added focused tests for archive/restore request payloads, sequential returned versions, conflict and failure handling, active/archived shell controls and rebooking rendering. Focused test execution failed before discovery with Windows tsx `uv_os_get_passwd` ENOMEM; no runtime pass is claimed. Typecheck and targeted ESLint passed. Interactive confirmation, draft retention/discard and full ARC-01–ARC-21 owner acceptance remain pending; static rendering and request mocks do not establish browser behavior.

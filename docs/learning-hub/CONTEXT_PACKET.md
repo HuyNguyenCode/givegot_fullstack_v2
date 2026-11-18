@@ -1,5 +1,18 @@
 # Learning Hub Context Packet
-## Current Slice 1–3 handoff (2026-11-14)
+## Current Slice 4A/5 handoff (2026-11-18)
+
+Slice 4A is **IMPLEMENTED — OWNER AUTOMATED VERIFICATION PASS — SEPARATE MANUAL API ACCEPTANCE NOT CONFIRMED**. The owner reports unit/integration PASS; the three management mutation routes check current-account eligibility, while Space GET keeps membership-based service authorization. Slice 5 title editing is **ACCEPTED / CLOSED**, with owner-reported unit/integration PASS and manual 12/12 PASS. Do not repeat completed-slice audits or implementation merely because dated checkpoints below say pending. Earlier Codex tsx ENOMEM before discovery remains historical NOT RUN; no root-cause repair or independent Codex rerun is claimed. Git commit status for this work is not verified as complete by this reconciliation.
+
+Deferred: Slice 4B restricted-account read-only UI/entry, read consistency/privacy and listing/layout/middleware redirects; Slice 4A pre-transaction account race; LH-TOPIC-002 / GG-LH-TD-001 conditional Topic parent-props P3; Slice 2 S05. Slice 5 F1/F3 are closed; F2 incomplete-success response risk and separate shell details stale-props risk are not reproduced, with P3 classification proposed. A possible pre-existing `addMember()` eligibility gap is deferred and pending inspection without a proven bypass; see IMPLEMENTATION_STATE. Pending work belongs to separate workstreams: MVP Gap Task 3 Discover-to-Space, I2 settlement and I3 cron/deadlines remain unfinished.
+
+## Slice 5 title editing (2026-11-16)
+The B2 details PATCH and existing editor now support title editing with the creation validator, duplicate titles, linked Bookings, and the existing details activity; shared version and heading use the save response. A later My Spaces fetch reads the persisted title. Unit/integration execution hit Windows tsx ENOMEM before discovery; manual acceptance is pending. Slice 4A and the deferred P3, S05 and Slice 4B limitations remain.
+
+## Slice 4A mutation eligibility (2026-11-14)
+
+Space PATCH, Topic POST and Topic PATCH use the My Spaces account decision: missing/suspended or Trust Score below 30 is 403; 30 is eligible. Space GET and archived reads retain existing membership-only behavior; `addMember` remains unchanged. Unit/integration execution stopped before discovery on Windows tsx ENOMEM; owner verification is pending, while legacy regressions passed. The account check remains before the transaction and can race a later account change. Slice 4B remains deferred: S4B-01 restricted-account read-only UI/entry, S4B-02 read consistency and privacy, S4B-03 listing/layout/middleware/suspension redirects. No complete read-only experience is claimed.
+
+## Historical Slice 1–3 handoff (2026-11-14)
 
 Slice 1 **ACCEPTED WITH KNOWN LIMITATION** (conditional stale Topic parent-props risk deferred P3); Slice 2 **ACCEPTED WITH KNOWN ISSUE** (S05 whitespace observation deferred; `findShell` version finding CLOSED, verified); Slice 3 **ACCEPTED** (owner manual ARC-01–ARC-16 16/16 PASS). For each slice the owner reports unit and integration PASS; all owner Slice 1 manual cases passed, and Slice 2 manual results were 9 PASS / 1 FAIL deferred. These are owner reports, not Codex or Playwright execution. Earlier Codex tsx ENOMEM failures are historical, with no root-cause fix established. Option A keeps Task drafts on archive cancel/failure/409, discards them on confirmed success, and does not restore them.
 

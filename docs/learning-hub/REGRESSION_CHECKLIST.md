@@ -1,11 +1,26 @@
 # Learning Hub Regression Checklist
+## Slice 4A/5 owner acceptance checkpoint (2026-11-18)
+
+Slice 4A is **IMPLEMENTED — OWNER AUTOMATED VERIFICATION PASS — SEPARATE MANUAL API ACCEPTANCE NOT CONFIRMED**. Slice 5 is **ACCEPTED / CLOSED**: owner reports S5-M01–M12 12/12 manual PASS and both standard unit/integration suites PASS. The owner also reports both suites PASS for Slice 4A; separate Slice 4A manual API acceptance is not confirmed. These are owner reports, not independent Codex, browser automation or Playwright results. Codex implementation-time suite attempts stopped before discovery with tsx ENOMEM; no root-cause repair is claimed.
+
+Retain as future regression scenarios the owner-passed Slice 5 title input, save/heading, reload, My Spaces, cancel, blank and overlength validation, duplicate title, linked Booking preservation, archived restriction, archive/restore sequence and two-tab 409. The older pending lists below are historical and remain useful for future regression; suite PASS does not prove dedicated automated coverage for all S5-01–S5-26.
+
+Deferred: LH-TOPIC-002 / GG-LH-TD-001 conditional Topic P3; Slice 2 S05; Slice 4A pre-transaction race and Slice 4B restricted-account UI/entry, read consistency/privacy and redirects. Slice 5 F1/F3 are closed; F2 response validation and separate shell details stale-props are not reproduced, with P3 proposed. The possible pre-existing `addMember()` eligibility gap is deferred pending inspection, without proven bypass; see IMPLEMENTATION_STATE. MVP Gap Task 3, I2 and I3 remain separate and unfinished; Git commit status for this work is not verified as complete.
+
+## Slice 5 title editing (2026-11-16)
+Pending owner verification: title validation and duplicate names; linked Booking preservation; account, membership, archived and stale-version rejection; one details activity and version increment; heading, cancel, failed draft, conflict and title-save/archive/restore sequencing; Objective/DoD and Task continuity; subsequent My Spaces fetch. Runtime unit/integration execution was blocked before discovery by Windows tsx ENOMEM. Manual acceptance is pending.
+
+## Slice 4A mutation eligibility (2026-11-14)
+
+Verify S4A-01–S4A-15 after the Windows test-runner issue: three mutation routes deny suspended, score 29 and missing accounts with 403; score 30 remains eligible; nonmember/session denials, GET including archived/suspended/low-score reads, restore, validation, conflicts, absence of mutation/activity side effects and `addMember` remain intact. Unit/integration tests did not start because tsx returned `uv_os_get_passwd` ENOMEM; legacy regression scripts passed. The eligibility read is pre-transaction and may race a subsequent account change. Slice 4B remains deferred: S4B-01 restricted-account UI/entry, S4B-02 read consistency and privacy, S4B-03 My Spaces/layout/middleware/`/suspended` redirects.
+
 ## Slice 1–3 accepted checkpoint (2026-11-14)
 
 The owner reports unit and integration PASS for each slice. Slice 1 is ACCEPTED WITH KNOWN LIMITATION (all owner-executed manual cases PASS); Slice 2 is ACCEPTED WITH KNOWN ISSUE (S01–S04 and S06–S10 PASS, S05 FAIL/deferred); Slice 3 is ACCEPTED (ARC-01–ARC-16 16/16 PASS). These are owner-reported manual and automation results, not Codex reruns or automated browser results. The dated pending-acceptance checklists below are historical and remain reusable regression scenarios; earlier Codex tsx ENOMEM failures remain recorded.
 
 For future regressions retain Topic create/rename/archive, archived visibility, Task option and draft continuity; Objective/DoD edit/clear, version/conflict, cancel and archived reads; archive confirmation/cancel, failure/409, restore, shared version, open editors, history and rebooking. Under Option A, cancel/failure/409 retains the Task draft; confirmed archive discards it and restore does not recover it.
 
-Deferred: conditional Topic parent-props risk P3 (no reachable problematic refresh confirmed); S05 whitespace-only input reports success then empty state, with validation versus UX unresolved; current-account eligibility gap remains OPEN for Slice 4. The source-only `findShell` version finding is CLOSED. Slice 5 title editing is pending; MVP Gap Task 3, I2 and I3 remain separate and unfinished.
+At this 2026-11-14 checkpoint, Topic parent-props P3 and S05 remained deferred, the account eligibility gap remained open for Slice 4, `findShell` was CLOSED, and Slice 5 was pending; see the current Slice 4A/5 checkpoint above. MVP Gap Task 3, I2 and I3 remain separate and unfinished.
 
 ## Space archive/restore UI (2026-11-11)
 Before acceptance execute ARC-01–ARC-21: confirm/cancel and draft behavior; archive/restore and sequential versions after details edits; conflict, failed request and duplicate clicks; open details and Topic editors; archived reads, rebooking and My Spaces; and existing Topic and Task flows. Option A discards the Task draft only after confirmed archive success. Manual acceptance and focused runtime execution are pending; the Windows tsx runner failed before discovery.

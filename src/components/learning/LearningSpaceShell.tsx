@@ -31,7 +31,7 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
   const now = new Date()
   const [state, setState] = useState(space.state)
   const [version, setVersion] = useState(space.version)
-  const [details, setDetails] = useState({ objective: space.objective, definitionOfDone: space.definitionOfDone })
+  const [details, setDetails] = useState({ title: space.title, objective: space.objective, definitionOfDone: space.definitionOfDone })
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -80,7 +80,7 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-medium text-purple-100">LearningSpace riêng tư</p>
-              <h1 className="mt-1 break-words text-2xl font-bold tracking-tight sm:text-3xl">{space.title}</h1>
+              <h1 className="mt-1 break-words text-2xl font-bold tracking-tight sm:text-3xl">{details.title}</h1>
               <p className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-sm font-medium break-words"><BookOpen aria-hidden="true" className="h-4 w-4 shrink-0" />{space.primarySkillName}</p>
             </div>
             <div className="rounded-xl bg-white/10 p-3 text-sm"><p className="text-purple-100">Cùng học với</p><p className="mt-1 font-semibold break-words">{space.members.map(member => member.name || member.email || 'Thành viên').join(' · ')}</p></div>
@@ -96,7 +96,7 @@ export function LearningSpaceShell({ space, showFirstValue = false, resources = 
           {message && <p role="status" className="mt-3 text-sm text-emerald-700">{message}</p>}
         </section>
 
-        <LearningSpaceDetails key={state} spaceId={space.id} archived={archived} version={version} objective={details.objective} definitionOfDone={details.definitionOfDone} mutationBusy={busy} beginMutation={beginMutation} endMutation={endMutation} onSaved={(field, value, nextVersion) => { setDetails(previous => ({ ...previous, [field]: value })); setVersion(nextVersion) }} />
+        <LearningSpaceDetails key={state} spaceId={space.id} archived={archived} version={version} title={details.title} objective={details.objective} definitionOfDone={details.definitionOfDone} mutationBusy={busy} beginMutation={beginMutation} endMutation={endMutation} onSaved={(field, value, nextVersion) => { setDetails(previous => ({ ...previous, [field]: value })); setVersion(nextVersion) }} />
 
         <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="booking-heading">
           <div className="flex items-center gap-2"><CalendarDays aria-hidden="true" className="h-5 w-5 text-purple-600" /><h2 id="booking-heading" className="text-base font-semibold text-slate-900">Buổi học hiện tại hoặc tiếp theo</h2></div>
