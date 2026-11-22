@@ -1,4 +1,22 @@
 # Learning Hub Test Matrix
+
+## Current G5 reconciliation (2026-11-22)
+
+G5 is ACCEPTED WITH KNOWN LIMITATIONS. G5 current evidence reconciliation: Founder-reported manual G5-A applicable cases and G5-B OPEN cancellation PASS; G5-08 IN_PROGRESS cancellation Founder manual QA PASS through the UI with database-prepared state; the START workflow was not verified. G5-13 retest 4/4 PASS; the actual historical Topic state was not independently inspected. G5-C initial 12/13 PASS with G5C-10 FAIL; after repair, Founder G5C-10 retest 9/9 PASS. These are owner-reported browser results, not Codex or automated E2E execution.
+
+Separate Codex automation checkpoints: G5 basic unit 173/173 and integration 68/68 plus route smoke; G5-13 focused 7/7; G5-C focused 28/28; G5C-10 focused 22/22. Typecheck, targeted ESLint and diff check passed at their respective checkpoints. Windows tsx ENOMEM required documented temporary/file-free workarounds. No counts are combined and no newer full rerun is claimed. GG-LH-G5-F02 test-only attempt BLOCKED: no suitable existing component/DOM interaction utilities; no tests added or executed. Its code inconsistency is confirmed; runtime impact is not verified, P2 LOGGED / UNRESOLVED in the existing backlog. GG-LH-G5-F01 P3 deferred, no confirmed runtime failure; G5-D P3 post-pilot.
+
+## Historical G5C-10 conflict refresh repair (2026-11-21)
+
+G5C-10: focused Task management and Submission UI tests passed 22/22 with the file-free Windows tsx workaround, including refreshed form field mapping, deadline/Topic baseline and versioned payload checks. Typecheck, targeted ESLint and diff check passed. These are helper/render and existing UI tests; confirmation, failure, two-tab conflict and asynchronous navigation interaction require owner browser retest.
+
+## Historical G5-C Task Topic editing checkpoint (2026-11-20)
+
+G5-C focused G1, Task management and Submission UI tests passed 28/28 using the file-free Windows tsx workaround; selector rendering, changed/unchanged/cleared payloads, inactive choices and existing G1/G2 behavior are covered at helper/render level. Typecheck and targeted ESLint passed. Browser validation of the complete editing and 409 flows remains pending. Founder reports G5-13 retest 4/4 PASS, not independently reproduced.
+
+## Historical G5 basic Task management checkpoint (2026-11-20)
+
+G5: focused tests cover creator/state/archive permissions, field/deadline validation, versioned PATCH and conflict/network responses. Full unit 173/173 and integration 68/68 plus route smoke passed under the temporary Windows tsx preload; typecheck and targeted ESLint passed. Confirmation, interactive 409 recovery, draft retention and mobile focus require manual browser QA; rendered/helper tests do not establish those interactions.
 ## Slice 4A/5 owner verification reconciliation (2026-11-18)
 
 Current: Slice 4A is **IMPLEMENTED — OWNER AUTOMATED VERIFICATION PASS — SEPARATE MANUAL API ACCEPTANCE NOT CONFIRMED**; Slice 5 is **ACCEPTED / CLOSED**. For each, the owner reports `npm run test:learning-hub` and `npm run test:learning-hub:integration` PASS. Separate Slice 4A manual API acceptance is not confirmed. Codex implementation-time runs stopped before discovery with Windows tsx `uv_os_get_passwd` ENOMEM and were NOT RUN; no root-cause repair or independent Codex rerun is claimed. Slice 5 Codex typecheck, targeted ESLint, legacy regressions and diff check passed, with line-ending warnings.

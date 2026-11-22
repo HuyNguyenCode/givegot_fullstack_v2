@@ -1,4 +1,12 @@
 # Learning Hub Regression Checklist
+
+## Current G5 reconciliation (2026-11-22)
+
+G5 is ACCEPTED WITH KNOWN LIMITATIONS. Current G5 regression boundary: creator-only OPEN basic/Topic edits; Topic keep/new ACTIVE same-Space/clear, including unchanged unavailable Topic; creator-confirmed OPEN/IN_PROGRESS cancellation; archive read-only; expectedVersion/409; refresh confirmation, five-field draft synchronization, refresh failure and retained unrelated Submission drafts/filters. Founder reports G5-13 4/4 and G5C-10 9/9 manual PASS; G5-08 IN_PROGRESS cancellation is Founder manual QA PASS through the UI using database-prepared state; the START workflow was not verified. GG-LH-G5-F02: newer parent/older refresh-return code inconsistency confirmed; runtime impact NOT VERIFIED and test-only attempt BLOCKED without tests executed, P2 LOGGED / UNRESOLVED in the existing backlog. Preserve G1/G2/G3/I1 and Booking/GP boundaries. G5-D is deferred post-pilot.
+
+## Historical G5 basic Task management checkpoint (2026-11-20)
+
+G5 uses the existing G1 PATCH for creator OPEN edits and confirmed creator OPEN/IN_PROGRESS cancellation. Retest stale-version refresh, concurrent submission, edit draft retention, filters/selection, uploads and G2/G3 continuity, archived behavior and linked Booking/I1 boundaries in browser. No backend state rules changed; unit and integration suites passed with the documented Windows preload.
 ## Slice 4A/5 owner acceptance checkpoint (2026-11-18)
 
 Slice 4A is **IMPLEMENTED — OWNER AUTOMATED VERIFICATION PASS — SEPARATE MANUAL API ACCEPTANCE NOT CONFIRMED**. Slice 5 is **ACCEPTED / CLOSED**: owner reports S5-M01–M12 12/12 manual PASS and both standard unit/integration suites PASS. The owner also reports both suites PASS for Slice 4A; separate Slice 4A manual API acceptance is not confirmed. These are owner reports, not independent Codex, browser automation or Playwright results. Codex implementation-time suite attempts stopped before discovery with tsx ENOMEM; no root-cause repair is claimed.

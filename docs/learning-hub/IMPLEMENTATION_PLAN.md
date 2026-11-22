@@ -1,5 +1,9 @@
 # Learning Hub Implementation Plan
 
+## Current G5 reconciliation (2026-11-22)
+
+G5 basic Task edit/cancel, Topic edit and conflict-refresh work is an independent implemented working-tree slice with owner-reported acceptance and remaining limitations; see IMPLEMENTATION_STATE and TEST_MATRIX. G5 is ACCEPTED WITH KNOWN LIMITATIONS; G5-08 is Founder manual QA PASS through the UI using database-prepared state (START workflow not verified), F02 is P2 LOGGED / UNRESOLVED, and G5-D Booking association editing is deferred post-pilot. This cross-reference does not change the G1/G2/G3/I1/I2/I3/J1 registry or dependencies.
+
 ## Current post-I1 checkpoint (2026-10-26)
 
 I1 mode-aware fulfillment is implemented under ADR 020. Migration 008 passed disposable TEST and was applied to STAGING on 2026-10-21 with precheck/postcheck PASS and 102 historical Booking rows preserved; production remains unmigrated. The 11-case automated gap audit and owner-reported 2026-10-26 localhost/STAGING browser-session smoke are recorded at distinct evidence levels in IMPLEMENTATION_STATE and TEST_MATRIX. Unauthenticated GET redirected to sign-in and returned HTML after fetch followed it, rather than the expected 401 JSON; this LOW-priority API contract deviation awaits a client-compatibility/contract decision. I2 linked settlement is NEXT, NOT STARTED; I3 cron/deadline policy remains pending.

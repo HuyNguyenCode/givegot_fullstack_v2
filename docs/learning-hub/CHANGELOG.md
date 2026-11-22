@@ -1,4 +1,8 @@
 # Learning Hub Changelog
+
+## Current G5 reconciliation (2026-11-22)
+
+G5 is ACCEPTED WITH KNOWN LIMITATIONS; this acceptance does not approve an F02 fix or establish overall pilot readiness. G5 implementation and owner-evidence reconciliation: G5-A/B add creator basic edit and confirmed cancel UI. G5-13 is the approved narrow G1 backend validation exception for unchanged persisted Topics; Founder reports 4/4 retest PASS. G5-C adds Topic edit UI; initial owner QA was 12/13, and subsequent G5C-10 conflict-refresh UI repair received owner-reported 9/9 PASS. G5-08 IN_PROGRESS cancellation is Founder manual QA PASS through the UI with database-prepared state; the START workflow was not verified. Proposed F01 is P3 deferred; F02 is a confirmed code inconsistency with unverified runtime impact and blocked test-only attempt, P2 LOGGED / UNRESOLVED in the existing backlog. G5-D remains P3 post-pilot. Changes remain uncommitted at this checkpoint; no deferred item is implemented.
 ## 2026-11-18 — Slice 4A/5 owner acceptance and documentation reconciliation
 
 The owner reports both standard Learning Hub unit and integration suites PASS for Slices 4A and 5. Slice 4A is **IMPLEMENTED — OWNER AUTOMATED VERIFICATION PASS — SEPARATE MANUAL API ACCEPTANCE NOT CONFIRMED**. Slice 5 is **ACCEPTED / CLOSED**, with owner-reported manual S5-M01–M12 12/12 PASS. Earlier Codex suite attempts stopped before discovery with tsx ENOMEM and remain NOT RUN; no root-cause repair or independent Codex rerun is claimed. Owner results do not prove dedicated automated coverage for all S5 cases or automated browser/Playwright execution.

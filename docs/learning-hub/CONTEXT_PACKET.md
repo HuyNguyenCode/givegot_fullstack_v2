@@ -1,4 +1,8 @@
 # Learning Hub Context Packet
+
+## Current G5 reconciliation (2026-11-22)
+
+G5 current reconciliation: G5-A/B/C implemented in the working tree; Founder reports applicable basic-edit and OPEN-cancel cases PASS, G5-13 4/4 PASS, and G5C-10 9/9 PASS after the initial G5-C 12/13 result. G5-08 IN_PROGRESS cancellation is Founder manual QA PASS using database-prepared state and the actual UI; the START workflow was not verified. G5 is ACCEPTED WITH KNOWN LIMITATIONS. Proposed GG-LH-G5-F01 (optional Task.version) is P3 deferred; GG-LH-G5-F02 (stale refresh return) is P2 LOGGED / UNRESOLVED: code inconsistency confirmed, runtime impact unverified. G5-D Booking association editing is P3 post-pilot pending I1/I2/I3 review. I2/I3 remain unstarted, Task 3 separate and J1 pending. See IMPLEMENTATION_STATE and TEST_MATRIX for evidence; do not treat historical pending-QA statements below as current.
 ## Current Slice 4A/5 handoff (2026-11-18)
 
 Slice 4A is **IMPLEMENTED — OWNER AUTOMATED VERIFICATION PASS — SEPARATE MANUAL API ACCEPTANCE NOT CONFIRMED**. The owner reports unit/integration PASS; the three management mutation routes check current-account eligibility, while Space GET keeps membership-based service authorization. Slice 5 title editing is **ACCEPTED / CLOSED**, with owner-reported unit/integration PASS and manual 12/12 PASS. Do not repeat completed-slice audits or implementation merely because dated checkpoints below say pending. Earlier Codex tsx ENOMEM before discovery remains historical NOT RUN; no root-cause repair or independent Codex rerun is claimed. Git commit status for this work is not verified as complete by this reconciliation.

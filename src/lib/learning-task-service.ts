@@ -103,7 +103,9 @@ export function createLearningTaskService(deps: Dependencies = defaults) {
       const topicId = Object.hasOwn(input, 'topicId') ? identifier(input.topicId, 'topicId') : task.topicId
       const data: Prisma.LearningTaskUncheckedUpdateManyInput = { version: { increment: 1 } }
       if (contentEdit) {
-        await references(tx, spaceId, bookingId, topicId, assigneeId, task.creatorId)
+        // An existing topic may have been archived after assignment; validate
+        // only a new association while retaining all other reference checks.
+        await references(tx, spaceId, bookingId, topicId === task.topicId ? null : topicId, assigneeId, task.creatorId)
         if (Object.hasOwn(input, 'assigneeId')) data.assigneeId = assigneeId
         if (Object.hasOwn(input, 'bookingId')) data.bookingId = bookingId
         if (Object.hasOwn(input, 'topicId')) data.topicId = topicId
