@@ -140,6 +140,7 @@ test('D0e current FILE protection under real PostgreSQL Serializable transaction
   const submission = (f: Fixture, db: PrismaClient) => createLearningSubmissionService({
     db: db as typeof prisma, actor: async () => ({ id: f.users[1] }), now: () => new Date(),
   })
+  const requirements = (f: Fixture) => ({ title: f.marker, description: null, acceptanceCriteria: null, topicId: null, dueAt: null })
 
   async function race(winner: 'submit' | 'delete' | 'either') {
     const f = await createFixture(setup)
@@ -151,7 +152,7 @@ test('D0e current FILE protection under real PostgreSQL Serializable transaction
     let deleteResult: ReturnType<typeof settled<unknown>> | undefined
     try {
       await Promise.all([prisma.$connect(), g2db.$connect()])
-      submitResult = settled(submission(f, g2db).submit(f.spaceId, f.taskId, { attachmentResourceId: f.fileA }))
+      submitResult = settled(submission(f, g2db).submit(f.spaceId, f.taskId, { attachmentResourceId: f.fileA, freshness: { requirements: requirements(f), previousSubmission: null } }))
       deleteResult = settled(storage(f).softDelete(f.spaceId, f.fileA))
       await Promise.all([reached(g2Gate, 'G2 READY validation'), reached(f1Gate, 'F1 current reference check')])
       if (winner === 'submit') {
@@ -211,12 +212,12 @@ test('D0e current FILE protection under real PostgreSQL Serializable transaction
       const f = await createFixture(setup)
       const g2db = new PrismaClient({ datasources: { db: { url: testUrl } } })
       try {
-        await submission(f, g2db).submit(f.spaceId, f.taskId, { attachmentResourceId: f.fileA })
+        const first = await submission(f, g2db).submit(f.spaceId, f.taskId, { attachmentResourceId: f.fileA, freshness: { requirements: requirements(f), previousSubmission: null } })
         await setup.$transaction(async tx => {
           await tx.learningTask.update({ where: { id: f.taskId }, data: { status: 'REVISION_REQUESTED' } })
           await tx.submission.update({ where: { taskId: f.taskId }, data: { status: 'REVISION_REQUESTED' } })
         })
-        await submission(f, g2db).submit(f.spaceId, f.taskId, { attachmentResourceId: f.fileB })
+        await submission(f, g2db).submit(f.spaceId, f.taskId, { attachmentResourceId: f.fileB, freshness: { requirements: requirements(f), previousSubmission: { submissionId: first.id, revisionCount: first.revisionCount } } })
         await storage(f).softDelete(f.spaceId, f.fileA)
         await assert.rejects(() => storage(f).softDelete(f.spaceId, f.fileB), { status: 409 })
         const [a, b, current] = await Promise.all([

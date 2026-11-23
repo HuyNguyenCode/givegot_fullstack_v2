@@ -40,6 +40,7 @@ test('nonreviewer, outsider, spoofed identity, self-review and inconsistent auth
 test('revision request reopens both records; optional dueAt is independent and G2 resubmits then G3 reviews the same rows', async () => {
   const f = reviewFixture()
   const deadline = '2030-01-03T12:00:00+07:00'
+  const stale = f.freshness()
   await f.reviews.review('space', 'task', { ...reviewBody('REVISION_REQUESTED'), revisionDueAt: deadline })
   let state = f.snapshot()
   assert.equal(state.task.status, 'REVISION_REQUESTED')
@@ -47,7 +48,9 @@ test('revision request reopens both records; optional dueAt is independent and G
   assert.equal((state.task.dueAt as Date).toISOString(), '2030-01-03T05:00:00.000Z')
   assert.equal(state.events[0].eventType, 'LEARNING_REVISION_REQUESTED')
   f.actor('assignee')
-  const revised = await f.submissions.submit('space', 'task', { content: 'Revised private answer' })
+  await assert.rejects(f.submissions.submit('space', 'task', { content: 'Stale answer', freshness: stale }), { status: 409, code: 'TASK_REQUIREMENTS_CHANGED' })
+  assert.deepEqual(f.snapshot(), state)
+  const revised = await f.submissions.submit('space', 'task', { content: 'Revised private answer', freshness: f.freshness() })
   assert.equal(revised.id, 'submission'); assert.equal(revised.revisionCount, 2)
   assert.equal((await f.reviews.current('space', 'task')).review, null)
   f.actor('creator')
@@ -63,10 +66,10 @@ test('revision request reopens both records; optional dueAt is independent and G
 test('omitted revision deadline preserves existing dueAt; null clears it; malformed or past deadlines fail', async () => {
   const f = reviewFixture()
   await f.reviews.review('space', 'task', { ...reviewBody('REVISION_REQUESTED'), revisionDueAt: '2030-02-01T00:00:00Z' })
-  f.actor('assignee'); await f.submissions.submit('space', 'task', { content: 'v2' }); f.actor('creator')
+  f.actor('assignee'); await f.submissions.submit('space', 'task', { content: 'v2', freshness: f.freshness() }); f.actor('creator')
   await f.reviews.review('space', 'task', reviewBody('REVISION_REQUESTED', 2))
   assert.equal((f.snapshot().task.dueAt as Date).toISOString(), '2030-02-01T00:00:00.000Z')
-  f.actor('assignee'); await f.submissions.submit('space', 'task', { content: 'v3' }); f.actor('creator')
+  f.actor('assignee'); await f.submissions.submit('space', 'task', { content: 'v3', freshness: f.freshness() }); f.actor('creator')
   await f.reviews.review('space', 'task', { ...reviewBody('REVISION_REQUESTED', 3), revisionDueAt: null })
   assert.equal(f.snapshot().task.dueAt, null)
   for (const due of ['2030-01-01T00:00:00Z', '2029-01-01T00:00:00Z', '2030-02-01', 'nonsense']) assert.throws(() => reviewInput({ ...reviewBody('REVISION_REQUESTED'), revisionDueAt: due }, reviewNow), { status: 400 })

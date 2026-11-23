@@ -5,12 +5,90 @@ import { resolve } from 'node:path'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { downloadSubmissionAttachment, fetchReadyLearningFiles, Form, learningTaskStatusLabel, paginateLearningTasks, submitLearningTask, submitTaskDraft, TaskListRow, TaskRequirements, TASK_PAGE_SIZE, uploadTaskAttachment, type Draft, type Task, type TaskRequestState } from '../../../src/components/learning/LearningSubmissions'
+import { applySubmissionRefresh, downloadSubmissionAttachment, fetchReadyLearningFiles, fetchSubmissionRequirements, Form, learningTaskStatusLabel, paginateLearningTasks, submitLearningTask, submitTaskDraft, TaskListRow, TaskRequirements, TASK_PAGE_SIZE, uploadTaskAttachment, viewedSubmission, type Draft, type SubmitState, type Task, type TaskRequestState } from '../../../src/components/learning/LearningSubmissions'
 import { finalizeLearningFileUpload, initiateLearningFileUpload, uploadLearningFileToProvider } from '../../../src/components/learning/LearningResources'
 
 const source = readFileSync(resolve('src/components/learning/LearningSubmissions.tsx'), 'utf8')
 const sections = readFileSync(resolve('src/components/learning/LearningSpaceSections.tsx'), 'utf8')
 const page = readFileSync(resolve('src/app/learning/[spaceId]/page.tsx'), 'utf8')
+const rowA = { task: { id: 'A', version: 1, title: 'Task A', description: null, acceptanceCriteria: null, assigneeId: 'learner', status: 'OPEN', dueAt: null }, submission: null }
+const freshnessA = viewedSubmission(rowA)
+
+test('G2 refresh keeps the Task baseline on late, older, or cross-Task responses', async () => {
+  const rowB = { ...rowA, task: { ...rowA.task, id: 'B', title: 'Task B' } }
+  const newerA = { ...rowA, task: { ...rowA.task, title: 'Updated A', version: 3 }, archived: false }
+  const current = {
+    rows: [newerA, rowB],
+    viewed: { A: freshnessA, B: viewedSubmission(rowB) },
+    submitStates: { A: { busy: false, error: 'Conflict', conflict: 'TASK_REQUIREMENTS_CHANGED' as const } },
+  }
+  const controller = new AbortController()
+  const late = Promise.withResolvers<Response>()
+  const pending = fetchSubmissionRequirements('space', 'A', controller.signal, async () => late.promise)
+  controller.abort()
+  const accepted = applySubmissionRefresh(current, 'A', newerA, new AbortController().signal)
+  late.resolve(Response.json({ ...rowA, archived: false }))
+  assert.equal(applySubmissionRefresh(accepted, 'A', await pending, controller.signal), accepted)
+  assert.equal(applySubmissionRefresh(accepted, 'A', rowB, new AbortController().signal), accepted)
+  const rejected = applySubmissionRefresh(current, 'A', rowA, new AbortController().signal)
+  assert.equal(rejected.rows, current.rows)
+  assert.equal(rejected.viewed, current.viewed)
+  assert.equal(rejected.submitStates.A.conflict, 'TASK_REQUIREMENTS_CHANGED')
+  assert.match(rejected.submitStates.A.refreshError ?? '', /thử lại/)
+  assert.equal(accepted.viewed.A.requirements.title, 'Updated A')
+  assert.equal(accepted.viewed.B, current.viewed.B)
+  assert.equal(accepted.submitStates.A.error, null)
+  assert.match(source, /baseline\.requirements/)
+  assert.match(source, /taskId !== selectedTaskId\) \{\s+cancelSubmissionRefresh\(\)/)
+  assert.match(source, /delete nextViewed\[taskId\]/)
+})
+
+test('G2 typed conflict allows a failed refresh and then a fresh manual revision retry with the same draft', async () => {
+  const draft = Object.freeze({ content: 'Bài làm', linkUrl: 'https://example.test/answer', attachmentResourceId: 'ready-file', attachmentTitle: 'original.pdf', directAttachment: null })
+  const revision = { id: 'submission-A', content: 'Previous', linkUrl: null, attachmentResourceId: null, revisionCount: 2, status: 'REVISION_REQUESTED', submittedAt: '2030-01-01T00:00:00Z' }
+  const latest = { task: { ...rowA.task, version: 5, status: 'REVISION_REQUESTED', dueAt: '2030-02-03T00:00:00Z', topicId: 'topic-A' }, submission: revision, archived: false }
+  const baseline = viewedSubmission({ ...rowA, submission: { ...revision, revisionCount: 1 } })
+  const calls: Array<{ url: string; init?: RequestInit }> = []
+  const request: typeof fetch = async (input, init) => {
+    calls.push({ url: String(input), init })
+    if (calls.length === 1) return Response.json({ error: 'Task requirements changed', code: 'TASK_REQUIREMENTS_CHANGED' }, { status: 409 })
+    if (calls.length === 2) return Response.json({ error: 'Forbidden' }, { status: 403 })
+    if (calls.length === 3) return Response.json(latest)
+    return Response.json({ submission: { ...revision, revisionCount: 3, status: 'SUBMITTED' } }, { status: 201 })
+  }
+  const states: SubmitState[] = []
+  const locks = new Set<string>()
+  let saves = 0
+  const submit = (freshness: typeof baseline) => submitTaskDraft('space', 'A', draft, freshness, locks, state => states.push(state), () => { saves++ }, request)
+  await submit(baseline)
+  const conflict = states.at(-1)!
+  assert.equal(conflict.conflict, 'TASK_REQUIREMENTS_CHANGED')
+  assert.equal(conflict.error, 'Yêu cầu của công việc đã thay đổi. Hãy cập nhật và xem lại yêu cầu mới trước khi gửi bài.')
+  const current = { rows: [rowA], viewed: { A: baseline }, submitStates: { A: conflict } }
+  const { signal } = new AbortController()
+  await assert.rejects(fetchSubmissionRequirements('space', 'A', signal, request), /Forbidden/)
+  assert.equal(current.viewed.A, baseline)
+  assert.equal(saves, 0)
+  const refreshed = applySubmissionRefresh(current, 'A', await fetchSubmissionRequirements('space', 'A', signal, request), signal)
+  assert.equal(calls.length, 3)
+  assert.equal(saves, 0)
+  assert.equal(calls[2].url, '/api/learning/spaces/space/tasks/A/submission?view=requirements')
+  assert.equal(calls[2].init?.cache, 'no-store')
+  assert.deepEqual(refreshed.viewed.A.previousSubmission, { submissionId: revision.id, revisionCount: 2 })
+  await submit(refreshed.viewed.A)
+  assert.deepEqual(calls.map(call => call.init?.method ?? 'GET'), ['POST', 'GET', 'GET', 'POST'])
+  const body = { content: draft.content, linkUrl: draft.linkUrl, attachmentResourceId: draft.attachmentResourceId }
+  assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { ...body, freshness: baseline })
+  assert.deepEqual(JSON.parse(String(calls[3].init?.body)), { ...body, freshness: viewedSubmission(latest) })
+  assert.equal(draft.attachmentTitle, 'original.pdf')
+  assert.equal(saves, 1)
+})
+
+test('G2 generic and revision-window 409s use distinct learner feedback', async () => {
+  const input = { content: 'Answer', linkUrl: '', attachmentResourceId: '', freshness: freshnessA }
+  await assert.rejects(submitLearningTask('space', 'A', input, async () => Response.json({ error: 'Try again' }, { status: 409 })), { code: 'OTHER', message: 'Try again' })
+  await assert.rejects(submitLearningTask('space', 'A', input, async () => Response.json({ error: 'Revision changed', code: 'STALE_SUBMISSION_REVISION' }, { status: 409 })), { code: 'STALE_SUBMISSION_REVISION', message: /Phiên bản bài nộp đã thay đổi/ })
+})
 
 test('D0d sections use accessible hash links, responsive rows, and mounted panels for draft retention', () => {
   for (const label of ['Tài liệu', 'Công việc & bài nộp', 'Ghi chú', 'Lịch sử']) assert.match(sections, new RegExp(label))
@@ -117,7 +195,7 @@ test('creation feedback has an isolated timed lifecycle and navigation dismissal
   assert.match(source, /4000\)/)
   assert.match(source, /return \(\) => window\.clearTimeout\(timer\)/)
   assert.match(source, /function changeFilter\(next: TaskFilter\) \{\s*setCreatedMessage\(null\)/)
-  assert.match(source, /if \(taskId !== selectedTaskId\) setCreatedMessage\(null\)/)
+  assert.match(source, /if \(taskId !== selectedTaskId\) \{\s+cancelSubmissionRefresh\(\)\s+setCreatedMessage\(null\)/)
   assert.match(source, /onOpen=\{\(\) => setCreatedMessage\(null\)\}/)
   assert.match(createSource, /if \(!open\) onOpen\?\.\(\)/)
   assert.match(source, /Đã tạo công việc\./)
@@ -168,8 +246,8 @@ test('D0d direct upload stamps purpose and G2 retry reuses the finalized ID with
   const reservation = await initiateLearningFileUpload('space', file, request, null, 'SUBMISSION_ATTACHMENT')
   await uploadLearningFileToProvider(file, reservation.upload, request)
   await finalizeLearningFileUpload('space', reservation.resourceId, request)
-  await assert.rejects(() => submitLearningTask('space', 'task', { content: 'Bài nộp', linkUrl: '', attachmentResourceId: reservation.resourceId }, request), /Attachment must be a ready file/)
-  const result = await submitLearningTask('space', 'task', { content: 'Bài nộp', linkUrl: '', attachmentResourceId: reservation.resourceId }, request)
+  await assert.rejects(() => submitLearningTask('space', 'task', { content: 'Bài nộp', linkUrl: '', attachmentResourceId: reservation.resourceId, freshness: freshnessA }, request), /Attachment must be a ready file/)
+  const result = await submitLearningTask('space', 'task', { content: 'Bài nộp', linkUrl: '', attachmentResourceId: reservation.resourceId, freshness: freshnessA }, request)
   assert.equal(result.submission.attachmentResourceId, 'ready-file')
   assert.equal(calls.filter(call => call.input === 'https://upload.example.test').length, 1)
   assert.deepEqual(calls.slice(3).map(call => JSON.parse(String(call.init?.body)).attachmentResourceId), ['ready-file', 'ready-file'])
@@ -290,7 +368,7 @@ test('D0d-F1 pending G2 locks remounted task inputs, rejects duplicate POST, and
     return calls.length === 1 ? first : Response.json({ submission: authoritative }, { status: 201 })
   }) as typeof fetch
   let saved: typeof authoritative | null = null
-  const submit = () => submitTaskDraft('space', 'A', draft, inFlight, state => { states.A = state }, submission => { saved = submission as typeof authoritative }, request)
+  const submit = () => submitTaskDraft('space', 'A', draft, freshnessA, inFlight, state => { states.A = state }, submission => { saved = submission as typeof authoritative }, request)
   const pending = submit()
   assert.equal(states.A.busy, true)
   const rowA = { task: { id: 'A', title: 'Task A', description: null, acceptanceCriteria: null, assigneeId: 'learner', status: 'OPEN', dueAt: null }, submission: null }

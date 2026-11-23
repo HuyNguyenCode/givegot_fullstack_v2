@@ -1,5 +1,14 @@
 # Learning Hub Regression Checklist
 
+## Current G2 stale Task submission guard acceptance (2026-11-23)
+
+**ACCEPTED / CLOSED.** Founder-reported manual browser QA G2-01 through G2-10 passed with 10 PASS / 0 FAIL / 0 BLOCKED. Prior evidence includes 73/73 focused unit/UI, 6/6 in-process G2/G3 route integration, 10/10 real PostgreSQL cases, and passing typecheck, targeted ESLint and diff check. See [TEST_MATRIX](TEST_MATRIX.md#lh-041-g2-founder-manual-browser-qa-2026-11-23). Keep the checks below for future regressions.
+
+- In two sessions, open an assigned Task as the learner and draft text, an HTTPS link and a READY file. Edit its requirements as the creator. Verify the learner receives the Vietnamese conflict and that the rejected POST creates no Submission or activity.
+- Block the explicit G2 refresh request, verify the conflict and draft persist, then retry. Verify the updated requirements appear, the draft and original file label remain, and the network shows no upload or POST until the learner manually submits.
+- Delay refresh while switching Tasks, then return. Verify the pending result cannot change another Task or clear its conflict or draft. Verify selection, filter and page stay stable during a successful in-place refresh.
+- Request a G3 revision with a changed deadline while another learner tab still has older requirements or revision identity. Verify stale submission is rejected, a manual retry updates the same Submission once, and the creator can complete the review. Check status-only START and same-value edits produce no requirements conflict. Check cancel/archive or an unavailable attachment still follows its existing eligibility rules.
+
 ## Current G5 reconciliation (2026-11-22)
 
 G5 is ACCEPTED WITH KNOWN LIMITATIONS. Current G5 regression boundary: creator-only OPEN basic/Topic edits; Topic keep/new ACTIVE same-Space/clear, including unchanged unavailable Topic; creator-confirmed OPEN/IN_PROGRESS cancellation; archive read-only; expectedVersion/409; refresh confirmation, five-field draft synchronization, refresh failure and retained unrelated Submission drafts/filters. Founder reports G5-13 4/4 and G5C-10 9/9 manual PASS; G5-08 IN_PROGRESS cancellation is Founder manual QA PASS through the UI using database-prepared state; the START workflow was not verified. GG-LH-G5-F02: newer parent/older refresh-return code inconsistency confirmed; runtime impact NOT VERIFIED and test-only attempt BLOCKED without tests executed, P2 LOGGED / UNRESOLVED in the existing backlog. Preserve G1/G2/G3/I1 and Booking/GP boundaries. G5-D is deferred post-pilot.

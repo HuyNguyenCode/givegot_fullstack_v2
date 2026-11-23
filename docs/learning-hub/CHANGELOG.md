@@ -1,5 +1,18 @@
 # Learning Hub Changelog
 
+## 2026-11-23 — G2 stale Task submission guard acceptance and documentation reconciliation
+
+**ACCEPTED / CLOSED.** G2 now requires `freshness` on every submission POST under the approved pre-launch breaking contract. The existing Serializable transaction checks viewed requirements and revision identity before the conditional Task claim, returning typed 409s for confirmed stale conflicts. The learner explicitly refreshes the Task, Submission and archive state, keeps the text, link and READY attachment, and manually retries. The G3 revision and review flow remains compatible.
+
+Verification passed in four categories: **73/73** focused unit/UI, **6/6** in-process route integration, **10/10** real PostgreSQL and **10/10** Founder-reported manual browser cases (G2-01–G2-10). See [TEST_MATRIX](TEST_MATRIX.md#lh-041-g2-founder-manual-browser-qa-2026-11-23).
+
+- **POST contract — CONFIRMED COMPATIBLE / NOT A BUG.** The active frontend sends the Task-specific freshness shape that backend validation accepts. Narrow source review found no active production G2 POST caller missing freshness. The previous three-field payload is intentionally unsupported.
+- **Requirements refresh API — EXPECTED BEHAVIOR / CLOSED.** The current GET handler supports `submission?view=requirements` and returns Task, Submission and archive state. Missing fields in a hypothetical HTTP 200 are a future validation risk. The current producer supplies the full shape.
+- **Untyped HTTP 409 retry — EXPECTED BEHAVIOR / CLOSED.** Only `TASK_REQUIREMENTS_CHANGED` and `STALE_SUBMISSION_REVISION` require refresh. Ordinary conflicts may be transient. The server revalidates each retry.
+- **G5-F02 — KNOWN DEFERRED ISSUE, P2.** The G5 refresh-return inconsistency remains open with runtime impact unverified. The separate G2 refresh rejects stale results before applying them.
+
+This reconciliation involved no new application implementation. The G2 repair included no schema, migrations, Booking association, fulfillment, GivePoint or settlement changes.
+
 ## Current G5 reconciliation (2026-11-22)
 
 G5 is ACCEPTED WITH KNOWN LIMITATIONS; this acceptance does not approve an F02 fix or establish overall pilot readiness. G5 implementation and owner-evidence reconciliation: G5-A/B add creator basic edit and confirmed cancel UI. G5-13 is the approved narrow G1 backend validation exception for unchanged persisted Topics; Founder reports 4/4 retest PASS. G5-C adds Topic edit UI; initial owner QA was 12/13, and subsequent G5C-10 conflict-refresh UI repair received owner-reported 9/9 PASS. G5-08 IN_PROGRESS cancellation is Founder manual QA PASS through the UI with database-prepared state; the START workflow was not verified. Proposed F01 is P3 deferred; F02 is a confirmed code inconsistency with unverified runtime impact and blocked test-only attempt, P2 LOGGED / UNRESOLVED in the existing backlog. G5-D remains P3 post-pilot. Changes remain uncommitted at this checkpoint; no deferred item is implemented.

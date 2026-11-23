@@ -1,5 +1,42 @@
 # Learning Hub Test Matrix
 
+## LH 041 G2 Founder manual browser QA (2026-11-23)
+
+**ACCEPTED / CLOSED.** Founder reported **G2-01 through G2-10: 10 PASS / 0 FAIL / 0 BLOCKED** in manual browser QA. These results are attributed to the Founder. The November 22 automated evidence is recorded separately below.
+
+| Case | Expected behavior | Founder-reported outcome |
+| --- | --- | --- |
+| G2-01 | Reject submission after the Task title changes. | PASS. The stale submission was rejected. |
+| G2-02 | Retain text, HTTPS link and READY attachment after a requirements conflict. | PASS. Draft and attachment were retained. |
+| G2-03 | Refresh requirements and allow a manual resubmission. | PASS. Refresh and manual resubmission succeeded. |
+| G2-04 | Reject submission against a stale Topic. | PASS. The stale Topic was rejected. |
+| G2-05 | Reject submission against a stale deadline. | PASS. The stale deadline was rejected. |
+| G2-06 | Accept unchanged effective requirements. | PASS. Submission succeeded. |
+| G2-07 | Prevent duplicate submission on repeated clicks. | PASS. No duplicate submission occurred. |
+| G2-08 | Retain the draft if refresh or the network fails. | PASS. The draft was retained. |
+| G2-09 | Keep Task-specific state safe during navigation and delayed refresh. | PASS. State stayed with the intended Task. |
+| G2-10 | Support a G3 revision with a changed deadline, same-row resubmission and final review. | PASS. The same Submission advanced from revision 1 to 2 and final review succeeded. |
+
+## LH 041 G2 stale Task submission guard automated evidence (2026-11-22)
+
+- **Focused unit/UI 73/73 PASS.** Covers each of the five requirement fields, same-value edit and reversion, START, null and unchanged archived Topic, equivalent deadline offsets, missing or malformed freshness, first and revision identity, existing status and authorization gates, attachment eligibility, and the G3 deadline/review lifecycle. Controlled mocks exercised G1 edit before G2 reads, G1 edit between read and conditional claim, and G2 commit before G1 edit.
+- **In-process G2/G3 route integration 6/6 PASS.** Covers 400 and typed/generic 409 envelopes, rejection before writes, simulated serialization rollback, private consistent refresh and unchanged standard GET, valid resubmission and final review.
+- **UI helper/render/source coverage** includes the POST snapshot, keeping separate Task baselines, older or canceled refresh responses, a failed refresh followed by a manual retry with the original text, link and READY file, and adjacent G1/G5 UI regressions. Typecheck, targeted ESLint and diff check passed. The file-free Windows workaround used tsx/cjs and local TypeScript module resolution for an existing dynamic import.
+- **Real PostgreSQL PASS, 10/10 cases.** The unchanged runner completed on TEST project `yxyipetjooqsysdhruut` in run `g2-pg-7863e86e-1863-4af4-9440-0fbd2f6978c4` at 2026-11-22 13:17:57 UTC. SELECT 1 and live column, enum and uniqueness checks passed. Preflight read-only backends were 7802 and 7801. Earlier P1001/P1017 connectivity failures remain historical and their root cause is unconfirmed. See the [November 23 Founder browser checkpoint](#lh-041-g2-founder-manual-browser-qa-2026-11-23).
+
+| Real G2 scenario | Verification status |
+| --- | --- |
+| R1 — G1 edit before G2 | PASS. The stale POST returned `TASK_REQUIREMENTS_CHANGED` with the edited Task unchanged at version 2. Refreshed submit created one Submission and one creation event at version 3. |
+| R2 — G1 edit commits first | PASS. G2 lost its claim with P2034 mapped to 409. Task stayed OPEN at version 2 with zero Submissions and no Submission activity. |
+| R3 — G2 commits first | PASS. G1 claimed zero rows and returned 409. Requirements were preserved and the Task reached SUBMITTED at version 2 with one Submission and one creation event. |
+| R4 — Double submission | PASS. Left request committed. Right request returned P2034 mapped to 409. One Submission at revision 1 and one creation event persisted, with Task version 2. |
+| R5 — G3 revision window | PASS. Stale deadline and identity returned 409. Activity-key collision P2002 rolled back the Task and Submission updates. Valid resubmission reused the row at revision 2 with one revision activity, then G3 completed the Task at version 5. |
+| R6 — Effective equality | PASS, 5/5. Same-value edit, exact revert, START, archived Topic and equivalent timestamp offset each allowed submission with one revision-1 row and one creation event. |
+
+For R2–R4, both services had read OPEN version 1 while backends 7803 and 7804 were simultaneously idle in their transactions. The runner checked final persisted state after each release schedule. Cleanup left zero rows in each of nine checked categories for all ten fixtures. Booking, GivePoint balances and TransactionLog snapshots matched before and after.
+
+The new runner passed Windows typecheck and targeted ESLint. It defaults to read-only preflight. In the existing Linux execution copy, run the synchronized file through Linux Node and local tsx with `G2_POSTGRES_EXECUTE=1` to enable the fixture cases after its target and schema guards pass.
+
 ## Current G5 reconciliation (2026-11-22)
 
 G5 is ACCEPTED WITH KNOWN LIMITATIONS. G5 current evidence reconciliation: Founder-reported manual G5-A applicable cases and G5-B OPEN cancellation PASS; G5-08 IN_PROGRESS cancellation Founder manual QA PASS through the UI with database-prepared state; the START workflow was not verified. G5-13 retest 4/4 PASS; the actual historical Topic state was not independently inspected. G5-C initial 12/13 PASS with G5C-10 FAIL; after repair, Founder G5C-10 retest 9/9 PASS. These are owner-reported browser results, not Codex or automated E2E execution.

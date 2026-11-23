@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { SubmissionConflictCode, SubmissionFreshness } from '@/lib/learning-submission-contract'
 import LearningSubmissionReview from '@/components/learning/LearningSubmissionReview'
 import { TaskManagement } from '@/components/learning/LearningTaskManagement'
 import { BookingContext, CreateTask, type Booking, type Member, type Topic } from '@/components/learning/LearningTaskCreate'
@@ -16,11 +17,14 @@ import {
 export type Task = { version?: number; id: string; title: string; description: string | null; acceptanceCriteria: string | null; assigneeId: string; creatorId?: string; bookingId?: string | null; topicId?: string | null; status: string; dueAt: string | null }
 type Submission = { id: string; content: string | null; linkUrl: string | null; attachmentResourceId: string | null; revisionCount: number; status: string; submittedAt: string }
 type Resource = { id: string; title: string; kind: string; status: string }
-type Row = { task: Task; submission: Submission | null }
+type Row = { task: Task; submission: Submission | null; archived?: boolean }
 export type DirectAttachment = { file: File; reservation: LearningFileUploadReservation | null; phase: 'SELECTED' | 'UPLOADING' | 'FINALIZING' }
 export type Draft = { content: string; linkUrl: string; attachmentResourceId: string; attachmentTitle: string; directAttachment: DirectAttachment | null }
 export type TaskRequestState = { busy: boolean; error: string | null }
+export type SubmitState = TaskRequestState & { conflict?: SubmissionConflictCode | 'OTHER'; refreshError?: string; refreshed?: boolean }
+type TaskData = { rows: Row[]; viewed: Record<string, SubmissionFreshness>; submitStates: Record<string, SubmitState> }
 const idleRequest: TaskRequestState = { busy: false, error: null }
+const refreshError = 'Không thể cập nhật công việc. Hãy kiểm tra kết nối hoặc quyền truy cập rồi thử lại.'
 const emptyDraft = (): Draft => ({ content: '', linkUrl: '', attachmentResourceId: '', attachmentTitle: '', directAttachment: null })
 export const TASK_PAGE_SIZE = 8
 const taskStatusLabels: Record<string, string> = {
@@ -68,14 +72,52 @@ async function read(response: Response) {
   if (!response.ok) throw new Error(data.error || 'Không thể tải dữ liệu')
   return data
 }
+const submissionUrl = (spaceId: string, taskId: string) => '/api/learning/spaces/' + encodeURIComponent(spaceId) + '/tasks/' + encodeURIComponent(taskId) + '/submission'
+
+export function viewedSubmission(row: Row): SubmissionFreshness {
+  const { title, description, acceptanceCriteria, topicId, dueAt } = row.task
+  return {
+    requirements: { title, description, acceptanceCriteria, topicId: topicId ?? null, dueAt },
+    previousSubmission: row.submission ? { submissionId: row.submission.id, revisionCount: row.submission.revisionCount } : null,
+  }
+}
+class SubmissionConflict extends Error {
+  constructor(message: string, readonly code: NonNullable<SubmitState['conflict']>) { super(message) }
+}
+export async function fetchSubmissionRequirements(spaceId: string, taskId: string, signal: AbortSignal, request: typeof fetch = fetch): Promise<Row> {
+  const row = await read(await request(submissionUrl(spaceId, taskId) + '?view=requirements', { cache: 'no-store', signal })) as Row
+  if (row.task?.id !== taskId || !Number.isSafeInteger(row.task.version) || typeof row.archived !== 'boolean'
+      || (row.submission !== null && (!row.submission?.id || !Number.isSafeInteger(row.submission.revisionCount)))) throw new Error(refreshError)
+  return row
+}
+export function applySubmissionRefresh(current: TaskData, taskId: string, latest: Row, signal: AbortSignal): TaskData {
+  if (signal.aborted || latest.task.id !== taskId) return current
+  const retained = current.rows.find(item => item.task.id === taskId)
+  if (!retained || (retained.task.version ?? 0) > (latest.task.version ?? 0)
+      || (retained.submission && (!latest.submission || retained.submission.revisionCount > latest.submission.revisionCount))) {
+    return { ...current, submitStates: { ...current.submitStates, [taskId]: { ...current.submitStates[taskId], refreshError } } }
+  }
+  return {
+    rows: current.rows.map(item => item.task.id === taskId ? latest : item),
+    viewed: { ...current.viewed, [taskId]: viewedSubmission(latest) },
+    submitStates: { ...current.submitStates, [taskId]: { ...idleRequest, refreshed: true } },
+  }
+}
 export async function fetchReadyLearningFiles(spaceId: string, request: typeof fetch = fetch): Promise<Resource[]> {
   const data = await read(await request('/api/learning/spaces/' + encodeURIComponent(spaceId) + '/resources?view=ready-files', { cache: 'no-store' })) as { resources: Resource[] }
   return data.resources
 }
-export async function submitLearningTask(spaceId: string, taskId: string, input: { content: string; linkUrl: string; attachmentResourceId: string }, request: typeof fetch = fetch) {
-  return await read(await request('/api/learning/spaces/' + encodeURIComponent(spaceId) + '/tasks/' + encodeURIComponent(taskId) + '/submission', {
+export async function submitLearningTask(spaceId: string, taskId: string, input: { content: string; linkUrl: string; attachmentResourceId: string; freshness: SubmissionFreshness }, request: typeof fetch = fetch) {
+  const response = await request(submissionUrl(spaceId, taskId), {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
-  })) as { submission: Submission }
+  })
+  if (response.status === 409) {
+    const data = await response.json()
+    if (data.code === 'TASK_REQUIREMENTS_CHANGED') throw new SubmissionConflict('Yêu cầu của công việc đã thay đổi. Hãy cập nhật và xem lại yêu cầu mới trước khi gửi bài.', data.code)
+    if (data.code === 'STALE_SUBMISSION_REVISION') throw new SubmissionConflict('Phiên bản bài nộp đã thay đổi. Hãy cập nhật công việc và xem lại trước khi gửi bài.', data.code)
+    throw new SubmissionConflict(data.error || 'Không thể gửi bài. Hãy cập nhật công việc và kiểm tra bài nộp trước khi thử lại.', 'OTHER')
+  }
+  return await read(response) as { submission: Submission }
 }
 export async function downloadSubmissionAttachment(spaceId: string, resourceId: string, request: typeof fetch = fetch, navigate: (url: string) => void = url => window.location.assign(url)) {
   const result = await read(await request('/api/learning/spaces/' + encodeURIComponent(spaceId) + '/files/' + encodeURIComponent(resourceId) + '/download', { method: 'POST' })) as { url?: unknown }
@@ -108,7 +150,7 @@ export async function uploadTaskAttachment(spaceId: string, taskId: string, sele
   } catch (cause) { error = cause instanceof Error ? cause.message : 'Không thể tải tệp lên' }
   finally { inFlight.delete(taskId); onState({ busy: false, error }) }
 }
-export async function submitTaskDraft(spaceId: string, taskId: string, draft: Draft, inFlight: Set<string>, onState: (state: TaskRequestState) => void, saved: (submission: Submission) => void, request: typeof fetch = fetch) {
+export async function submitTaskDraft(spaceId: string, taskId: string, draft: Draft, freshness: SubmissionFreshness, inFlight: Set<string>, onState: (state: SubmitState) => void, saved: (submission: Submission) => void, request: typeof fetch = fetch) {
   if (inFlight.has(taskId) || draft.directAttachment) return
   if (!draft.content.trim() && !draft.linkUrl.trim() && !draft.attachmentResourceId) { onState({ busy: false, error: 'Thêm nội dung, liên kết HTTPS hoặc tệp đính kèm.' }); return }
   if (draft.linkUrl.trim()) {
@@ -117,15 +159,16 @@ export async function submitTaskDraft(spaceId: string, taskId: string, draft: Dr
   }
   inFlight.add(taskId)
   onState({ busy: true, error: null })
-  let error: string | null = null
+  let state: SubmitState = idleRequest
   try {
-    const data = await submitLearningTask(spaceId, taskId, { content: draft.content, linkUrl: draft.linkUrl, attachmentResourceId: draft.attachmentResourceId }, request)
+    const data = await submitLearningTask(spaceId, taskId, { content: draft.content, linkUrl: draft.linkUrl, attachmentResourceId: draft.attachmentResourceId, freshness }, request)
     saved(data.submission)
-  } catch (cause) { error = cause instanceof Error ? cause.message : 'Không thể gửi bài' }
-  finally { inFlight.delete(taskId); onState({ busy: false, error }) }
+  } catch (cause) {
+    state = { busy: false, error: cause instanceof Error ? cause.message : 'Không thể gửi bài', ...(cause instanceof SubmissionConflict ? { conflict: cause.code } : {}) }
+  } finally { inFlight.delete(taskId); onState(state) }
 }
-export function Form({ spaceId, row, draft, uploadState, submitState, updateDraft, uploadAttachment, submitDraft, clearUploadError, clearSubmitError }: {
-  spaceId: string; row: Row; draft: Draft; uploadState: TaskRequestState; submitState: TaskRequestState; updateDraft(change: Partial<Draft>): void; uploadAttachment(selected: DirectAttachment): void; submitDraft(draft: Draft): void; clearUploadError(): void; clearSubmitError(): void
+export function Form({ spaceId, row, draft, uploadState, submitState, submissionBlocked = false, updateDraft, uploadAttachment, submitDraft, clearUploadError, clearSubmitError }: {
+  spaceId: string; row: Row; draft: Draft; uploadState: TaskRequestState; submitState: TaskRequestState; submissionBlocked?: boolean; updateDraft(change: Partial<Draft>): void; uploadAttachment(selected: DirectAttachment): void; submitDraft(draft: Draft): void; clearUploadError(): void; clearSubmitError(): void
 }) {
   const busy = submitState.busy
   const uploadBusy = uploadState.busy
@@ -158,7 +201,7 @@ export function Form({ spaceId, row, draft, uploadState, submitState, updateDraf
         {!draft.directAttachment && <div className="mt-3"><button type="button" disabled={busy || pickerBusy} onClick={() => { if (busy) return; if (pickerOpen) setPickerOpen(false); else void openPicker() }} aria-expanded={pickerOpen} className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium">Dùng tệp đã tải lên trước đó</button>{pickerOpen && <div className="mt-2 rounded-lg border border-slate-200 bg-white p-3">{pickerBusy && <p role="status" className="text-sm">Đang tải danh sách tệp…</p>}{pickerError && <p role="alert" className="text-sm text-red-700">{pickerError}</p>}{!pickerBusy && !pickerError && pickerFiles.length === 0 && <p className="text-sm text-slate-600">Chưa có tệp sẵn sàng.</p>}{!pickerBusy && !pickerError && <ul className="space-y-2">{pickerFiles.map(file => <li key={file.id}><button type="button" disabled={busy} onClick={() => { updateDraft({ attachmentResourceId: file.id, attachmentTitle: file.title }); setPickerOpen(false); clearUploadError() }} className="min-h-10 w-full rounded-lg border border-slate-200 px-3 text-left text-sm break-words hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600">{file.title}</button></li>)}</ul>}</div>}</div>}
       </fieldset>
       {submitError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{submitError}</p>}
-      <button type="submit" disabled={busy || !!draft.directAttachment} className="min-h-11 w-full rounded-xl bg-purple-600 px-4 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto">{busy ? 'Đang gửi bài…' : row.submission ? 'Gửi bản sửa' : 'Gửi bài'}</button>
+      <button type="submit" disabled={busy || submissionBlocked || !!draft.directAttachment} className="min-h-11 w-full rounded-xl bg-purple-600 px-4 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto">{busy ? 'Đang gửi bài…' : row.submission ? 'Gửi bản sửa' : 'Gửi bài'}</button>
     </div>
   </form>
 }
@@ -167,7 +210,11 @@ export function filterLearningTasks(rows: Row[], viewerId: string, filter: TaskF
   return rows.filter(({ task }) => filter === 'assigned' ? task.assigneeId === viewerId : filter === 'created' ? task.creatorId === viewerId : task.assigneeId === viewerId || task.creatorId === viewerId)
 }
 export function LearningSubmissions({ spaceId, viewerId, archived, members, topics, bookings }: { spaceId: string; viewerId: string; archived: boolean; members: Member[]; topics: Topic[]; bookings: Booking[] }) {
-  const [rows, setRows] = useState<Row[]>([])
+  const [taskData, setTaskData] = useState<TaskData>({ rows: [], viewed: {}, submitStates: {} })
+  const { rows, viewed, submitStates } = taskData
+  const setRows = useCallback((update: (rows: Row[]) => Row[]) => {
+    setTaskData(previous => ({ ...previous, rows: update(previous.rows) }))
+  }, [])
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [taskPage, setTaskPage] = useState(1)
   const [filter, setFilter] = useState<TaskFilter>('all')
@@ -175,7 +222,8 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
   const creationSequence = useRef(0)
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [uploadStates, setUploadStates] = useState<Record<string, TaskRequestState>>({})
-  const [submitStates, setSubmitStates] = useState<Record<string, TaskRequestState>>({})
+  const [refreshing, setRefreshing] = useState<string | null>(null)
+  const refreshRequest = useRef<{ taskId: string; controller: AbortController; pending: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
@@ -200,7 +248,7 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
         const tasks: Task[] = (await read(await fetch('/api/learning/spaces/' + encodeURIComponent(spaceId) + '/tasks', { cache: 'no-store' }))).tasks
         const loaded = await Promise.all(tasks.map(async task => ({ task, submission: (await read(await fetch('/api/learning/spaces/' + encodeURIComponent(spaceId) + '/tasks/' + encodeURIComponent(task.id) + '/submission', { cache: 'no-store' }))).submission as Submission | null })))
         if (active) {
-          setRows(loaded)
+          setRows(() => loaded)
           setError(null)
           if (window.matchMedia('(min-width: 1024px)').matches) setSelectedTaskId(current => current ?? loaded[0]?.task.id ?? null)
         }
@@ -211,15 +259,30 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
     }
     void load()
     return () => { active = false }
-  }, [spaceId, reload])
+  }, [spaceId, reload, setRows])
+  useEffect(() => () => refreshRequest.current?.controller.abort(), [spaceId])
   const filteredRows = filterLearningTasks(rows, viewerId, filter)
   const row = filteredRows.find(item => item.task.id === selectedTaskId)
   const taskPagination = paginateLearningTasks(filteredRows, taskPage)
-  const editable = !!row && !archived && row.task.assigneeId === viewerId && ((!row.submission && ['OPEN', 'IN_PROGRESS'].includes(row.task.status)) || (row.submission?.status === 'REVISION_REQUESTED' && row.task.status === 'REVISION_REQUESTED'))
+  const editable = !!row && !archived && !row.archived && row.task.assigneeId === viewerId && ((!row.submission && ['OPEN', 'IN_PROGRESS'].includes(row.task.status)) || (row.submission?.status === 'REVISION_REQUESTED' && row.task.status === 'REVISION_REQUESTED'))
+  const baseline = row && viewed[row.task.id]
+  if (row && editable && !baseline && !loading && !error) {
+    // Capture the same requirements that the detail renders. Later row updates keep this view pinned.
+    setTaskData({ ...taskData, viewed: { ...viewed, [row.task.id]: viewedSubmission(row) } })
+  }
+  const submitState: SubmitState = row ? submitStates[row.task.id] ?? idleRequest : idleRequest
+  const needsRefresh = !!submitState.conflict && submitState.conflict !== 'OTHER'
+  useEffect(() => {
+    if (submitState.refreshed) detailHeading.current?.focus()
+  }, [selectedTaskId, submitState.refreshed])
   const attachment = row?.submission?.attachmentResourceId ? readyFiles.find(file => file.id === row.submission?.attachmentResourceId) : null
   function updateDraft(taskId: string, change: Partial<Draft>) { if (submittingTasks.current.has(taskId)) return; setDrafts(previous => ({ ...previous, [taskId]: { ...(previous[taskId] ?? emptyDraft()), ...change } })) }
   function clearUploadError(taskId: string) { setUploadStates(previous => ({ ...previous, [taskId]: idleRequest })) }
-  function clearSubmitError(taskId: string) { setSubmitStates(previous => ({ ...previous, [taskId]: idleRequest })) }
+  function clearSubmitError(taskId: string) {
+    setTaskData(previous => previous.submitStates[taskId]?.conflict ? previous : {
+      ...previous, submitStates: { ...previous.submitStates, [taskId]: idleRequest },
+    })
+  }
   function uploadAttachment(taskId: string, selected: DirectAttachment) {
     if (submittingTasks.current.has(taskId)) return
     void uploadTaskAttachment(spaceId, taskId, selected, uploadingTasks.current,
@@ -228,13 +291,42 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
       file => setReadyFiles(previous => [...previous.filter(item => item.id !== file.id), file]))
   }
   function submitDraft(taskId: string, draft: Draft) {
-    if (uploadingTasks.current.has(taskId)) return
-    void submitTaskDraft(spaceId, taskId, draft, submittingTasks.current,
-      state => setSubmitStates(previous => ({ ...previous, [taskId]: state })),
+    const freshness = viewed[taskId]
+    if (!freshness || needsRefresh || uploadingTasks.current.has(taskId)
+        || (refreshRequest.current?.taskId === taskId && refreshRequest.current.pending)) return
+    void submitTaskDraft(spaceId, taskId, draft, freshness, submittingTasks.current,
+      state => setTaskData(previous => ({ ...previous, submitStates: { ...previous.submitStates, [taskId]: state } })),
       submission => {
-        setRows(previous => previous.map(item => item.task.id === taskId ? { task: { ...item.task, status: 'SUBMITTED' }, submission } : item))
+        setTaskData(previous => {
+          const nextViewed = { ...previous.viewed }
+          delete nextViewed[taskId]
+          return { ...previous, viewed: nextViewed, rows: previous.rows.map(item => item.task.id === taskId ? { ...item, task: { ...item.task, status: 'SUBMITTED' }, submission } : item) }
+        })
         void fetchReadyLearningFiles(spaceId).then(files => { setReadyFiles(files); setReadyFilesError(false) }).catch(() => setReadyFilesError(true))
       })
+  }
+  function cancelSubmissionRefresh() {
+    refreshRequest.current?.controller.abort()
+    refreshRequest.current = null
+    setRefreshing(null)
+  }
+  async function refreshSubmission(taskId: string) {
+    if (refreshRequest.current?.pending || submittingTasks.current.has(taskId)) return
+    const attempt = { taskId, controller: new AbortController(), pending: true }
+    refreshRequest.current = attempt
+    const { signal } = attempt.controller
+    setRefreshing(taskId)
+    try {
+      const latest = await fetchSubmissionRequirements(spaceId, taskId, signal)
+      setTaskData(previous => applySubmissionRefresh(previous, taskId, latest, signal))
+    } catch {
+      setTaskData(previous => signal.aborted ? previous : {
+        ...previous, submitStates: { ...previous.submitStates, [taskId]: { ...previous.submitStates[taskId], refreshError } },
+      })
+    } finally {
+      attempt.pending = false
+      if (refreshRequest.current === attempt) setRefreshing(null)
+    }
   }
   async function downloadAttachment(resource: Resource) {
     if (attachmentDownloadInFlight.current) return
@@ -259,21 +351,25 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
     const index = nextRows.findIndex(item => item.task.id === selectedTaskId)
     setFilter(next)
     setTaskPage(index >= 0 ? Math.floor(index / TASK_PAGE_SIZE) + 1 : 1)
-    if (index < 0) setSelectedTaskId(null)
+    if (index < 0) { cancelSubmissionRefresh(); setSelectedTaskId(null) }
     setAttachmentDownloadError(null)
   }
   function selectTask(taskId: string) {
-    if (taskId !== selectedTaskId) setCreatedMessage(null)
+    if (taskId !== selectedTaskId) {
+      cancelSubmissionRefresh()
+      setCreatedMessage(null)
+    }
     setSelectedTaskId(taskId)
     setAttachmentDownloadError(null)
     window.requestAnimationFrame(() => detailHeading.current?.focus())
   }
   function showTaskList() {
+    cancelSubmissionRefresh()
     setSelectedTaskId(null)
     window.requestAnimationFrame(() => listHeading.current?.focus())
   }
   return <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="tasks-heading"><h2 id="tasks-heading" className="text-base font-semibold text-slate-900">Công việc & bài nộp</h2>
-    {!archived && !loading && !error && <CreateTask spaceId={spaceId} viewerId={viewerId} members={members} topics={topics} bookings={bookings} onOpen={() => setCreatedMessage(null)} onCreated={task => { setRows(previous => [{ task, submission: null }, ...previous.filter(item => item.task.id !== task.id)]); setFilter('created'); setTaskPage(1); setSelectedTaskId(task.id); setCreatedMessage(++creationSequence.current); window.requestAnimationFrame(() => detailHeading.current?.focus()) }} />}
+    {!archived && !loading && !error && <CreateTask spaceId={spaceId} viewerId={viewerId} members={members} topics={topics} bookings={bookings} onOpen={() => setCreatedMessage(null)} onCreated={task => { cancelSubmissionRefresh(); setRows(previous => [{ task, submission: null }, ...previous.filter(item => item.task.id !== task.id)]); setFilter('created'); setTaskPage(1); setSelectedTaskId(task.id); setCreatedMessage(++creationSequence.current); window.requestAnimationFrame(() => detailHeading.current?.focus()) }} />}
     {createdMessage && <p role="status" className="mt-3 text-sm text-emerald-700">Đã tạo công việc.</p>}
     {loading && <p role="status" className="mt-3 text-sm text-slate-600">Đang tải công việc…</p>}
     {error && <div className="mt-3"><p role="alert" className="text-sm text-red-700">{error}</p><button type="button" onClick={() => { setError(null); setLoading(true); setReload(value => value + 1) }} className="mt-2 min-h-10 rounded-lg border border-slate-300 px-3 text-sm">Thử lại</button></div>}
@@ -287,7 +383,14 @@ export function LearningSubmissions({ spaceId, viewerId, archived, members, topi
       </div>
       <div className={`${row ? 'block' : 'hidden lg:block'} min-w-0 rounded-xl border border-slate-200 p-4 sm:p-5`}>
         {!row && <div className="flex min-h-48 items-center justify-center text-center"><div><p className="font-medium text-slate-800">Chọn một công việc</p><p className="mt-1 text-sm text-slate-600">Chi tiết và bài nộp sẽ xuất hiện tại đây.</p></div></div>}
-        {row && <><button type="button" onClick={showTaskList} className="mb-4 min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 lg:hidden">← Quay lại danh sách</button><TaskRequirements task={row.task} headingRef={detailHeading} members={members} topics={topics} /><TaskManagement key={row.task.id} task={row.task} viewerId={viewerId} archived={archived} spaceId={spaceId} topics={topics} onUpdated={task => setRows(previous => previous.map(item => item.task.id === task.id && (item.task.version ?? 0) <= (task.version ?? 0) ? { ...item, task } : item))} onRefresh={refreshManagedTask} />{row.task.bookingId ? <BookingContext booking={bookings.find(booking => booking.id === row.task.bookingId)} members={members} creatorId={row.task.creatorId ?? ''} assigneeId={row.task.assigneeId} /> : <p className="mt-2 text-sm text-slate-600">Không gắn buổi học</p>}{row.submission && <div className="mt-5 min-w-0 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-purple-950">Đã nộp · bản {row.submission.revisionCount}</p><time className="text-xs text-purple-800" dateTime={row.submission.submittedAt}>{formatDateTime(row.submission.submittedAt)}</time></div>{row.submission.content && <p className="mt-3 whitespace-pre-wrap break-words text-slate-800">{row.submission.content}</p>}{row.submission.linkUrl && <a href={row.submission.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-3 block break-all font-medium text-purple-700 underline-offset-4 hover:underline">Mở liên kết bài nộp</a>}{attachment && <button type="button" disabled={downloadingAttachmentId === attachment.id} onClick={() => void downloadAttachment(attachment)} aria-label={`Tải tệp đính kèm ${attachment.title}`} className="mt-3 block break-all text-left font-medium text-purple-700 disabled:opacity-60 cursor-pointer">{downloadingAttachmentId === attachment.id ? 'Đang chuẩn bị tải xuống…' : `Tệp đính kèm: ${attachment.title}`}</button>}{row.submission.attachmentResourceId && !attachment && <p role="alert" className="mt-3 text-red-700">{readyFilesError ? 'Không thể kiểm tra tệp đính kèm. Hãy thử tải lại trang.' : 'Tệp đính kèm không còn khả dụng.'}</p>}{attachmentDownloadError && <p role="alert" className="mt-3 text-red-700">{attachmentDownloadError}</p>}</div>}{editable && <Form key={row.task.id} spaceId={spaceId} row={row} draft={drafts[row.task.id] ?? emptyDraft()} uploadState={uploadStates[row.task.id] ?? idleRequest} submitState={submitStates[row.task.id] ?? idleRequest} updateDraft={change => updateDraft(row.task.id, change)} uploadAttachment={selected => uploadAttachment(row.task.id, selected)} submitDraft={draft => submitDraft(row.task.id, draft)} clearUploadError={() => clearUploadError(row.task.id)} clearSubmitError={() => clearSubmitError(row.task.id)} />}</>}
+        {row && <><button type="button" onClick={showTaskList} className="mb-4 min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 lg:hidden">← Quay lại danh sách</button><TaskRequirements task={baseline && row.task.assigneeId === viewerId ? { ...row.task, ...baseline.requirements } : row.task} headingRef={detailHeading} members={members} topics={topics} /><TaskManagement key={row.task.id} task={row.task} viewerId={viewerId} archived={archived} spaceId={spaceId} topics={topics} onUpdated={task => setRows(previous => previous.map(item => item.task.id === task.id && (item.task.version ?? 0) <= (task.version ?? 0) ? { ...item, task } : item))} onRefresh={refreshManagedTask} />{row.task.bookingId ? <BookingContext booking={bookings.find(booking => booking.id === row.task.bookingId)} members={members} creatorId={row.task.creatorId ?? ''} assigneeId={row.task.assigneeId} /> : <p className="mt-2 text-sm text-slate-600">Không gắn buổi học</p>}{row.submission && <div className="mt-5 min-w-0 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-purple-950">Đã nộp · bản {row.submission.revisionCount}</p><time className="text-xs text-purple-800" dateTime={row.submission.submittedAt}>{formatDateTime(row.submission.submittedAt)}</time></div>{row.submission.content && <p className="mt-3 whitespace-pre-wrap break-words text-slate-800">{row.submission.content}</p>}{row.submission.linkUrl && <a href={row.submission.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-3 block break-all font-medium text-purple-700 underline-offset-4 hover:underline">Mở liên kết bài nộp</a>}{attachment && <button type="button" disabled={downloadingAttachmentId === attachment.id} onClick={() => void downloadAttachment(attachment)} aria-label={`Tải tệp đính kèm ${attachment.title}`} className="mt-3 block break-all text-left font-medium text-purple-700 disabled:opacity-60 cursor-pointer">{downloadingAttachmentId === attachment.id ? 'Đang chuẩn bị tải xuống…' : `Tệp đính kèm: ${attachment.title}`}</button>}{row.submission.attachmentResourceId && !attachment && <p role="alert" className="mt-3 text-red-700">{readyFilesError ? 'Không thể kiểm tra tệp đính kèm. Hãy thử tải lại trang.' : 'Tệp đính kèm không còn khả dụng.'}</p>}{attachmentDownloadError && <p role="alert" className="mt-3 text-red-700">{attachmentDownloadError}</p>}</div>}
+          {submitState.conflict && <div className="mt-4 space-y-2 rounded-lg bg-amber-50 p-3 text-sm">
+            <p role="alert">{submitState.error}</p>
+            {submitState.refreshError && <p role="alert">{submitState.refreshError}</p>}
+            <button type="button" onClick={() => void refreshSubmission(row.task.id)} disabled={refreshing === row.task.id || submitState.busy} className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 font-medium disabled:opacity-60">{refreshing === row.task.id ? 'Đang cập nhật…' : 'Cập nhật công việc'}</button>
+          </div>}
+          {submitState.refreshed && <p role="status" className="mt-4 text-sm text-slate-700">{editable ? 'Đã cập nhật công việc. Hãy xem lại yêu cầu trước khi gửi bài.' : 'Đã cập nhật công việc. Hiện không thể gửi bài cho công việc này.'}</p>}
+          {editable && <Form key={row.task.id} spaceId={spaceId} row={row} draft={drafts[row.task.id] ?? emptyDraft()} uploadState={uploadStates[row.task.id] ?? idleRequest} submitState={submitState.conflict ? { ...submitState, error: null } : submitState} submissionBlocked={needsRefresh || refreshing === row.task.id} updateDraft={change => updateDraft(row.task.id, change)} uploadAttachment={selected => uploadAttachment(row.task.id, selected)} submitDraft={draft => submitDraft(row.task.id, draft)} clearUploadError={() => clearUploadError(row.task.id)} clearSubmitError={() => clearSubmitError(row.task.id)} />}</>}
         {row?.submission && <LearningSubmissionReview key={`${row.task.id}:${row.submission.revisionCount}`} spaceId={spaceId} taskId={row.task.id} submissionId={row.submission.id} revisionCount={row.submission.revisionCount} archived={archived} onReviewed={() => setReload(value => value + 1)} />}
       </div>
     </div>}

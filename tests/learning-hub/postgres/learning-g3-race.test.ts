@@ -178,7 +178,10 @@ async function main() {
         return { marker, users: [creator.id, assignee.id] as [string, string], skillId: skill.id, spaceId: space.id, taskId: task.id }
       })
       allFixtures.push(f)
-      await submitService(setup, f).submit(f.spaceId, f.taskId, { content: 'Synthetic first revision' })
+      await submitService(setup, f).submit(f.spaceId, f.taskId, {
+        content: 'Synthetic first revision',
+        freshness: { requirements: { title: f.marker, description: null, acceptanceCriteria: 'Synthetic concurrency verification', topicId: null, dueAt: null }, previousSubmission: null },
+      })
       console.log(JSON.stringify({ evidence: 'FIXTURE', ...f }))
       return f
     }
@@ -242,6 +245,13 @@ async function main() {
       assert.deepEqual(await snapshotUnrelated(setup, f.users), unrelated)
       console.log(JSON.stringify({ evidence: 'RACE_PASS', label, winner: winner === 0 ? 'A' : 'B', outcome: input.outcome, loserStatus: 409, task: after.task.status, submission: after.submission.status, revisionCount: 1, reviewCount: 1, activityCount: 2, deadline: after.task.dueAt, noPartialWrites: true, unrelatedUnchanged: true }))
     }
+    const nextRevision = ({ task, submission }: Awaited<ReturnType<typeof state>>) => ({
+      content: 'Synthetic next revision',
+      freshness: {
+        requirements: { title: task.title, description: task.description, acceptanceCriteria: task.acceptanceCriteria, topicId: task.topicId, dueAt: task.dueAt?.toISOString() ?? null },
+        previousSubmission: { submissionId: submission.id, revisionCount: submission.revisionCount },
+      },
+    })
     try {
       await competing('R1', 'REVIEWED', 'REVIEWED')
       await competing('R2-reviewed-wins', 'REVIEWED', 'REVISION_REQUESTED', 'left')
@@ -251,7 +261,7 @@ async function main() {
         const f = await fixture('R4'), before = await state(f), unrelated = await snapshotUnrelated(setup, f.users)
         const stale = body(before, 'REVIEWED', 'Decision A')
         await reviewService(a, f).review(f.spaceId, f.taskId, body(before, 'REVISION_REQUESTED', 'Decision B'))
-        await submitService(b, f).submit(f.spaceId, f.taskId, { content: 'Synthetic next revision' })
+        await submitService(b, f).submit(f.spaceId, f.taskId, nextRevision(await state(f)))
         const resubmitted = await state(f)
         assert.equal(resubmitted.submission.revisionCount, 2); assert.equal(resubmitted.activities.length, 3)
         await assert.rejects(reviewService(a, f).review(f.spaceId, f.taskId, stale), { status: 409 })
@@ -274,7 +284,7 @@ async function main() {
         if (base === 'REVISION_REQUESTED') await reviewService(a, f).review(f.spaceId, f.taskId, body(await state(f), 'REVISION_REQUESTED', 'Decision A'))
         const before = await state(f), unrelated = await snapshotUnrelated(setup, f.users)
         const desired = { ...body(before, 'REVISION_REQUESTED', 'Decision B'), revisionCount: base === 'REVISION_REQUESTED' ? 2 : 1 }
-        const results = await overlap(f, db => reviewService(db, f).review(f.spaceId, f.taskId, desired), db => submitService(db, f).submit(f.spaceId, f.taskId, { content: 'Synthetic next revision' }), base === 'SUBMITTED' ? 'left' : 'right')
+        const results = await overlap(f, db => reviewService(db, f).review(f.spaceId, f.taskId, desired), db => submitService(db, f).submit(f.spaceId, f.taskId, nextRevision(before)), base === 'SUBMITTED' ? 'left' : 'right')
         const allowed = base === 'SUBMITTED' ? 0 : 1, denied = allowed === 0 ? 1 : 0
         assert.ok(results[allowed].ok); assert.equal(results[denied].ok, false); assert.equal((results[denied] as { status: number }).status, 409)
         const after = await state(f)

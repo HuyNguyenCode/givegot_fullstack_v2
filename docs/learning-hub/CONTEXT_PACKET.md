@@ -1,5 +1,11 @@
 # Learning Hub Context Packet
 
+## Current G2 acceptance (2026-11-23)
+
+**G2 Stale Task Submission Guard — ACCEPTED / CLOSED.** G2 POST requires the learner's viewed requirements and previous Submission identity in `freshness`. The server returns typed 409s for changed requirements or stale Submission identity. These conflicts require an explicit refresh. The learner retains the text, HTTPS link and READY attachment and submits again manually.
+
+Focused unit/UI **73/73**, in-process route integration **6/6**, real PostgreSQL **10/10**, and Founder-reported manual browser QA **10/10** (G2-01–G2-10) passed. G5-F02 remains separately deferred as P2. I2 and I3 remain unstarted. See [IMPLEMENTATION_STATE](IMPLEMENTATION_STATE.md#current-g2-acceptance-2026-11-23) and [TEST_MATRIX](TEST_MATRIX.md#lh-041-g2-founder-manual-browser-qa-2026-11-23).
+
 ## Current G5 reconciliation (2026-11-22)
 
 G5 current reconciliation: G5-A/B/C implemented in the working tree; Founder reports applicable basic-edit and OPEN-cancel cases PASS, G5-13 4/4 PASS, and G5C-10 9/9 PASS after the initial G5-C 12/13 result. G5-08 IN_PROGRESS cancellation is Founder manual QA PASS using database-prepared state and the actual UI; the START workflow was not verified. G5 is ACCEPTED WITH KNOWN LIMITATIONS. Proposed GG-LH-G5-F01 (optional Task.version) is P3 deferred; GG-LH-G5-F02 (stale refresh return) is P2 LOGGED / UNRESOLVED: code inconsistency confirmed, runtime impact unverified. G5-D Booking association editing is P3 post-pilot pending I1/I2/I3 review. I2/I3 remain unstarted, Task 3 separate and J1 pending. See IMPLEMENTATION_STATE and TEST_MATRIX for evidence; do not treat historical pending-QA statements below as current.

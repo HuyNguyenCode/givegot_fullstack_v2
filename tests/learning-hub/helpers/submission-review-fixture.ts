@@ -2,16 +2,18 @@ import { Prisma } from '@prisma/client'
 import { createLearningSubmissionReviewService } from '../../../src/lib/learning-submission-review-service'
 import { createLearningSubmissionService } from '../../../src/lib/learning-submission-service'
 import { AuthorizationError } from '../../../src/lib/server-authorization'
+import type { SubmissionFreshness } from '../../../src/lib/learning-submission-contract'
 
 export const reviewNow = new Date('2030-01-01T00:00:00Z')
 export const reviewBody = (outcome = 'REVIEWED', revisionCount = 1) => ({ submissionId: 'submission', revisionCount, content: 'Private feedback', outcome })
+const requirements = { title: 'Task', description: null, acceptanceCriteria: 'Complete the task', topicId: null, dueAt: null }
 type Row = Record<string, unknown>
 const matches = (row: Row, where: Row) => Object.entries(where).every(([key, value]) => row[key] === value)
 export function reviewFixture() {
   let actor = 'creator'
   let authenticated = true
   let space = 'ACTIVE'
-  let task: Row = { id: 'task', learningSpaceId: 'space', creatorId: 'creator', assigneeId: 'assignee', bookingId: null, status: 'SUBMITTED', version: 2, dueAt: null }
+  let task: Row = { id: 'task', learningSpaceId: 'space', creatorId: 'creator', assigneeId: 'assignee', bookingId: null, status: 'SUBMITTED', version: 2, ...requirements }
   let submission: Row = { id: 'submission', taskId: 'task', authorId: 'assignee', content: 'Private answer', status: 'SUBMITTED', revisionCount: 1, submittedAt: reviewNow }
   let review: Row | null = null
   let events: Row[] = []
@@ -80,6 +82,10 @@ export function reviewFixture() {
   const deps = { db: db as never, actor: async () => { if (!authenticated) throw new AuthorizationError(401, 'Authentication required'); return { id: actor } }, now: () => reviewNow }
   return {
     reviews: createLearningSubmissionReviewService(deps), submissions: createLearningSubmissionService(deps),
+    freshness: (): SubmissionFreshness => ({
+      requirements: { ...requirements, dueAt: (task.dueAt as Date | null)?.toISOString() ?? null },
+      previousSubmission: { submissionId: String(submission.id), revisionCount: Number(submission.revisionCount) },
+    }),
     snapshot: () => structuredClone({ task, submission, review, events, booking }), members, sideEffects, transactions,
     actor: (id: string) => { actor = id }, loggedOut: () => { authenticated = false }, archive: () => { space = 'ARCHIVED' },
     linkBooking: (status: string) => { task.bookingId = 'booking'; booking.status = status },

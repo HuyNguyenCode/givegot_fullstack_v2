@@ -18,7 +18,7 @@ test('G3 route integrates session reviewer, revision request, private read, G2 r
   f.actor('assignee')
   response = await route.GET(get(), context)
   assert.equal((await response.json()).review.content, 'Private feedback')
-  await f.submissions.submit('space', 'task', { content: 'Second answer' })
+  await f.submissions.submit('space', 'task', { content: 'Second answer', freshness: f.freshness() })
   f.actor('creator')
   response = await route.POST(post(reviewBody('REVIEWED', 2)), context)
   assert.equal(response.status, 201)
