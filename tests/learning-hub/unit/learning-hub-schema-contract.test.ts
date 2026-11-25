@@ -66,7 +66,6 @@ test('B1 schema permits multiple spaces for the same pair and carries no permane
   assert.doesNotMatch(member, /\b(role|mentor|learner)\b/i)
   assert.doesNotMatch(space, /@@unique/)
   assert.doesNotMatch(schema, /@@unique\(\[[^\]]*primarySkillId[^\]]*\]\)/)
-  assert.match(space, /primarySkillId\s+String\s*$/m)
 })
 
 test('B1 relations declare deletion behavior and preserve archived/history-capable records', () => {
@@ -91,4 +90,19 @@ test('B1 migration is additive for Booking and leaves BookingStatus and legacy r
   assert.doesNotMatch(migration, /UNIQUE[^;]*(?:primarySkillId|learningSpaceId)[^;]*(?:userId|primarySkillId)/i)
   assert.match(rollback, /DROP COLUMN "learningSpaceId"/)
   assert.doesNotMatch(rollback, /ALTER TYPE "BookingStatus"/)
+})
+
+test('migration 009 makes Space skill optional while retaining Skill constraints', () => {
+  const space = modelBlock('LearningSpace')
+  const invite = modelBlock('LearningInvite')
+  assert.match(space, /primarySkillId\s+String\?[ \t]*$/m)
+  assert.match(space, /primarySkill\s+Skill\? @relation\("LearningSpacePrimarySkill", fields: \[primarySkillId\], references: \[id\], onDelete: Restrict\)/)
+  assert.match(space, /@@index\(\[primarySkillId, state\]\)/)
+  assert.match(space, /@@index\(\[state, updatedAt\]\)/)
+  assert.match(space, /creationOrigin\s+LearningSpaceCreationOrigin\?[ \t]*$/m)
+  assert.match(schema, /enum LearningSpaceCreationOrigin \{\s+USER_INITIATED\s+BOOKING_CONFIRMATION\s+\}/)
+  assert.match(invite, /primarySkillId\s+String[ \t]*$/m)
+  assert.match(invite, /primarySkill\s+Skill\s+@relation\(fields: \[primarySkillId\], references: \[id\], onDelete: Restrict\)/)
+  assert.match(migration, /CREATE TABLE "LearningSpace" \([\s\S]*?"primarySkillId" TEXT NOT NULL/)
+  assert.match(migration, /CONSTRAINT "LearningSpace_primarySkillId_fkey" FOREIGN KEY \("primarySkillId"\) REFERENCES "Skill"\("id"\) ON DELETE RESTRICT ON UPDATE CASCADE/)
 })

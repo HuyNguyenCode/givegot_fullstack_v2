@@ -8,9 +8,9 @@ import { AuthorizationError } from '../../../src/lib/server-authorization'
 const CREATED_AT = new Date('2026-09-16T00:00:00.000Z')
 const TOKEN = '4f_DdsMNjrFKri7cogT10OCcYDI3aaOdBvyNkYmNQjg'
 type InviteRecord = Pick<LearningInvite, 'id' | 'tokenHash' | 'inviterId' | 'acceptedById' | 'learningSpaceId' | 'primarySkillId' | 'objective' | 'status' | 'maxUses' | 'useCount' | 'expiresAt' | 'acceptedAt'> & { primarySkill?: { name: string } | null }
-type SpaceRecord = Pick<LearningSpace, 'id' | 'state' | 'primarySkillId'> & { objective?: string | null }
+type SpaceRecord = Pick<LearningSpace, 'id' | 'state' | 'primarySkillId' | 'creationOrigin'> & { objective?: string | null }
 type MemberRecord = Pick<LearningSpaceMember, 'learningSpaceId' | 'userId' | 'status'>
-type SpaceCreateData = Pick<Prisma.LearningSpaceUncheckedCreateInput, 'title' | 'primarySkillId'> & Partial<Pick<Prisma.LearningSpaceUncheckedCreateInput, 'objective' | 'createdById' | 'updatedById'>>
+type SpaceCreateData = Pick<Prisma.LearningSpaceUncheckedCreateInput, 'title' | 'primarySkillId' | 'objective' | 'createdById' | 'updatedById' | 'creationOrigin'>
 
 function repository() {
   const invites = new Map<string, InviteRecord>(); const invitesByHash = new Map<string, InviteRecord>(); const spaces = new Map<string, SpaceRecord>(); const members = new Map<string, MemberRecord>(); let next = 1; let tail = Promise.resolve()
@@ -30,7 +30,7 @@ function repository() {
     revokeInvite: async (id: string, revokedAt: Date) => Object.assign(invites.get(id)!, { status: 'REVOKED', revokedAt }),
     space: async (id: string | null) => id ? spaces.get(id) ?? null : null,
     activeMembers: async (spaceId: string) => [...members.values()].filter(member => member.learningSpaceId === spaceId && member.status === 'ACTIVE'),
-    createSpace: async (data: SpaceCreateData) => { const space = { id: `space-${next++}`, state: 'ACTIVE' as const, ...data }; spaces.set(space.id, space); return space },
+    createSpace: async (data: SpaceCreateData) => { const space = { id: `space-${next++}`, state: 'ACTIVE' as const, ...data, primarySkillId: data.primarySkillId ?? null, creationOrigin: data.creationOrigin ?? null }; spaces.set(space.id, space); return space },
     createMember: async (learningSpaceId: string, userId: string) => { const member = { learningSpaceId, userId, status: 'ACTIVE' as const }; members.set(memberKey(learningSpaceId, userId), member); return member },
     acceptInvite: async (id: string, acceptedById: string, learningSpaceId: string, acceptedAt: Date) => { const invite = invites.get(id); if (!invite || invite.status !== 'ACTIVE' || invite.useCount >= 1) return null; Object.assign(invite, { status: 'ACCEPTED', acceptedById, learningSpaceId, acceptedAt, useCount: invite.useCount + 1 }); return invite },
   }
@@ -45,7 +45,9 @@ async function create(repo: ReturnType<typeof repository>, expiresAt = new Date(
 }
 
 test('C1 creates a high-entropy hashed invite and accepts it exactly once for its pair', async () => {
-  const repo = repository(); const created = await create(repo); const accepted = await service(repo, 'b').accept(created.token)
+  const repo = repository(); const created = await create(repo); const accepted = await service(repo, 'b').accept(created.token, { creationOrigin: 'BOOKING_CONFIRMATION' })
+  assert.equal(repo.spaces.get(accepted.space!.id)?.creationOrigin, 'USER_INITIATED')
+  assert.equal(accepted.space?.primarySkillId, 'skill-1')
   assert.equal(created.token, TOKEN); assert.equal((created.invite as typeof created.invite & { tokenHash?: string }).tokenHash, undefined); assert.notEqual([...repo.invites.values()][0].tokenHash, TOKEN)
   assert.equal(accepted.space!.objective, 'Ship a safe invite'); assert.equal([...repo.members.values()].filter(member => member.learningSpaceId === accepted.space!.id).length, 2)
   assert.equal(accepted.invite.acceptedAt instanceof Date, true); assert.equal(accepted.invite.useCount, 1)
@@ -73,13 +75,17 @@ test('C1 serializes concurrent acceptance without a duplicate space or third mem
 })
 
 test('C1 rejects reuse that would create a third active member', async () => {
-  const repo = repository(); const existing = await repo.tx.createSpace({ title: 'Existing', primarySkillId: 'skill-1' }); await repo.tx.createMember(existing.id, 'a'); await repo.tx.createMember(existing.id, 'c'); const created = await create(repo)
+  const repo = repository(); const existing = await repo.tx.createSpace({ title: 'Existing', primarySkillId: 'skill-1', createdById: 'a' }); await repo.tx.createMember(existing.id, 'a'); await repo.tx.createMember(existing.id, 'c'); const created = await create(repo)
   await assert.rejects(service(repo, 'b').accept(created.token, { reuseSpaceId: existing.id }), (error: unknown) => error instanceof LearningInviteConflictError && /third/.test(error.message))
 })
 
 test('C1 lets an existing pair explicitly reuse or create a separate active space', async () => {
-  const repo = repository(); const existing = await repo.tx.createSpace({ title: 'Existing', primarySkillId: 'skill-1' }); await repo.tx.createMember(existing.id, 'a'); await repo.tx.createMember(existing.id, 'b')
-  const reuse = await create(repo); const reuseAccepted = await service(repo, 'b').accept(reuse.token, { reuseSpaceId: existing.id }); assert.equal(reuseAccepted.space!.id, existing.id)
+  const repo = repository(); const existing = await repo.tx.createSpace({ title: 'Existing', primarySkillId: 'skill-1', createdById: 'a' }); await repo.tx.createMember(existing.id, 'a'); await repo.tx.createMember(existing.id, 'b')
+  const reuse = await create(repo); const reuseAccepted = await service(repo, 'b').accept(reuse.token, { reuseSpaceId: existing.id, creationOrigin: 'BOOKING_CONFIRMATION' }); assert.equal(reuseAccepted.space!.id, existing.id)
+  const replay = await service(repo, 'b').accept(reuse.token, { creationOrigin: 'USER_INITIATED' })
+  assert.equal(replay.idempotent, true)
+  assert.equal(replay.space?.id, existing.id)
+  assert.equal(repo.spaces.get(existing.id)?.creationOrigin, null)
   const separate = await create(repo); const separateAccepted = await service(repo, 'b').accept(separate.token); assert.notEqual(separateAccepted.space!.id, existing.id); assert.equal(repo.spaces.size, 2)
 })
 
@@ -90,4 +96,14 @@ test('C2 preview shows only the active invite promise and hides stale pair metad
   await service(repo, 'a').revoke(created.invite.id)
   const revoked = await service(repo, 'b').preview(created.token)
   assert.equal(revoked.status, 'REVOKED'); assert.equal(revoked.canAccept, false); assert.equal(revoked.invite, null)
+})
+
+test('Bring Your Pair still rejects an absent or invalid invite skill', async () => {
+  const repo = repository()
+  const inviteService = service(repo, 'a')
+  const input = { expiresAt: new Date('2026-09-17T00:00:00.000Z').toISOString(), maxUses: 1 }
+  await assert.rejects(inviteService.create(input), /primarySkillId is required/)
+  await assert.rejects(inviteService.create({ ...input, primarySkillId: 'missing' }), /must reference an existing skill/)
+  assert.equal(repo.invites.size, 0)
+  assert.equal(repo.spaces.size, 0)
 })

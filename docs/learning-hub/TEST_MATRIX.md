@@ -1,5 +1,12 @@
 # Learning Hub Test Matrix
 
+## T3-B verification checkpoint (2026-11-24)
+
+T3-B.1 passed Prisma validate/generate 5.22.0, typecheck, static SQL and historical migration checks, diff check and 71 focused tests (55 unit, 16 non-database integration across 11 files). Initial Windows tsx startup hit uv_os_get_passwd ENOMEM before discovery; in-process bootstrap passed without establishing a permanent host fix. Build and full application regression NOT RUN.
+
+T3-B.2/R1 passed 45 distinct PostgreSQL cases: 44 automated across initial and continuation runs, and B07 Founder/PO manual SQL PASS. A01–A12, B01–B06, B08–B09, P01–P04, C01–C02, D01–D08, E01–E05 and F01–F05 are automated. B07 returned 23502 for NULL invite skill and left zero test records; the synthetic inviter verifies NOT NULL only. The original automated diagnostic remains unresolved/deferred and its assertion remains intact. R1's T3_B2_RESUME_POST_009=1 skips B07. Seven subsequent diff findings were closed with no confirmed regression. See IMPLEMENTATION_STATE for full evidence. T3-C NOT STARTED.
+
+
 ## LH 041 G2 Founder manual browser QA (2026-11-23)
 
 **ACCEPTED / CLOSED.** Founder reported **G2-01 through G2-10: 10 PASS / 0 FAIL / 0 BLOCKED** in manual browser QA. These results are attributed to the Founder. The November 22 automated evidence is recorded separately below.
@@ -118,7 +125,7 @@ Owner-reported manual cases, 27 total: PASS (19): T2-M03, M04, M05, M10, M12, M1
 
 Task 2: added focused unit coverage for counterpart derivation, payload, filter-before-pagination, Booking direction and source-level continuity guards. The standard commands failed before discovery with uv_os_get_passwd ENOMEM. A file-free inline tsx/cjs workaround passed all 156 unit tests including G1/G2/G3/I1 and the new cases; 67/68 integration cases passed, with extensionless dynamic import resolution blocking the legacy smoke and separate route smoke under that workaround. Typecheck, targeted ESLint, five legacy regression scripts and production build passed. Manual browser QA is pending; source-level assertions do not establish interactive behavior.
 
-Current checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at separate evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
+Historical checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at separate evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
 
 ## Owner-reported I1 real HTTP/browser-session smoke (2026-10-26)
 
@@ -345,7 +352,7 @@ Every P0 LH requirement maps to implementation tasks and explicit placeholders b
 | --- | --- | --- | --- | --- | --- |
 | LH 001 | C1 | `LH001-U` token entropy/hash, expiry, usage | `LH001-I` create; `LH001-S` session/self/third-member auth | Invite delivery/provider failure preserves state | C1 PASS; no delivery/provider coupling added |
 | LH 002 | C1, C2 | `LH002-U` token state transitions | `LH002-I` preview/accept; `LH002-C` concurrent/idempotent accept | Signup return and existing-space behavior | PASS: C2 covers Vietnamese creator/recipient UI, encrypted logged-out continuation, idempotent server acceptance, stale-state privacy, back navigation, mobile/focus labels, and first Booking action |
-| LH 010 | B1, B2, D1 | `LH010-U` create/reuse decision | `LH010-I` pair membership; `LH010-L` old Booking/null compatibility | Discover/Booking creation still works | B1/B2 PASS; D1 PASS for authorized persistent-space shell and Booking context; C2 PASS for Bring Your Pair creation/onboarding UI and first-Booking action |
+| LH 010 | B1, B2, D1; T3-B, T3-C, T3-D | `LH010-U` create/reuse decision | `LH010-I` pair membership; `LH010-L` old Booking/null compatibility | Discover/Booking creation still works | Historical B1/B2 PASS; D1 authorized shell and Booking context PASS; C2 Bring Your Pair PASS. T3-B optional skill/origin COMPLETE: 71 focused tests and 45 distinct PostgreSQL cases, evidence above. T3-C automatic confirmation linkage and T3-D setup NOT STARTED; no PASS claimed. |
 | LH 011 | B1, B2, D1 | `LH011-U` normalize/rename/archive/map | `LH011-I` member auth; `LH011-L` topic/history provenance | Skill moderation/public catalog unchanged | Historical B1/B2 PASS; D1 PASS for authorized topic display, empty/archived read states and long-content UI. Slice 1 Topic management UI is owner-accepted with the conditional P3 limitation above. |
 | LH 012 | B2, D1 | `LH012-U` objective/DoD validation/version | `LH012-I` member auth; `LH012-C` optimistic-lock conflict | Booking note and UI long-text behavior | Historical B2 PASS; D1 PASS for objective/definition display, empty and long-Vietnamese UI. Slice 2 versioned Objective/DoD UI is owner-accepted with S05 deferred above. |
 | LH 020 | E1, I1 | `LH020-U` mode/checklist rules | `LH020-I` Booking integration and immutable-after-delivery guard | `LH020-R` legacy Live/Calendar/Meet/cancellation | E1 PASS WITH KNOWN LIMITATION: LIVE/HYBRID use the locked AvailableSlot path with no manual fallback; EXERCISE_REVIEW and legacy manual creation remain compatible; three evidence/timing contracts, member-pair linkage, stable snapshots, null-mode compatibility, provider/lifecycle regression, and the early direct-create guard pass. I1 fulfillment transitions remain pending |

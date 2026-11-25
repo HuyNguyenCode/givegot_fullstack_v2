@@ -151,7 +151,7 @@ export function createLearningInviteService(deps: {
       } else {
         const skill = await tx.skill(invite.primarySkillId)
         if (!skill) throw new LearningInviteValidationError('Invite primary skill no longer exists')
-        space = await tx.createSpace({ title: `Learning: ${skill.name}`, primarySkillId: invite.primarySkillId, objective: invite.objective, createdById: invite.inviterId, updatedById: invite.inviterId })
+        space = await tx.createSpace({ title: `Learning: ${skill.name}`, primarySkillId: invite.primarySkillId, objective: invite.objective, createdById: invite.inviterId, updatedById: invite.inviterId, creationOrigin: 'USER_INITIATED' })
         await tx.createMember(space.id, invite.inviterId)
         await tx.createMember(space.id, recipient.id)
       }

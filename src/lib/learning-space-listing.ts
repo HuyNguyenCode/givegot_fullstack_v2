@@ -32,7 +32,7 @@ export async function findListingSpaces(userId: string) {
         members: { where: { status: 'ACTIVE', userId: { not: userId } }, orderBy: { joinedAt: 'asc' }, take: 1, select: { user: { select: { name: true } } } },
       },
     })
-    return spaces.map(space => ({ id: space.id, title: space.title, state: space.state, primarySkillName: space.primarySkill.name, partnerName: space.members[0]?.user.name ?? null }))
+    return spaces.map(space => ({ id: space.id, title: space.title, state: space.state, primarySkillName: space.primarySkill?.name ?? 'Chưa thiết lập', partnerName: space.members[0]?.user.name ?? null }))
 }
 
 export const listMySpaces = createSpaceListing({

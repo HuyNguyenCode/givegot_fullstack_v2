@@ -1,5 +1,10 @@
 # GiveGot Learning Hub Master Specification
 
+## Task 3 T3-B amendment (2026-11-24)
+
+Task 3 v1.1 supersedes older language requiring every Space to have a primary skill and suggesting reuse for ordinary Booking confirmation. A Space may have no skill; existing B2 user-initiated and Bring Your Pair creation paths still require one. T3-C is NOT STARTED. Its approved writer creates a new pair Space for each successfully confirmed ordinary unlinked Booking, including approved manual paths; Space-originated rebooking retains its link. No picker or historical backfill. An ordinary linked Booking retains null learningMode and legacy completion/GP behavior; linkage and Space activity do not establish fulfillment or settlement evidence. See IMPLEMENTATION_STATE for provenance, rollout and verification.
+
+
 ## Purpose and authority
 
 This file is the product and technical source of truth for the Learning Hub program. Direct owner instructions override it. `ARCHITECTURE_DECISIONS.md` governs implementation details; current code remains the regression baseline unless this specification explicitly requires a change.
@@ -21,7 +26,7 @@ Booking remains the scheduling, attendance, cancellation, dispute, review, escro
 - LearningSpace persists across Bookings.
 - `primarySkill` is mutable with audit and notification. Changing it never rewrites historical Booking/topic provenance.
 - Subtopics are flexible: free-form labels, optional canonical Skill mapping, and ACTIVE/ARCHIVED state.
-- Do not add a hard unique constraint for pair plus primary skill. Suggest reuse of a matching active space, but allow a distinct goal, project, or learning phase to use another space.
+- Do not add a hard pair-plus-skill unique constraint. Preserve existing explicit user-initiated B2 reuse where applicable. Future T3-C creates exactly one new pair Space for each successfully confirmed ordinary unlinked Booking, including approved manual paths, without automatic same-pair reuse. Space-originated rebooking retains its link without another Space; no picker or historical backfill.
 - MVP has exactly three modes: LIVE, EXERCISE_REVIEW, and HYBRID. Mode changes checklist, artifacts, and completion eligibility; it is not cosmetic metadata.
 - BookingStatus and FulfillmentStatus are separate lifecycles.
 - Submission feedback is private learning feedback and must not alter public Review or Trust Score.
@@ -42,7 +47,7 @@ Booking remains the scheduling, attendance, cancellation, dispute, review, escro
 | --- | --- | --- | --- |
 | LH 001 | Create invite | Create an invite with primarySkill, objective, expiry, and usage limit. | Hash token; prevent self-invite and a third active member. |
 | LH 002 | Accept invite | Show an accurate preview and let the recipient join the space. | Idempotent; reject expired, revoked, exhausted, or concurrently reused token. |
-| LH 010 | Create space | Create directly or associate after Booking confirmation. | Primary skill required; no hard pair-plus-skill uniqueness. |
+| LH 010 | Create space | Create directly or associate after Booking confirmation. | Space skill optional; existing user-initiated B2 and invite paths require skill; no hard pair-plus-skill uniqueness. |
 | LH 011 | Manage topics | Add, rename, archive, and optionally map subtopics to canonical Skill. | Do not automatically publish a new Skill; preserve provenance. |
 | LH 012 | Objective | Let the pair update objective and definition of done. | Record updater and version; reject lost updates. |
 | LH 020 | Learning mode | Select LIVE, EXERCISE_REVIEW, or HYBRID. | Mode activates a distinct checklist and settlement eligibility rule. |
@@ -92,7 +97,7 @@ FulfillmentStatus is separate from BookingStatus; I1 added its terminal labels a
 
 Future schema is additive. Names may follow repository conventions, but relationships and invariants must remain.
 
-- LearningSpace: title, mutable primarySkillId, ACTIVE/ARCHIVED state, timestamps.
+- LearningSpace: title, nullable mutable primarySkillId, nullable server-owned creationOrigin, ACTIVE/ARCHIVED state, timestamps. See ADR 002 and IMPLEMENTATION_STATE for origin semantics.
 - LearningSpaceMember: composite space/user identity, joined time, status; at most two active members enforced transactionally at service layer.
 - LearningTopic: free-form/normalized label, optional skillId, state, creator, provenance.
 - Booking additions: nullable learningSpaceId, topicId, learningMode, objective, definitionOfDone, fulfillmentStatus, deliveredAt, acceptedAt.
@@ -150,7 +155,7 @@ Track raw counts and rates for invite acceptance, first value within 24 hours, l
 ## MVP acceptance
 
 - An existing pair joins one persistent space through an invite and creates first value without Discover.
-- A pair formed through Booking can reuse an active space or create a separate one.
+- Each successfully confirmed ordinary unlinked Booking creates exactly one new pair Space, including approved manual Booking paths. Space-originated rebooking retains its existing Space and creates no additional Space. Existing explicit user-initiated B2 reuse remains available where applicable; no picker or historical backfill. T3-C remains NOT STARTED.
 - Primary skill changes are audited; subtopics and historical snapshots retain provenance.
 - All three MVP modes enforce their own completion evidence.
 - Exercise Review completes task -> Submission -> feedback -> acceptance/settlement without manual database repair.

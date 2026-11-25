@@ -20,14 +20,22 @@ test('listing derives identity from authentication and stops on authentication f
   await assert.rejects(createSpaceListing({ authenticate: async () => { throw new Error('unauthenticated') }, findAccount: async () => { throw new Error('unexpected account query') }, findSpaces: async () => { queried = true; return [] } }))
   assert.equal(queried, false)
 })
-test('Prisma query limits listing and partner to active membership with minimal fields', async () => {
+test('Prisma listing keeps active membership filtering and handles a Space without a skill', async t => {
   const original = prisma.learningSpace.findMany
-  let query: unknown
-  try {
-    prisma.learningSpace.findMany = (async (args: unknown) => { query = args; return [] }) as typeof original
-    await findListingSpaces('user-a')
-  } finally { prisma.learningSpace.findMany = original }
-  assert.deepEqual((query as { where: unknown }).where, { members: { some: { userId: 'user-a', status: 'ACTIVE' } } })
+  const findMany = t.mock.fn(async (_args?: Parameters<typeof prisma.learningSpace.findMany>[0]) => [
+    { id: 'a', title: 'Tiếng Việt', state: 'ACTIVE', primarySkill: { name: 'Nói' }, members: [{ user: { name: 'Bình' } }] },
+    { id: 'b', title: 'Không gian đã lưu trữ', state: 'ARCHIVED', primarySkill: null, members: [] },
+  ])
+  Reflect.set(prisma.learningSpace, 'findMany', findMany)
+  t.after(() => { Reflect.set(prisma.learningSpace, 'findMany', original) })
+  const spaces = await findListingSpaces('user-a')
+  assert.deepEqual(spaces, [records[0], { ...records[1], primarySkillName: 'Chưa thiết lập' }])
+  const html = renderToStaticMarkup(createElement(MySpacesView, { status: 'ready', spaces, retry: () => {} }))
+  assert.match(html, /Chưa thiết lập/)
+  assert.match(html, /Đã lưu trữ · Chỉ xem/)
+  const [query] = findMany.mock.calls[0].arguments
+  assert.deepEqual(query?.where, { members: { some: { userId: 'user-a', status: 'ACTIVE' } } })
+  assert.deepEqual(query?.orderBy, [{ updatedAt: 'desc' }, { id: 'asc' }])
   const source = readFileSync('src/lib/learning-space-listing.ts', 'utf8')
   assert.match(source, /some: \{ userId, status: 'ACTIVE' \}/)
   assert.match(source, /status: 'ACTIVE', userId: \{ not: userId \}/)

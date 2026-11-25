@@ -534,6 +534,11 @@ enum LearningSpaceStatus {
   ARCHIVED
 }
 
+enum LearningSpaceCreationOrigin {
+  USER_INITIATED
+  BOOKING_CONFIRMATION
+}
+
 enum LearningSpaceMemberStatus {
   ACTIVE
   LEFT
@@ -602,22 +607,23 @@ enum LearningNoteType {
 }
 
 model LearningSpace {
-  id               String              @id @default(uuid())
+  id               String                       @id @default(uuid())
   title            String
-  primarySkillId   String
-  state            LearningSpaceStatus @default(ACTIVE)
-  objective        String?             @db.Text
-  definitionOfDone String?             @db.Text
-  version          Int                 @default(1)
+  primarySkillId   String?
+  creationOrigin   LearningSpaceCreationOrigin?
+  state            LearningSpaceStatus          @default(ACTIVE)
+  objective        String?                      @db.Text
+  definitionOfDone String?                      @db.Text
+  version          Int                          @default(1)
   createdById      String
   updatedById      String?
   archivedAt       DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @default(now()) @updatedAt
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @default(now()) @updatedAt
 
-  primarySkill Skill @relation("LearningSpacePrimarySkill", fields: [primarySkillId], references: [id], onDelete: Restrict)
-  createdBy    User  @relation("LearningSpaceCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User? @relation("LearningSpaceUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  primarySkill Skill? @relation("LearningSpacePrimarySkill", fields: [primarySkillId], references: [id], onDelete: Restrict)
+  createdBy    User   @relation("LearningSpaceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User?  @relation("LearningSpaceUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
 
   members    LearningSpaceMember[]
   topics     LearningTopic[]

@@ -1,5 +1,10 @@
 # Learning Hub Regression Checklist
 
+## T3-B checkpoint (2026-11-24)
+
+Focused implementation verification and the 45-case disposable PostgreSQL rehearsal are complete at the separate evidence levels in TEST_MATRIX and IMPLEMENTATION_STATE. B07 is Founder/PO manual PASS; its automated diagnostic remains deferred. The 71 focused tests do not establish full application regression; production build and full regression were NOT RUN for T3-B. Booking/GP, Calendar/Meet, cron, fulfillment, Task and artifact business logic was not changed. T3-C remains NOT STARTED. Earlier checkpoints below are historical.
+
+
 ## Current G2 stale Task submission guard acceptance (2026-11-23)
 
 **ACCEPTED / CLOSED.** Founder-reported manual browser QA G2-01 through G2-10 passed with 10 PASS / 0 FAIL / 0 BLOCKED. Prior evidence includes 73/73 focused unit/UI, 6/6 in-process G2/G3 route integration, 10/10 real PostgreSQL cases, and passing typecheck, targeted ESLint and diff check. See [TEST_MATRIX](TEST_MATRIX.md#lh-041-g2-founder-manual-browser-qa-2026-11-23). Keep the checks below for future regressions.
@@ -59,7 +64,7 @@ Task 2 pre-repair regression: owner reports unit 156/156 and integration 68/68 p
 
 Task 2 regression evidence: typecheck, targeted ESLint, five legacy regression scripts and production build passed. Standard Learning Hub unit/integration commands failed before discovery on the known Windows tsx host ENOMEM. A file-free tsx/cjs workaround passed 156 unit tests including G1/G2/G3/I1 and 67/68 integration tests; legacy and route smoke dynamic imports failed to resolve under that workaround. No browser QA is claimed. Preserve the existing shell whitespace when interpreting git diff --check. No backend state machine or financial code changed.
 
-Current checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at distinct evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
+Historical checkpoint: post-I1 reconciliation (2026-10-26). I1 implementation, disposable PostgreSQL verification, STAGING migration 008, automated gap audit, and owner-reported runtime smoke are complete at distinct evidence levels. I2 is NEXT, NOT STARTED; I3 remains pending.
 
 ## Standalone Teaching Calendar A2 regression evidence (2026-10-28)
 

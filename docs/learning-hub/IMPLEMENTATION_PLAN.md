@@ -1,10 +1,15 @@
 # Learning Hub Implementation Plan
 
+## Task 3 checkpoint (2026-11-24)
+
+The approved v1.1 sequence is T3-A audit, T3-B schema, T3-C confirmation linkage, T3-D setup UI, T3-E notification/dashboard, T3-F existing email and T3-G targeted regression/documentation. T3-A and T3-B are COMPLETE. T3-C is READY / NOT STARTED; no later phase starts automatically. A11/A13 remain audit-only and unapproved. See IMPLEMENTATION_STATE for handoff and evidence. The separate playbook's I2 remains NOT STARTED.
+
+
 ## Current G5 reconciliation (2026-11-22)
 
 G5 basic Task edit/cancel, Topic edit and conflict-refresh work is an independent implemented working-tree slice with owner-reported acceptance and remaining limitations; see IMPLEMENTATION_STATE and TEST_MATRIX. G5 is ACCEPTED WITH KNOWN LIMITATIONS; G5-08 is Founder manual QA PASS through the UI using database-prepared state (START workflow not verified), F02 is P2 LOGGED / UNRESOLVED, and G5-D Booking association editing is deferred post-pilot. This cross-reference does not change the G1/G2/G3/I1/I2/I3/J1 registry or dependencies.
 
-## Current post-I1 checkpoint (2026-10-26)
+## Historical post-I1 checkpoint (2026-10-26)
 
 I1 mode-aware fulfillment is implemented under ADR 020. Migration 008 passed disposable TEST and was applied to STAGING on 2026-10-21 with precheck/postcheck PASS and 102 historical Booking rows preserved; production remains unmigrated. The 11-case automated gap audit and owner-reported 2026-10-26 localhost/STAGING browser-session smoke are recorded at distinct evidence levels in IMPLEMENTATION_STATE and TEST_MATRIX. Unauthenticated GET redirected to sign-in and returned HTML after fetch followed it, rather than the expected 401 JSON; this LOW-priority API contract deviation awaits a client-compatibility/contract decision. I2 linked settlement is NEXT, NOT STARTED; I3 cron/deadline policy remains pending.
 
@@ -49,7 +54,7 @@ The registry and historical task evidence below retain their original sequence.
 - Prefer additive changes. Stop for owner review before changing GivePoint policy, privacy, or an irreversible migration.
 - Do not combine two high-risk areas such as authorization and settlement, migration and UI, or storage and AI.
 - Stage explicit paths only; never clean, reset, or absorb unrelated user changes.
-- Use the current post-I1 checkpoint (2026-10-26): H1, H2, and I1 are implemented; migration 008 is on TEST and STAGING, not production. I2 linked settlement is NEXT, NOT STARTED; I3 and J1 remain pending. R-004, R-010, and R-017 retain their release gates. Dated older checkpoint statements are historical.
+- Use the current Task 3 checkpoint: T3-B COMPLETE, T3-C READY / NOT STARTED. Complete the approved Task 3 sequence through T3-G before resuming the separate I2–L1 playbook; no subsequent implementation starts automatically. I2 and I3 remain NOT STARTED and J1 pending. I1 and migration 008 retain their historical TEST/STAGING evidence. R-004, R-010, and R-017 retain their release gates.
 
 ## Task registry
 
@@ -100,7 +105,7 @@ Every P0 requirement has an implementation owner and named test placeholders. De
 | --- | --- | --- |
 | LH 001 | C1 | LH001-U, LH001-I, LH001-S |
 | LH 002 | C1, C2 | LH002-U, LH002-I, LH002-C |
-| LH 010 | B1, B2, D1 | LH010-U, LH010-I, LH010-L |
+| LH 010 | B1, B2, D1; T3-B complete; T3-C and T3-D NOT STARTED | LH010-U, LH010-I, LH010-L; T3-B: 71 focused tests and 45 distinct PostgreSQL cases, see TEST_MATRIX; T3-C automatic linkage and T3-D setup remain pending |
 | LH 011 | B1, B2, D1 | LH011-U, LH011-I, LH011-L |
 | LH 012 | B2, D1 | LH012-U, LH012-I, LH012-C |
 | LH 020 | E1, I1 | LH020-U, LH020-I, LH020-R |

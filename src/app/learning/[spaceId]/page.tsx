@@ -1,28 +1,12 @@
 import { notFound } from 'next/navigation'
 
 import { LearningSpaceShell } from '@/components/learning/LearningSpaceShell'
-import { loadLearningSpaceShell, type AuthorizedLearningSpaceShellData, type LearningSpaceShellData } from '@/lib/learning-space-shell'
+import { findShell, loadLearningSpaceShell, type AuthorizedLearningSpaceShellData } from '@/lib/learning-space-shell'
 import { learningSpaceRepository } from '@/lib/learning-space-service'
 import { isAuthorizationError, requireLearningSpaceMember } from '@/lib/server-authorization'
-import { prisma } from '@/lib/prisma'
 import { listLearningResources } from '@/lib/learning-resource-service'
 
 export const dynamic = 'force-dynamic'
-
-async function findShell(spaceId: string): Promise<LearningSpaceShellData | null> {
-  const space = await prisma.learningSpace.findUnique({
-    where: { id: spaceId },
-    select: {
-      id: true, title: true, version: true, state: true, objective: true, definitionOfDone: true,
-      primarySkill: { select: { name: true } },
-      members: { where: { status: 'ACTIVE' }, orderBy: { joinedAt: 'asc' }, select: { user: { select: { id: true, name: true, email: true } } } },
-      topics: { orderBy: { createdAt: 'asc' }, select: { id: true, label: true, state: true } },
-      bookings: { orderBy: { startTime: 'asc' }, select: { id: true, startTime: true, endTime: true, status: true, mentorId: true, menteeId: true } },
-    },
-  })
-  if (!space) return null
-  return { ...space, primarySkillName: space.primarySkill.name, members: space.members.map(member => member.user) }
-}
 
 export default async function LearningSpacePage({ params, searchParams }: { params: Promise<{ spaceId: string }>; searchParams: Promise<{ onboarding?: string }> }) {
   const { spaceId } = await params

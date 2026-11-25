@@ -62,7 +62,7 @@ export function createLearningSpaceService(deps: Dependencies) {
   async function createDirect(input: Record<string, unknown>) {
     const actor = await deps.requireAuthenticatedUser(); const memberId = text(input.memberId, 'memberId', 191)
     if (memberId === actor.id) throw new LearningSpaceValidationError('A learning space needs two different members')
-    const data = { title: text(input.title, 'title'), primarySkillId: text(input.primarySkillId, 'primarySkillId', 191), objective: detail(input.objective, 'objective'), definitionOfDone: detail(input.definitionOfDone, 'definitionOfDone'), createdById: actor.id }
+    const data = { title: text(input.title, 'title'), primarySkillId: text(input.primarySkillId, 'primarySkillId', 191), objective: detail(input.objective, 'objective'), definitionOfDone: detail(input.definitionOfDone, 'definitionOfDone'), createdById: actor.id, creationOrigin: 'USER_INITIATED' as const }
     return deps.repository.transaction(async tx => {
       if (!await tx.userExists(memberId)) throw new AuthorizationError(404, 'Learning space member not found')
       if (!await tx.skillExists(data.primarySkillId)) throw new LearningSpaceValidationError('primarySkillId must reference an existing skill')
@@ -71,7 +71,7 @@ export function createLearningSpaceService(deps: Dependencies) {
   }
   async function createFromConfirmedBooking(input: Record<string, unknown>) {
     const actor = await deps.requireAuthenticatedUser(); const bookingId = text(input.bookingId, 'bookingId', 191)
-    const data = { title: text(input.title, 'title'), primarySkillId: text(input.primarySkillId, 'primarySkillId', 191), objective: detail(input.objective, 'objective'), definitionOfDone: detail(input.definitionOfDone, 'definitionOfDone'), createdById: actor.id }
+    const data = { title: text(input.title, 'title'), primarySkillId: text(input.primarySkillId, 'primarySkillId', 191), objective: detail(input.objective, 'objective'), definitionOfDone: detail(input.definitionOfDone, 'definitionOfDone'), createdById: actor.id, creationOrigin: 'USER_INITIATED' as const }
     return deps.repository.transaction(async tx => {
       const booking = await tx.booking(bookingId); if (!booking) throw new AuthorizationError(404, 'Booking not found')
       if (booking.mentorId !== actor.id && booking.menteeId !== actor.id) throw new AuthorizationError(403, 'Booking participant access required')

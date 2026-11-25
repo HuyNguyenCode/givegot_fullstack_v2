@@ -4,7 +4,8 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { LearningSpaceShell } from '../../../src/components/learning/LearningSpaceShell'
-import { loadLearningSpaceShell, type LearningSpaceShellData } from '../../../src/lib/learning-space-shell'
+import { findShell, loadLearningSpaceShell, type LearningSpaceShellData } from '../../../src/lib/learning-space-shell'
+import { prisma } from '../../../src/lib/prisma'
 
 const base: LearningSpaceShellData = {
   id: 'space-1', title: 'Luyện phát âm tiếng Việt', version: 1, state: 'ACTIVE', primarySkillName: 'Giao tiếp',
@@ -56,4 +57,24 @@ test('mobile layout, keyboard focus, and navigation stay local to the route', ()
   assert.match(html, /focus-visible:ring-2/)
   assert.equal((html.match(/<nav/g) ?? []).length, 2)
   assert.doesNotMatch(html, /ProductionHeader|Tin nhắn|Ví của Mình/)
+})
+
+test('the detail projection renders both an unset skill and an existing skill for an authorized member', async t => {
+  let primarySkill: { name: string } | null = null
+  const original = prisma.learningSpace.findUnique
+  Reflect.set(prisma.learningSpace, 'findUnique', async () => ({
+    ...base,
+    primarySkill,
+    members: base.members.map(user => ({ user })),
+  }))
+  t.after(() => { Reflect.set(prisma.learningSpace, 'findUnique', original) })
+  const load = () => loadLearningSpaceShell(base.id, { requireMember: async () => ({ user: { id: 'member-1' } }), findShell })
+  const unset = await load()
+  assert.ok(unset)
+  assert.equal(unset.primarySkillName, 'Chưa thiết lập')
+  assert.equal(unset.viewerId, 'member-1')
+  assert.match(renderToStaticMarkup(createElement(LearningSpaceShell, { space: unset })), /Chưa thiết lập/)
+  primarySkill = { name: 'Giao tiếp' }
+  const existing = await load()
+  assert.equal(existing?.primarySkillName, 'Giao tiếp')
 })

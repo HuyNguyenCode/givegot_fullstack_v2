@@ -1,5 +1,10 @@
 # Learning Hub Context Packet
 
+## Current Task 3 checkpoint (2026-11-24)
+
+T3-B is COMPLETE; migration 009 was verified on disposable TEST. T3-C is READY / NOT STARTED and I2/I3 remain NOT STARTED. Earlier Task 3 and slice-next statements below are historical. Space skill is nullable; existing B2 and Bring Your Pair creation paths still require skill. Origin is server-owned and nullable; historical unknown origin stays NULL. Ordinary linked Bookings retain null learningMode and legacy completion/GP behavior. See IMPLEMENTATION_STATE for evidence, seven reviewed findings and deployment prerequisites.
+
+
 ## Current G2 acceptance (2026-11-23)
 
 **G2 Stale Task Submission Guard — ACCEPTED / CLOSED.** G2 POST requires the learner's viewed requirements and previous Submission identity in `freshness`. The server returns typed 409s for changed requirements or stale Submission identity. These conflicts require an explicit refresh. The learner retains the text, HTTPS link and READY attachment and submits again manually.
@@ -112,7 +117,7 @@ LH 040 is complete. The task service/API uses session identity, active-pair auth
 
 ## Historical implementation overview (through 2026-10-14)
 
-Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMENTATION_STATE, TEST_MATRIX, and the dated sections above. They preserve their original tests, limits, and then-pending task status; the current post-I1 checkpoint controls today's status.
+Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMENTATION_STATE, TEST_MATRIX, and the dated sections above. They preserve their original tests, limits, and then-pending task status; the T3-B checkpoint above controls today's status.
 
 ## Owner-owned dirty state before Task 00
 
@@ -128,7 +133,7 @@ Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMEN
 - Booking remains the session, schedule, attendance, cancellation, dispute, review, escrow, and GivePoint transaction.
 - `primarySkill` is mutable with audit/notification; history retains prior provenance.
 - Subtopics are flexible free-form topics with optional canonical Skill mapping.
-- No hard unique constraint for pair plus primary skill; suggest reuse but allow another space.
+- No hard pair-plus-skill unique constraint. Existing explicit user-initiated B2 reuse remains available where applicable. Under future T3-C, each successfully confirmed ordinary unlinked Booking, including approved manual Booking paths, creates exactly one new pair Space without automatic same-pair reuse; Space-originated rebooking keeps its link without another Space. No picker or historical backfill.
 - Exactly two active members in MVP; roles live on Booking/Task, not permanent membership.
 - P0 modes are LIVE, EXERCISE_REVIEW, and HYBRID, each with distinct evidence and completion rules.
 - For EXERCISE_REVIEW only, `Booking.startTime`/`endTime` are unchanged legacy compatibility fields, not synchronous availability/attendance or async workflow timing. `LearningTask.dueAt` is independent; `Submission.submittedAt`, `SubmissionReview.reviewedAt`, `Booking.deliveredAt`, and fulfillment lifecycle state are authoritative. The separate question of whether EXERCISE_REVIEW should stop consuming an AvailableSlot is deferred; G1/G2/G3 do not change it, and I1/I2/I3 own endTime-independent settlement enforcement.
@@ -171,6 +176,7 @@ Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMEN
     - H1 Notes collection/item APIs: `/api/learning/spaces/[spaceId]/notes` and `/api/learning/spaces/[spaceId]/notes/[noteId]`; Learning invite APIs: `/api/learning/invites/*`; I1 fulfillment GET/POST: `/api/learning/spaces/[spaceId]/bookings/[bookingId]/fulfillment`.
 - Schema has 27 models, including the ten Learning Hub domain models. Booking retains additive nullable Learning Hub fields, including I1 fulfillment version/timestamps, and keeps its original status enum unchanged.
 - Manual migration 004 adds the Learning Hub domain additively, with an executable rollback plus a production rollback note. Additive migration 005 adds only `LearningTask.version` with default 1 and has executable rollback SQL plus a rollback note. Migration 006 adds only `LearningResourcePurpose` and non-null `LearningResource.purpose` with the `LEGACY_UNCLASSIFIED` database default, plus its guarded rollback. Migration 007 adds H1 note type/default, audited soft deletion, and an active-list index; TEST rehearsal and STAGING forward passed. Migration 008 adds nullable `Booking.fulfillmentVersion` and terminal fulfillment labels; TEST rehearsal and STAGING forward passed with no Booking backfill. Production remains unmigrated for 007/008.
+- Migration 009 makes LearningSpace skill and relation optional and adds nullable `creationOrigin` without default or backfill. Disposable TEST forward, guarded refusals, safe rollback and reapplication passed; application staging and production rollout remain unverified. See IMPLEMENTATION_STATE for evidence.
 - Canonical commands include `typecheck`, `test:learning-hub`, `test:learning-hub:integration`, `test:learning-hub:migration`, and `test:regression`.
 
 ## Environment names only
@@ -179,7 +185,7 @@ Earlier B2/C1/D1/E1/F1/F2/G1/G2 and D0 checkpoints remain documented in IMPLEMEN
 
 ## Next task
 
-I2 linked GivePoint settlement is next and NOT STARTED; I3 mode-aware cron/deadline policy and J1 remain pending. I2 must independently prove atomic, idempotent GP/TransactionLog release and reconciliation without changing legacy Booking semantics or assuming I1's controlled fulfillment races prove settlement. Task COMPLETED/private feedback is not Booking delivery, acceptance, or GP settlement. The current post-I1 checkpoint above controls; dated historical evidence remains in its owning checkpoint.
+T3-C is the next Task 3 phase: READY / NOT STARTED. Complete the approved Task 3 sequence through T3-G before resuming the separate I2–L1 playbook; no subsequent implementation starts automatically. I2 and I3 remain NOT STARTED and J1 remains pending. I2 must independently prove atomic, idempotent GP/TransactionLog release and reconciliation without changing legacy Booking semantics or assuming I1's controlled fulfillment races prove settlement. Task COMPLETED/private feedback is not Booking delivery, acceptance, or GP settlement. The T3-B checkpoint above controls; dated evidence remains in its owning historical checkpoint.
 
 ## Completion contract
 

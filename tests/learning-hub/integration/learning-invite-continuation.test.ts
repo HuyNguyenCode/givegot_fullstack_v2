@@ -12,7 +12,7 @@ test('C1 preserves a logged-out invite only in a short-lived encrypted HttpOnly 
   let acceptedToken: string | null = null
   const service = {
     preview: async () => ({ invite: { id: 'invite-1' }, status: 'ACTIVE', canAccept: true }),
-    accept: async (token: unknown) => { acceptedToken = token as string; return { invite: { id: 'invite-1' }, space: { id: 'space-1' }, idempotent: false } },
+    accept: async (token: unknown) => { acceptedToken = token as string; return { invite: { id: 'invite-1' }, space: { id: 'space-1', title: 'Pair', primarySkillId: 'skill-1', creationOrigin: 'USER_INITIATED' }, idempotent: false } },
   }
   const preview = createLearningInvitePreviewHandlers(service, (response, token) => setLearningInviteContinuation(response, token, SECRET)).POST
   const previewResponse = await preview(new NextRequest('http://local/api/learning/invites/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: TOKEN }) }))
@@ -21,5 +21,6 @@ test('C1 preserves a logged-out invite only in a short-lived encrypted HttpOnly 
   const cookie = setCookie.split(';', 1)[0]
   const accept = createLearningInviteAcceptHandlers(service, request => readLearningInviteContinuation(request, SECRET)).POST
   const acceptResponse = await accept(new NextRequest('http://local/api/learning/invites/accept', { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({}) }))
+  assert.deepEqual(await acceptResponse.json(), { invite: { id: 'invite-1' }, space: { id: 'space-1', title: 'Pair', primarySkillId: 'skill-1' }, idempotent: false })
   assert.equal(acceptResponse.status, 200); assert.equal(acceptedToken, TOKEN); assert.match(acceptResponse.headers.get('set-cookie')!, /Max-Age=0/)
 })

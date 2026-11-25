@@ -1,5 +1,10 @@
 # Learning Hub Changelog
 
+## 2026-11-24 — Task 3 T3-B closure
+
+T3-B optional Space skill and server-owned creation origin are complete. Migration 009 passed disposable TEST forward, independent guarded refusals, safe rollback and reapplication; 44 cases were automated across runs and B07 was Founder/PO manual PASS, with its automation diagnostic deferred. Focused implementation checks passed 71 tests; production build and full regression were not run. Seven subsequent diff findings were reviewed with no confirmed regression. TEST remains on 009 as last verified; application staging/production were not verified or migrated. T3-C READY / NOT STARTED. See IMPLEMENTATION_STATE and TEST_MATRIX.
+
+
 ## 2026-11-23 — G2 stale Task submission guard acceptance and documentation reconciliation
 
 **ACCEPTED / CLOSED.** G2 now requires `freshness` on every submission POST under the approved pre-launch breaking contract. The existing Serializable transaction checks viewed requirements and revision identity before the conditional Task claim, returning typed 409s for confirmed stale conflicts. The learner explicitly refreshes the Task, Submission and archive state, keeps the text, link and READY attachment, and manually retries. The G3 revision and review flow remains compatible.
@@ -62,7 +67,7 @@ Task 2 pre-repair QA reconciliation (2026-11-08): recorded owner-reported standa
 
 Task 2 adds a Create Task form, participant responsibility filters, and Booking role/direction presentation to the existing master/detail UI. The authorized Booking projection includes mentorId and menteeId. Existing services and schema are unchanged. Typecheck, targeted ESLint, legacy regressions and build passed; standard unit/integration startup failed; a file-free workaround passed 156 unit tests and 67/68 integration tests, with smoke imports unresolved. Browser QA remains pending as recorded in IMPLEMENTATION_STATE.
 
-Current checkpoint: post-I1 reconciliation (2026-10-26); I2 is NEXT, NOT STARTED, and I3 remains pending. Dated entries retain their original evidence levels.
+Historical checkpoint: post-I1 reconciliation (2026-10-26); I2 is NEXT, NOT STARTED, and I3 remains pending. Dated entries retain their original evidence levels.
 
 ## 2026-11-01 — Task 1 real PostgreSQL listing verification
 

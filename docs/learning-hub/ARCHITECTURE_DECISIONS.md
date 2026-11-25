@@ -1,5 +1,8 @@
 # Learning Hub Architecture Decisions
 
+Current Task 3 v1.1 amendments are recorded in ADR 002 and IMPLEMENTATION_STATE. For ordinary Booking confirmation, the future T3-C contract creates a new Space; it does not suggest reuse. This narrowly supersedes ADR 004's general reuse suggestion for that journey. ADR 008's historical conditional-backfill allowance does not authorize Task 3 historical Booking or origin backfill. T3-C remains NOT STARTED.
+
+
 ## Decision policy
 
 These decisions are accepted for P0 unless the owner explicitly changes them. A later task must record a superseding decision before implementing a conflicting design.
@@ -14,7 +17,9 @@ LearningSpace is a long-lived private relationship container for a pair. Booking
 
 **Status:** Accepted
 
-A space has one `primarySkillId` for naming, discovery, contribution grouping, and analytics. It can change under the approved pair policy, with audit, optimistic concurrency, and notification. Historical Bookings and topics retain their original snapshot or reference.
+Original decision: a space has one `primarySkillId` for naming, discovery, contribution grouping, and analytics. It can change under the approved pair policy, with audit, optimistic concurrency, and notification. Historical Bookings and topics retain their original snapshot or reference.
+
+**T3-B amendment (2026-11-24):** The requirement that every Space already have a skill is superseded. The field and relation are nullable. Existing B2 user-initiated and Bring Your Pair creation still require skill; existing member authorization and version checks apply to assignment, and clearing is not added. creationOrigin is server-owned and nullable: USER_INITIATED for existing user-initiated creation, BOOKING_CONFIRMATION reserved for T3-C, NULL for unknown historical origin without backfill. Public Space and Invite responses omit origin. See IMPLEMENTATION_STATE for migration and rollback evidence.
 
 ## ADR 003 Flexible subtopics
 
@@ -26,7 +31,9 @@ LearningTopic stores a free-form label, normalized label, optional canonical `sk
 
 **Status:** Accepted
 
-Do not add a database unique constraint over member pair and primary skill. The service suggests reuse of a matching active space but permits a new one for a separate goal, project, or phase. Pair ordering and two-member concurrency still require deterministic service logic.
+Original decision: do not add a database unique constraint over member pair and primary skill. The service suggests reuse of a matching active space but permits a new one for a separate goal, project, or phase. Pair ordering and two-member concurrency still require deterministic service logic.
+
+**Task 3 v1.1 qualification:** Existing explicit user-initiated B2 reuse remains available where applicable. Future T3-C creates exactly one new pair Space for each successfully confirmed ordinary unlinked Booking, including approved manual paths, without automatically reusing a same-pair Space. Space-originated rebooking retains its link and creates no additional Space. No picker or historical backfill; T3-C is NOT STARTED.
 
 ## ADR 005 Two active members in MVP
 
@@ -146,7 +153,9 @@ New notes default to SPACE_MEMBERS. AUTHOR_ONLY restricts reads to the author; B
 
 **Status:** Accepted for I1 (2026-10-21)
 
-The existing nullable `Booking.fulfillmentStatus` is the separate learning lifecycle. Add `DISPUTED` and `CANCELLED` to its enum, retain `SETTLED` for I2, and add nullable `fulfillmentVersion`. A linked row with null status is treated as `NOT_STARTED` at version zero only by the fulfillment service; a legacy row with null `learningMode` is never enrolled. The first successful transition materializes the status and increments the version. No old row is backfilled.
+The existing nullable `Booking.fulfillmentStatus` is the separate learning lifecycle. Add `DISPUTED` and `CANCELLED` to its enum, retain `SETTLED` for I2, and add nullable `fulfillmentVersion`. An eligible mode-aware linked Booking with null fulfillment status is treated as `NOT_STARTED` at version zero only by the fulfillment service. Space linkage alone does not enroll a Booking; `learningSpaceId != null` does not imply `learningMode != null`. An ordinary linked Booking with null `learningMode` retains legacy completion and GivePoint behavior and is not enrolled in mode-aware fulfillment. The first successful transition materializes the status and increments the version. No old row is backfilled.
+
+The following transition table applies to eligible mode-aware Bookings.
 
 | Current fulfillment | Authorized next state | Evidence and guard |
 | --- | --- | --- |
@@ -158,6 +167,6 @@ The existing nullable `Booking.fulfillmentStatus` is the separate learning lifec
 | Any unsettled state | DISPUTED or CANCELLED | Only the existing Booking dispute/cancellation/no-show writer, in the same transaction; terminal Booking state blocks all normal fulfillment writes |
 | ACCEPTED, DISPUTED, CANCELLED, SETTLED | no participant action in I1 | I2 owns settlement and admin resolution policy |
 
-Every transition requires server-session identity, active unsuspended membership, the Booking pair, exact expected version, and a conditional status/version/BookingStatus claim inside a Serializable transaction. A stable version-keyed, content-free LearningActivity is written in that transaction. Retries with the prior version receive 409; competing delivery/acceptance attempts cannot both win. `deliveredAt` is set only on delivery, cleared on a revision restart, and is not derived from `endTime`. `acceptedAt` is set only on learner acceptance. The service never changes BookingStatus, wallet, ledger, public Review, or Trust. Existing Booking cancellation/dispute paths may mirror their own terminal outcome into fulfillment; they keep ownership of BookingStatus and financial policy. I1 guards existing legacy payout entry points for linked bookings; I2/I3 will implement mode-aware payout and cron timing.
+Every transition requires server-session identity, active unsuspended membership, the Booking pair, exact expected version, and a conditional status/version/BookingStatus claim inside a Serializable transaction. A stable version-keyed, content-free LearningActivity is written in that transaction. Retries with the prior version receive 409; competing delivery/acceptance attempts cannot both win. `deliveredAt` is set only on delivery, cleared on a revision restart, and is not derived from `endTime`. `acceptedAt` is set only on learner acceptance. The service never changes BookingStatus, wallet, ledger, public Review, or Trust. Existing Booking cancellation/dispute paths may mirror their own terminal outcome into fulfillment; they keep ownership of BookingStatus and financial policy. I1 guards existing legacy payout entry points for mode-aware Bookings; Space-linked Bookings with null learningMode retain legacy completion and GivePoint behavior. I2/I3 will implement mode-aware payout and cron timing.
 
 For I1, LIVE delivery uses elapsed Booking time plus a mentor-authored visible recap as its current session evidence; learner acceptance is separate. EXERCISE_REVIEW evidence is a linked mentor-created task with the learner's current reviewed submission and matching private feedback. HYBRID uses that reviewed prework submitted before the scheduled start as its acknowledgement, plus the scheduled Meet component and a mentor-authored visible recap. A Meet `endTime` alone never supplies delivery evidence. These concrete evidence rules can be expanded only by an explicit later ADR when new artifact types exist.

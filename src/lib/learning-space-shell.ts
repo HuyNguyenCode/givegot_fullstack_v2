@@ -1,3 +1,5 @@
+import { prisma } from '@/lib/prisma'
+
 /**
  * D1's small read boundary.  Keeping the authorization call ahead of the
  * query makes it difficult for a route to accidentally render private space
@@ -17,6 +19,21 @@ export type LearningSpaceShellData = {
 }
 
 export type AuthorizedLearningSpaceShellData = LearningSpaceShellData & { viewerId: string }
+
+export async function findShell(spaceId: string): Promise<LearningSpaceShellData | null> {
+  const space = await prisma.learningSpace.findUnique({
+    where: { id: spaceId },
+    select: {
+      id: true, title: true, version: true, state: true, objective: true, definitionOfDone: true,
+      primarySkill: { select: { name: true } },
+      members: { where: { status: 'ACTIVE' }, orderBy: { joinedAt: 'asc' }, select: { user: { select: { id: true, name: true, email: true } } } },
+      topics: { orderBy: { createdAt: 'asc' }, select: { id: true, label: true, state: true } },
+      bookings: { orderBy: { startTime: 'asc' }, select: { id: true, startTime: true, endTime: true, status: true, mentorId: true, menteeId: true } },
+    },
+  })
+  if (!space) return null
+  return { ...space, primarySkillName: space.primarySkill?.name ?? 'Chưa thiết lập', members: space.members.map(member => member.user) }
+}
 
 type Dependencies = {
   requireMember(spaceId: string): Promise<{ user: { id: string } }>
